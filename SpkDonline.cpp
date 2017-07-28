@@ -123,10 +123,10 @@ void Detection::MeanVoltage(unsigned short *vm, int tInc) // if median takes too
 }
 
 void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
-  int a; // to buffer the difference between ADC counts and Qm
+  int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
   // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
   // std::cout.flush();
-  for (int t = tCut; t < tInc+tCut;
+  for (int t = tCut; t < tInc;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     for (int i = 0; i < NChannels; i++) { // loop across channels
@@ -141,8 +141,8 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
       // }
       // DEFAULT OPERATIONS
       // else if (A[i] == 0) {
-      if (A[i] == 0) {
-        a = (vm[i + t*NChannels] - Aglobal[t]) * Ascale -
+      // if (A[i] == 0) {
+        a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale -
             Qm[i]; // difference between ADC counts and Qm
         // UPDATE Qm and Qd
         if (a > 0) {
@@ -175,11 +175,10 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
           // accept spikes after MaxSl frames if...
           if ((Sl[i] == MaxSl) & (AHP[i])) {
             if ((2 * SpkArea[i]) > (MinSl * MinAvgAmp * Qd[i])) {
-
               w << ChInd[i] << " " << t0 + t - MaxSl + 1 - tCut << " "
                 << -Amp[i] * Ascale / Qd[i] << "\n";
               wShapes << ChInd[i] << " " << t0 + t - MaxSl + 1 - tCut<< " "
-                << -Amp[i] * Ascale / Qd[i] << " ";
+                << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
 
               // Cut out for neighbours
               int CurrNghbr;
@@ -206,6 +205,7 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
             AHP[i] = false;  // reset AHP
             SpkArea[i] += a; // not resetting this one (anyway don't need to
                              // care if the spike is wide)
+            b = Aglobal[t-tCut];// Qm[i];
           }
         }
         // check for threshold crossings
@@ -215,14 +215,14 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
           AHP[i] = false;
           SpkArea[i] = a;
         }
-      }
-      // AFTER CHANNEL WAS OUT OF LINEAR REGIME
-      else {
-        Qm[i] = (2 * Qm[i] + (vm[i + t*NChannels] - Aglobal[t]) * Ascale +
-                 2 * Qd[i]) /
-                3; // update Qm
-        A[i]--;
-      }
+      // }
+      // // AFTER CHANNEL WAS OUT OF LINEAR REGIME
+      // else {
+      //   Qm[i] = (2 * Qm[i] + (vm[i + t*NChannels] - Aglobal[t]) * Ascale +
+      //            2 * Qd[i]) /
+      //           3; // update Qm
+      //   A[i]--;
+      // }
     }
   }
   // for (int i = 0; i < NChannels; i++) { // reset params after each chunk

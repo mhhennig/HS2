@@ -37,12 +37,12 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
         nRecCh = d.shape[0]
     else:
         nRecCh = 1
-    nFrames = d.shape[1]
-    nSec = nFrames / sfd  # the duration in seconds of the recording
+    nFrames = 6000 #d.shape[1]
     sf = int(sfd)
+    nSec = nFrames / sfd  # the duration in seconds of the recording
+    tCut = 11 #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
     nSec = nFrames / sfd
-    tInc = min(nFrames, 50000) # cap at specified number of frames
-    tCut = int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
+    tInc = min(nFrames-tCut, 50000) # cap at specified number of frames
 
     print("# Sampling rate: " + str(sf))
     print("# Number of recorded channels: " + str(nRecCh))
@@ -95,7 +95,7 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
         print d[:,t0-tCut:t1].shape
         # detect spikes
         # det.MedianVoltage(&vm[0])
-        # det.MeanVoltage( &vm[0])  # a bit faster (maybe)
+        det.MeanVoltage( &vm[0], tInc+tCut)  # a bit faster (maybe)
         det.Iterate(&vm[0], t0, tInc, tCut)
 
         t0 += tInc #- tCut
