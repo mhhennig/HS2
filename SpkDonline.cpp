@@ -122,7 +122,7 @@ void Detection::MeanVoltage(unsigned short *vm, int tInc) // if median takes too
   }
 }
 
-void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
+void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCut2) {
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
   // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
   // std::cout.flush();
@@ -189,7 +189,10 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut) {
                   for (int k=0; k < Window; k++) {
                     wShapes << vm[CurrNghbr + NChannels*(t - MaxSl - 9 + k)] << " ";
                     if (CurrNghbr + NChannels*(t - MaxSl - 9 + k) < 0) {
-                    	std::cout << "index < 0" << "\n";
+                    	std::cout << "index < 0: " << CurrNghbr + NChannels*(t - MaxSl - 9 + k) << "\n";
+                    }
+                    if (CurrNghbr + NChannels*(t - MaxSl - 9 + k) > NChannels * (tInc + tCut + tCut2)) {
+                      std::cout << "index > length: " << CurrNghbr + NChannels*(t - MaxSl - 9 + k) << "\n";
                     }
                   }
                 }
