@@ -37,7 +37,7 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
         nRecCh = d.shape[0]
     else:
         nRecCh = 1
-    nFrames = 200000 #d.shape[1]
+    nFrames = d.shape[1]
     sf = int(sfd)
     nSec = nFrames / sfd  # the duration in seconds of the recording
     nSec = nFrames / sfd
@@ -63,7 +63,7 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
 
     #set tCut, tCut2 and tInc
     tCut = 10 + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
-    tCut2 = 20 - maxsl
+    tCut2 = 21 - maxsl
     tInc = min(nFrames-tCut-tCut2, 50000) # cap at specified number of frames
 
     # Messy! To be consistent, X and Y have to be swappped
@@ -86,48 +86,25 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
     # np.zeros(len(d), dtype=ctypes.c_ushort)
     startTime = datetime.now()
     #vm = d.flatten('F').astype(dtype=ctypes.c_ushort)
-    t0 = tCut
+    t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
-        # t1 = t0 + tInc
-        # # t1 = t0 + tInc + tCut
-        # print('Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
-        # print('t0 = ' + str(t0) + ', t1 = ' +str(t1))
+        t1 = t0 + tInc
+        print('Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
+        print('t0 = ' + str(t0) + ', t1 = ' +str(t1))
         # # slice data
-        # # this won't work when data too big to fit in memory - need different file type to .npy
-        # vm = d[:,t0-tCut:t1+tCut2].flatten('F').astype(ctypes.c_ushort)
-        # print d[:,t0-tCut:t1+tCut2].shape
-        # detect spikes
-        # det.MedianVoltage(&vm[0])
-        if t0 == tCut:
-            t1 = tInc
-            print('Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
-            print('t0 = ' + str(t0 - tCut) + ', t1 = ' +str(t1))
-            # slice data
-            # this won't work when data too big to fit in memory - need different file type to .npy
-            vm = d[:,t0-tCut:t1+tCut2].flatten('F').astype(ctypes.c_ushort)
-            print d[:,t0-tCut:t1+tCut2].shape
-
-            det.MeanVoltage( &vm[0], tInc+tCut2)  # a bit faster (maybe)
-            det.Iterate(&vm[0], t0, tInc, 0, tCut2)
-
-            t0 = tInc #- tCut
-            if t0 < nFrames - tCut2:
-                tInc = min(tInc, nFrames - tCut2 - t0)
+        if t0 == 0:
+            vm = np.hstack((np.zeros(nRecCh * tCut), d[:,t0:t1+tCut2].flatten('F'))).astype(ctypes.c_ushort)
+            print d[:,t0:t1+tCut2].shape
         else:
-            t1 = t0 + tInc
-            print('Analysing ' + str(t1 - t0 + tCut - tCut2) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
-            print('t0 = ' + str(t0) + ', t1 = ' +str(t1))
-            # slice data
-            # this won't work when data too big to fit in memory - need different file type to .npy
             vm = d[:,t0-tCut:t1+tCut2].flatten('F').astype(ctypes.c_ushort)
             print d[:,t0-tCut:t1+tCut2].shape
+        # detect spikes
+        det.MeanVoltage( &vm[0], tInc+tCut2)  # a bit faster (maybe)
+        det.Iterate(&vm[0], t0, tInc, tCut, tCut2)
 
-            det.MeanVoltage( &vm[0], tInc+tCut+tCut2)  # a bit faster (maybe)
-            det.Iterate(&vm[0], t0, tInc, tCut, tCut2)
-
-            t0 += tInc #- tCut
-            if t0 < nFrames - tCut2:
-                tInc = min(tInc, nFrames - tCut2 - t0)
+        t0 += tInc #- tCut
+        if t0 < nFrames - tCut2:
+            tInc = min(tInc, nFrames - tCut2 - t0)
 
     det.FinishDetection()
     endTime=datetime.now()

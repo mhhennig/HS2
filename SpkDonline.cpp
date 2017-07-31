@@ -126,7 +126,7 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
   // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
   // std::cout.flush();
-  for (int t = tCut; t < tInc;
+  for (int t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     for (int i = 0; i < NChannels; i++) { // loop across channels
@@ -175,9 +175,9 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
           // accept spikes after MaxSl frames if...
           if ((Sl[i] == MaxSl) & (AHP[i])) {
             if ((2 * SpkArea[i]) > (MinSl * MinAvgAmp * Qd[i])) {
-              w << ChInd[i] << " " << t0 + t - MaxSl + 1 - tCut << " "
+              w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 << -Amp[i] * Ascale / Qd[i] << "\n";
-              wShapes << ChInd[i] << " " << t0 + t - MaxSl + 1 - tCut<< " "
+              wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
 
               // Cut out for neighbours
@@ -189,10 +189,10 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
                   for (int k=0; k < Window; k++) {
                     wShapes << vm[CurrNghbr + NChannels*(t - MaxSl - 9 + k)] << " ";
                     if (CurrNghbr + NChannels*(t - MaxSl - 9 + k) < 0) {
-                    	std::cout << "index < 0: " << CurrNghbr + NChannels*(t - MaxSl - 9 + k) << "\n";
+                    	std::cout << "index < 0: t0 = " << t0 << ", t = " << t << ", k = " << k << "\n";
                     }
                     if (CurrNghbr + NChannels*(t - MaxSl - 9 + k) > NChannels * (tInc + tCut + tCut2)) {
-                      std::cout << "index > length: " << CurrNghbr + NChannels*(t - MaxSl - 9 + k) << "\n";
+                      std::cout << "index > length: t0 = " << t0 << ", t =  " << t << ", k = " << k << "\n";
                     }
                   }
                 }
