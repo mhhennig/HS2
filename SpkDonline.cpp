@@ -34,8 +34,8 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   }
 
   // Create matrix with channel neighbours
-  ChInd10 = new int*[NChannels];
-  for (int i = 0; i < NChannels; i++) {
+  ChInd10 = new int*[NChannels-1];
+  for (int i = 0; i < NChannels-1; i++) {
   ChInd10[i] = new int[10];
     for (int j = 0; j < 10; j++) {
       ChInd10[i][j] = -1;
@@ -43,7 +43,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   }
 
   // 10 neighbours
-  for (int i = 0; i < NChannels; i++) {
+  for (int i = 0; i < NChannels-1; i++) {
     if (i % 2 == 0) {
       for (int j = 0; j < 10; j++) {
         if (i - 4 + j >= 0 && i - 4 + j < NChannels-1) {
@@ -58,6 +58,14 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
       }
     }
   }
+  // Print out ChInd10
+  // std::cout << "\n";
+  // for (int i =0; i < NChannels - 1; i++) {
+  //   for (int j=0; j < 10; j++) {
+  //     std::cout << ChInd10[i][j] << " ";
+  //   }
+  //   std::cout << "\n";
+  // }
 }
 
 void Detection::SetInitialParams(int thres, int maa, int ahpthr, int maxsl,
@@ -102,23 +110,29 @@ void Detection::MedianVoltage(unsigned short *vm) // easier to interpret, though
   }
 }
 
-void Detection::MeanVoltage(unsigned short *vm, int tInc) // if median takes too long...
+void Detection::MeanVoltage(unsigned short *vm, int tInc, int tCut) // if median takes too long...
                                                 // or there are only few
                                                 // channnels (?)
 {
   int n;
   int Vsum;
 
-  for (int t = 0; t < tInc; t++) {
+  for (int t = tCut; t < tInc + tCut; t++) {
     n = 1; // constant offset doesn't matter, avoid zero division
     Vsum = 0;
     for (int i = 0; i < NChannels; i++) { // loop across channels
       // if (((vm[i * tInc + t] + 4) % 4096) > 10) {
-        Vsum += (vm[i + t*NChannels]);
-        n++;
+      if (i + t*NChannels > (tInc + tCut)*NChannels) {
+        std::cout << "line 125" << "\n";
+      }
+      Vsum += (vm[i + t*NChannels]);
+      n++;
       // }
     }
-    Aglobal[t] = Vsum / n;
+    if (t-tCut > tInc) {
+      std::cout << "line 133" << "\n";
+    }
+    Aglobal[t-tCut] = Vsum / n;
   }
 }
 
@@ -142,7 +156,11 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
       // DEFAULT OPERATIONS
       // else if (A[i] == 0) {
       // if (A[i] == 0) {
-        a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale -
+        if (t-tCut >= tInc) {
+          std::cout << "line 154: referencing index too large" << "\n";
+        }
+        a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - // should tCut be subtracted here??
+        // a = (vm[i + t*NChannels] - Aglobal[t]) * Ascale -
             Qm[i]; // difference between ADC counts and Qm
         // UPDATE Qm and Qd
         if (a > 0) {
@@ -208,7 +226,11 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
             AHP[i] = false;  // reset AHP
             SpkArea[i] += a; // not resetting this one (anyway don't need to
                              // care if the spike is wide)
-            b = Aglobal[t-tCut];// Qm[i];
+            if (t-tCut >= tInc) {
+            std::cout << "line 223: referencing index too large" << "\n";
+            }
+            b = Aglobal[t - tCut];// Qm[i]; // Again, should tCut be subtracted here?
+            // b = Aglobal[t];
           }
         }
         // check for threshold crossings

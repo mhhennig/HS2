@@ -18,7 +18,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void openSpikeFile(const char * name)
         void openFiles(const char * spikes, const char * shapes)
         void MedianVoltage(unsigned short * vm)
-        void MeanVoltage(unsigned short * vm, int tInc)
+        void MeanVoltage(unsigned short * vm, int tInc, int tCut)
         void Iterate(unsigned short * vm, long t0, int tInc, int tCut, int tCut2)
         void FinishDetection()
 
@@ -99,7 +99,9 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
             vm = d[:,t0-tCut:t1+tCut2].flatten('F').astype(ctypes.c_ushort)
             print d[:,t0-tCut:t1+tCut2].shape
         # detect spikes
-        det.MeanVoltage( &vm[0], tInc+tCut2)  # a bit faster (maybe)
+        # det.MeanVoltage( &vm[0], tInc+tCut2) 
+        det.MeanVoltage( &vm[0], tInc, tCut)  # a bit faster (maybe)
+        # print "Gets past MeanVoltage"
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2)
 
         t0 += tInc #- tCut

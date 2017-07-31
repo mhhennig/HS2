@@ -59,7 +59,7 @@ public:
   void openSpikeFile(const char *name);
   void openFiles(const char *spikes, const char *shapes);
   void MedianVoltage(unsigned short *vm);
-  void MeanVoltage(unsigned short *vm, int tInc);
+  void MeanVoltage(unsigned short *vm, int tInc, int tCut);
   void Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCut2);
   void FinishDetection();
 };
