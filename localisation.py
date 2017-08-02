@@ -82,10 +82,10 @@ def localisation(file, chpos, clen=26, medians=False):
 		line_count = 0
 		for line in f:
 			line_count += 1
-			print(line)
-			line = map(float, line.split())
-			print(list(line))
-			no_ch = int(len(list(line)))/clen
+			# print(line)
+			line = list(map(int, line.split())) # can be int??
+			# print(list(line))
+			no_ch = int(len(list(line))/clen)
 			if len(line) % clen != 0:
 				print("Length of line =", len(line))
 				print("Number of channels =", no_ch)
@@ -98,7 +98,7 @@ def localisation(file, chpos, clen=26, medians=False):
 			max_amp_cutout = ''
 			for i in range(no_ch):
 				chID = int(line[i*clen])
-				cutout = np.array(line[i*clen+1:(i+1)*clen])
+				cutout = np.array(line[i*clen+1:(i+1)*clen], dtype=int)
 				cutout_amp = amps(cutout)
 				if cutout_amp > max_amp:
 					max_amp = cutout_amp
@@ -122,6 +122,6 @@ def localisation(file, chpos, clen=26, medians=False):
 			if np.sum(amps_) != 0:
 				Bj = np.dot(amps_, chpos_)/np.sum(amps_)
 				g.write(str(Bj[1]) + ' ' + str(Bj[0]) + '\n')
-			# else:
+			else:
 				print("Broken line =", line_count)
 				print(line)
