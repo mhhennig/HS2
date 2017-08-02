@@ -17,12 +17,13 @@ def filteredSpikes(file):
 			frame = int(line[1])
 			amp = int(line[2])
 			baseline = int(line[3])
-			cutout = map(int,line[4:])
+			cutout = list(map(int,line[4:]))
+			print(list(cutout))
 			if line_count == 0:
 				curr_max_ch = ch
 				curr_max_frame = frame
 				curr_max_amp = amp
-				curr_max_cutout = ' '.join(cutout)
+				curr_max_cutout = ' '.join(map(str,cutout))
 			else:
 				if frame - curr_max_frame <= 5:
 					if abs(ch - curr_max_ch) <= 7:
@@ -30,7 +31,8 @@ def filteredSpikes(file):
 							curr_max_ch = ch
 							curr_max_frame = frame
 							curr_max_amp = amp
-							curr_max_cutout = ' '.join(cutout)
+							# curr_max_cutout = ' '.join(cutout)
+							curr_max_cutout = ' '.join(map(str,cutout))
 							curr_max_line = line_count
 					else:
 						g.write(str(curr_max_ch) + ' ' + str(curr_max_frame) + ' ' + str(curr_max_amp) + '\n')
@@ -39,7 +41,7 @@ def filteredSpikes(file):
 						curr_max_ch = ch
 						curr_max_frame = frame
 						curr_max_amp = amp
-						curr_max_cutout = ' '.join(cutout)
+						curr_max_cutout = ' '.join(map(str,cutout))
 						curr_max_line = line_count
 				else:
 					g.write(str(curr_max_ch) + ' ' + str(curr_max_frame) + ' ' + str(curr_max_amp) + '\n')
@@ -48,7 +50,7 @@ def filteredSpikes(file):
 					curr_max_ch = ch
 					curr_max_frame = frame
 					curr_max_amp = amp
-					curr_max_cutout = ' '.join(cutout)
+					curr_max_cutout = ' '.join(map(str,cutout))
 					curr_max_line = line_count
 
 			line_count += 1
@@ -82,8 +84,10 @@ def localisation(file, chpos, clen=26, medians=False):
 		line_count = 0
 		for line in f:
 			line_count += 1
+			print(line)
 			line = map(float, line.split())
-			no_ch = int(len(line))/clen
+			print(list(line))
+			no_ch = int(len(list(line)))/clen
 			if len(line) % clen != 0:
 				print("Length of line =", len(line))
 				print("Number of channels =", no_ch)
