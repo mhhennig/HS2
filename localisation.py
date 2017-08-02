@@ -53,12 +53,12 @@ def filteredSpikes(file):
 
 			line_count += 1
 
-		# include append for last line 
+		# include append for last line
 		g.write(str(curr_max_ch) + ' ' + str(curr_max_frame) + ' ' + str(curr_max_amp) + '\n')
 		h.write(curr_max_cutout + '\n')
 		print_count += 1
 
-	print "Number of filtered spikes =", print_count
+	print("Number of filtered spikes =", print_count)
 
 
 
@@ -85,9 +85,9 @@ def localisation(file, chpos, clen=26, medians=False):
 			line = map(float, line.split())
 			no_ch = int(len(line))/clen
 			if len(line) % clen != 0:
-				print "Length of line =", len(line)
-				print "Number of channels =", no_ch
-				print "Line number =", line_count
+				print("Length of line =", len(line))
+				print("Number of channels =", no_ch)
+				print("Line number =", line_count)
 	 		# Create dictionary to store channel info
 			# spike_dict = {}
 			amps_ = []
@@ -105,8 +105,8 @@ def localisation(file, chpos, clen=26, medians=False):
 				amps_.append(cutout_amp)
 				chpos_.append(chpos[chID])
 			if line_count == 0:
-				print amps_
-				print chpos_
+				print(amps_)
+				print(chpos_)
 			# Write max cutout to file
 			h.write(max_amp_cutout + '\n')
 			# Calculate spike medians
@@ -121,7 +121,5 @@ def localisation(file, chpos, clen=26, medians=False):
 				Bj = np.dot(amps_, chpos_)/np.sum(amps_)
 				g.write(str(Bj[1]) + ' ' + str(Bj[0]) + '\n')
 			# else:
-				print "Broken line =", line_count
-				print line
-
-
+				print("Broken line =", line_count)
+				print(line)
