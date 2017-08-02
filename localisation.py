@@ -18,7 +18,6 @@ def filteredSpikes(file):
 			amp = int(line[2])
 			baseline = int(line[3])
 			cutout = list(map(int,line[4:]))
-			print(list(cutout))
 			if line_count == 0:
 				curr_max_ch = ch
 				curr_max_frame = frame
@@ -31,7 +30,6 @@ def filteredSpikes(file):
 							curr_max_ch = ch
 							curr_max_frame = frame
 							curr_max_amp = amp
-							# curr_max_cutout = ' '.join(cutout)
 							curr_max_cutout = ' '.join(map(str,cutout))
 							curr_max_line = line_count
 					else:
