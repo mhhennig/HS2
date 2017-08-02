@@ -34,8 +34,8 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   }
 
   // Create matrix with channel neighbours
-  ChInd10 = new int*[NChannels-1];
-  for (int i = 0; i < NChannels-1; i++) {
+  ChInd10 = new int*[NChannels];
+  for (int i = 0; i < NChannels; i++) {
   ChInd10[i] = new int[10];
     for (int j = 0; j < 10; j++) {
       ChInd10[i][j] = -1;
@@ -66,6 +66,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   //   }
   //   std::cout << "\n";
   // }
+  std::cout << "init";
 }
 
 void Detection::SetInitialParams(int thres, int maa, int ahpthr, int maxsl,
@@ -137,7 +138,9 @@ void Detection::MeanVoltage(unsigned short *vm, int tInc, int tCut) // if median
 }
 
 void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCut2) {
+  // MeanVoltage(vm, tInc, tCut);
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
+  int CurrNghbr;
   // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
   // std::cout.flush();
   for (int t = tCut; t < tInc + tCut;
@@ -199,7 +202,6 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
                 << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
 
               // Cut out for neighbours
-              int CurrNghbr;
               for (int j = 0; j < 10; j++) {
                 CurrNghbr = ChInd10[i][j];
                 if (CurrNghbr != -1) {
