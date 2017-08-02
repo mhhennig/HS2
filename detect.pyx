@@ -64,8 +64,8 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
     #set tCut, tCut2 and tInc
     tCut = 10 + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
     tCut2 = 21 - maxsl
-    tInc = min(nFrames-tCut-tCut2, 50000) # cap at specified number of frames
-
+    tInc = min(nFrames-tCut-tCut2, 100000) # cap at specified number of frames
+    print('tInc:'+str(tInc))
     # Messy! To be consistent, X and Y have to be swappped
     cdef np.ndarray[long, mode = "c"] Indices = np.zeros(nRecCh, dtype=ctypes.c_long)
     for i in range(nRecCh):
@@ -94,12 +94,12 @@ def detectData(data, spikefilename, shapefilename, sfd, thres, maa = None, maxsl
         # # slice data
         if t0 == 0:
             vm = np.hstack((np.zeros(nRecCh * tCut), d[:,t0:t1+tCut2].flatten('F'))).astype(ctypes.c_ushort)
-            print d[:,t0:t1+tCut2].shape
+            print(d[:,t0:t1+tCut2].shape)
         else:
             vm = d[:,t0-tCut:t1+tCut2].flatten('F').astype(ctypes.c_ushort)
-            print d[:,t0-tCut:t1+tCut2].shape
+            print(d[:,t0-tCut:t1+tCut2].shape, len(vm))
         # detect spikes
-        # det.MeanVoltage( &vm[0], tInc+tCut2) 
+        # det.MeanVoltage( &vm[0], tInc+tCut2)
         det.MeanVoltage( &vm[0], tInc, tCut)  # a bit faster (maybe)
         # print "Gets past MeanVoltage"
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2)
