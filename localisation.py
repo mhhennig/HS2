@@ -34,7 +34,7 @@ def filteredSpikes(file):
 							curr_max_line = line_count
 					else:
 						g.write(str(curr_max_ch) + ' ' + str(curr_max_frame) + ' ' + str(curr_max_amp) + '\n')
-						h.write(curr_max_cutout + '\n')
+						h.write(str(baseline) + ' ' + curr_max_cutout + '\n')
 						print_count += 1
 						curr_max_ch = ch
 						curr_max_frame = frame
@@ -43,7 +43,7 @@ def filteredSpikes(file):
 						curr_max_line = line_count
 				else:
 					g.write(str(curr_max_ch) + ' ' + str(curr_max_frame) + ' ' + str(curr_max_amp) + '\n')
-					h.write(curr_max_cutout + '\n')
+					h.write(str(baseline) + ' ' + curr_max_cutout + '\n')
 					print_count += 1
 					curr_max_ch = ch
 					curr_max_frame = frame
@@ -55,16 +55,15 @@ def filteredSpikes(file):
 
 		# include append for last line
 		g.write(str(curr_max_ch) + ' ' + str(curr_max_frame) + ' ' + str(curr_max_amp) + '\n')
-		h.write(curr_max_cutout + '\n')
+		h.write(str(baseline) + ' ' + curr_max_cutout + '\n')
 		print_count += 1
 
 	print("Number of filtered spikes =", print_count)
 
 
 
-def amps(cutout):
-	baseline = np.median(np.asarray(cutout[:4]))
-	peak = np.min(np.asarray(cutout[4:19]))
+def amps(cutout, baseline):
+	peak = np.min(np.asarray(cutout[6:16]))
 	return baseline - peak
 
 
@@ -80,36 +79,39 @@ def localisation(file, chpos, clen=26, medians=False):
 
 	with open(file) as f:
 		line_count = 0
+		count2 = 0
+		count_emptystring = 0
 		for line in f:
 			line_count += 1
-			# print(line)
-			line = list(map(int, line.split())) # can be int??
-			# print(list(line))
-			no_ch = int(len(list(line))/clen)
-			if len(line) % clen != 0:
-				print("Length of line =", len(line))
+			line = map(float, line.split())
+			baseline = line[0]
+			cutouts = line[1:]
+			no_ch = int(len(cutouts))/clen
+			if len(cutouts) % clen != 0:
+				print("Length of line =", len(cutouts))
 				print("Number of channels =", no_ch)
 				print("Line number =", line_count)
-	 		# Create dictionary to store channel info
-			# spike_dict = {}
+				break
+	 		# Create arrays to store channel info
 			amps_ = []
 			chpos_ = []
 			max_amp = 0
 			max_amp_cutout = ''
 			for i in range(no_ch):
-				chID = int(line[i*clen])
-				cutout = np.array(line[i*clen+1:(i+1)*clen], dtype=int)
-				cutout_amp = amps(cutout)
+				chID = int(cutouts[i*clen])
+				cutout = np.array(cutouts[i*clen+1:(i+1)*clen])
+				cutout_amp = amps(cutout, baseline)
+				if chID == 384:
+					print('384 line =', line_count)
 				if cutout_amp > max_amp:
 					max_amp = cutout_amp
 					max_amp_cutout = ' '.join(map(str,cutout))
-				# spike_dict[chID] = [chpos[chID], cutout_amp]
 				amps_.append(cutout_amp)
 				chpos_.append(chpos[chID])
-			if line_count == 0:
-				print(amps_)
-				print(chpos_)
 			# Write max cutout to file
+			if max_amp_cutout == '':
+				# print "max_amp_cutout == '':" + str(amps_)
+				count_emptystring += 1
 			h.write(max_amp_cutout + '\n')
 			# Calculate spike medians
 			amps_ = np.asarray(amps_)
@@ -117,11 +119,18 @@ def localisation(file, chpos, clen=26, medians=False):
 			if medians == True:
 				# Calculate spike medians
 				median = np.median(amps_)
-				amps_ = np.clip(amps_-median,0.0,1.0e12)
+				amps_1 = np.clip(amps_-median,0.0,1.0e12)
+			# Count number of points that fall on grid (mean position of 2 channels)
+			if np.count_nonzero(amps_1) <= 2:
+				count2 += 1
 			# Calculate centre of mass
-			if np.sum(amps_) != 0:
-				Bj = np.dot(amps_, chpos_)/np.sum(amps_)
+			if np.sum(amps_1) != 0:
+				Bj = np.dot(amps_1, chpos_)/np.sum(amps_1)
 				g.write(str(Bj[1]) + ' ' + str(Bj[0]) + '\n')
 			else:
 				print("Broken line =", line_count)
-				print(line)
+				print(cutouts)
+				print(median, amps_)
+
+		print("count2 =", count2)
+		print("empty string =", count_emptystring)
