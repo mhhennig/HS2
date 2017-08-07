@@ -146,6 +146,12 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
   for (int t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
+
+    // std::cout << "\n";
+    // for (int x = 0; x < NChannels; x++) {
+    //   std::cout << Qd[x] << " ";
+    // }
+    // std::cout << "\n";
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME
       // if (((vm[i + t*NChannels] + 4) % NChannels) < 10) {

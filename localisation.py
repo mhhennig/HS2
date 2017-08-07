@@ -64,7 +64,14 @@ def filteredSpikes(file):
 
 def amps(cutout, baseline):
 	peak = np.min(np.asarray(cutout[6:16]))
-	return baseline - peak
+	bl = np.median(np.asarray(cutout[:5]))
+	amp = baseline - peak
+	if amp > 0:
+		return amp
+	elif bl - peak > 0:
+		return bl - peak
+	else:
+		return 0
 
 
 def localisation(file, chpos, clen=26, medians=False):
@@ -112,6 +119,7 @@ def localisation(file, chpos, clen=26, medians=False):
 			if max_amp_cutout == '':
 				# print "max_amp_cutout == '':" + str(amps_)
 				count_emptystring += 1
+				continue
 			h.write(max_amp_cutout + '\n')
 			# Calculate spike medians
 			amps_ = np.asarray(amps_)
