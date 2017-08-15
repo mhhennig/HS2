@@ -4,7 +4,8 @@ namespace SpkDonline {
 Detection::Detection() {}
 
 void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
-                              long ti, long *Indices, int agl) {
+                              long ti, long *Indices, int agl, short *ChIndN, int tpref, int tpostf
+                              ) {
   NChannels = NCh;
   tInc = ti;
   Qd = new int[NChannels];      // noise amplitude
@@ -16,6 +17,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   A = new int[NChannels];       // control parameter for amplifier effects
   ChInd = new int[NChannels];
   Slice = new int[NChannels];
+  // Qdmean = new int[NChannels];
   // MaxSl = 8; //sf / 1000 + 1;
   // MinSl = 3; //sf / 3000 + 2;
   Sampling = sf;
@@ -31,42 +33,46 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
     A[i] = artT; // start like after an out-of-linear-regime event
     SpkArea[i] = 0;
     ChInd[i] = Indices[i];
+    // Qdmean[i] = 0;
   }
 
+  spikeCount = 0;
+  // frameCount = 0;
+
+  fpre = tpref;
+  fpost = tpostf;
+
   // Create matrix with channel neighbours
-  ChInd10 = new int*[NChannels];
-  for (int i = 0; i < NChannels; i++) {
-  ChInd10[i] = new int[10];
-    for (int j = 0; j < 10; j++) {
-      ChInd10[i][j] = -1;
-    }
+  ChInd10 = new short[NChannels*10];
+  for (int i = 0; i < NChannels*10; i++) {
+    ChInd10[i] = ChIndN[i];
   }
 
   // 10 neighbours
-  for (int i = 0; i < NChannels-1; i++) {
-    if (i % 2 == 0) {
-      for (int j = 0; j < 10; j++) {
-        if (i - 4 + j >= 0 && i - 4 + j < NChannels-1) {
-          ChInd10[i][j] = i - 4 + j;
-        }
-      }
-    } else if (i % 2 == 1) {
-      for (int j = 0; j < 10; j++) {
-        if (i - 5 + j >= 0 && i - 5 + j < NChannels-1) {
-          ChInd10[i][j] = i - 5 + j;
-        }
-      }
-    }
-  }
+  // for (int i = 0; i < NChannels-1; i++) {
+  //   if (i % 2 == 0) {
+  //     for (int j = 0; j < 10; j++) {
+  //       if (i - 4 + j >= 0 && i - 4 + j < NChannels-1) {
+  //         ChInd10[i][j] = i - 4 + j;
+  //       }
+  //     }
+  //   } else if (i % 2 == 1) {
+  //     for (int j = 0; j < 10; j++) {
+  //       if (i - 5 + j >= 0 && i - 5 + j < NChannels-1) {
+  //         ChInd10[i][j] = i - 5 + j;
+  //       }
+  //     }
+  //   }
+  // }
   // Print out ChInd10
   // std::cout << "\n";
   // for (int i =0; i < NChannels - 1; i++) {
   //   for (int j=0; j < 10; j++) {
-  //     std::cout << ChInd10[i][j] << " ";
+  //     std::cout << ChInd10[i*10 + j] << " ";
   //   }
   //   std::cout << "\n";
   // }
-  std::cout << "init";
+  // std::cout << "init";
 }
 
 void Detection::SetInitialParams(int thres, int maa, int ahpthr, int maxsl,
@@ -95,7 +101,7 @@ void Detection::openFiles(const char *spikes, const char *shapes) {
   wShapes.open(shapes);
 }
 
-void Detection::MedianVoltage(unsigned short *vm) // easier to interpret, though
+void Detection::MedianVoltage(short *vm) // easier to interpret, though
                                                   // it takes a little longer to
                                                   // run, but I'm sure there is
                                                   // a faster method in C++ for
@@ -111,7 +117,7 @@ void Detection::MedianVoltage(unsigned short *vm) // easier to interpret, though
   }
 }
 
-void Detection::MeanVoltage(unsigned short *vm, int tInc, int tCut) // if median takes too long...
+void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes too long...
                                                 // or there are only few
                                                 // channnels (?)
 {
@@ -137,7 +143,7 @@ void Detection::MeanVoltage(unsigned short *vm, int tInc, int tCut) // if median
   }
 }
 
-void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCut2) {
+void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   // MeanVoltage(vm, tInc, tCut);
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
   int CurrNghbr;
@@ -146,7 +152,7 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
   for (int t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
-
+    // frameCount += 1;
     // std::cout << "\n";
     // for (int x = 0; x < NChannels; x++) {
     //   std::cout << Qd[x] << " ";
@@ -202,22 +208,28 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
           // accept spikes after MaxSl frames if...
           if ((Sl[i] == MaxSl) & (AHP[i])) {
             if ((2 * SpkArea[i]) > (MinSl * MinAvgAmp * Qd[i])) {
+              // increase spike count
+              spikeCount += 1;
+
+              // Write spikes to file
               w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 << -Amp[i] * Ascale / Qd[i] << "\n";
-              wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
 
-              // Cut out for neighbours
+              // wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
+                // << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
+              wShapes << b << " ";
+
+              // Write cut out for neighbours to file
               for (int j = 0; j < 10; j++) {
-                CurrNghbr = ChInd10[i][j];
+                CurrNghbr = ChInd10[i*10 + j];
                 if (CurrNghbr != -1) {
-                  wShapes << CurrNghbr << " ";
-                  for (int k=0; k < Window; k++) {
-                    wShapes << vm[CurrNghbr + NChannels*(t - MaxSl - 9 + k)] << " ";
-                    if (CurrNghbr + NChannels*(t - MaxSl - 9 + k) < 0) {
+                  wShapes << CurrNghbr << " " << Qd[CurrNghbr] << " ";
+                  for (int k=0; k < fpre + fpost + 1; k++) {
+                    wShapes << vm[CurrNghbr + NChannels*(t - MaxSl + 1 - fpre + k)] << " ";
+                    if (CurrNghbr + NChannels*(t - MaxSl + 1 - fpre + k) < 0) {
                     	std::cout << "index < 0: t0 = " << t0 << ", t = " << t << ", k = " << k << "\n";
                     }
-                    if (CurrNghbr + NChannels*(t - MaxSl - 9 + k) > NChannels * (tInc + tCut + tCut2)) {
+                    if (CurrNghbr + NChannels*(t - MaxSl + 1 - fpre + k) > NChannels * (tInc + tCut + tCut2)) {
                       std::cout << "index > length: t0 = " << t0 << ", t =  " << t << ", k = " << k << "\n";
                     }
                   }
@@ -256,6 +268,9 @@ void Detection::Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCu
       //           3; // update Qm
       //   A[i]--;
       // }
+      // for (int v = 0; v <NChannels; v++) {
+      //   Qdmean[v] = (frameCount * Qdmean[v] + Qd[v])/(frameCount + 1);
+      // }
     }
   }
   // for (int i = 0; i < NChannels; i++) { // reset params after each chunk
@@ -274,5 +289,13 @@ void Detection::FinishDetection() // write spikes in interval after last
 {
   w.close();
   wShapes.close();
+  wCount.open("count");
+  wCount << spikeCount;
+  wCount.close();
+  // wVar.open("variability");
+  // for (int i = 0; i < NChannels; i++) {
+  //   wVar << Qdmean[i] << " ";
+  // }
+  // wVar.close();
 }
 }

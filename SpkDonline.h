@@ -42,25 +42,35 @@ class Detection {
   int Sampling;
   std::ofstream w; // for spikes
   std::ofstream wShapes; // for shapes
+  std::ofstream wCount; // for count
+  // std::ofstream wVar; // for variability
   int *Aglobal;
   int *Slice;
   int a; // buffer for Iterate()
 
   // Shapes print out parameters
-  int** ChInd10;
-  int Window = 31; // Change this to change size of cutout
+  short *ChInd10;
+  int fpre; // Change this to change size of pre cutout
+  int fpost; // Change this to change size of post cutout
+
+  // spike count
+  int spikeCount;
+  // frame count
+  // int frameCount;
+  // variability means
+  // int *Qdmean;
 
 public:
   Detection();
   ~Detection();
   void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti,
-                     long int *Indices, int agl);
+                     long int *Indices, int agl, short *ChIndN, int tpref, int tpostf);
   void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl);
   void openSpikeFile(const char *name);
   void openFiles(const char *spikes, const char *shapes);
-  void MedianVoltage(unsigned short *vm);
-  void MeanVoltage(unsigned short *vm, int tInc, int tCut);
-  void Iterate(unsigned short *vm, long t0, int tInc, int tCut, int tCut2);
+  void MedianVoltage(short *vm);
+  void MeanVoltage(short *vm, int tInc, int tCut);
+  void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2);
   void FinishDetection();
 };
 };
