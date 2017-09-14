@@ -213,7 +213,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
 
               // Write spikes to file
               w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                << -Amp[i] * Ascale / Qd[i] << Qm[i] << "\n";
+                << -Amp[i] * Ascale / Qd[i] << " " << Qm[i] << "\n";
 
               // wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 // << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
