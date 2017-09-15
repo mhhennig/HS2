@@ -96,9 +96,10 @@ void Detection::openSpikeFile(const char *name) {
   // w = new StreamWriter(fs);
 }
 
-void Detection::openFiles(const char *spikes, const char *shapes) {
+void Detection::openFiles(const char *spikes, const char *shapes, const char *medians) {
   w.open(spikes);
   wShapes.open(shapes);
+  channel_medians.open(medians)
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -213,7 +214,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
 
               // Write spikes to file
               w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                << -Amp[i] * Ascale / Qd[i] << " " << Qm[i] << "\n";
+                << -Amp[i] * Ascale / Qd[i] << "\n";
 
               // wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 // << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
