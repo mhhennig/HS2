@@ -67,7 +67,7 @@ public:
                      long int *Indices, int agl, short *ChIndN, int tpref, int tpostf);
   void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl);
   void openSpikeFile(const char *name);
-  void openFiles(const char *spikes, const char *shapes, const char *medians);
+  void openFiles(const char *spikes, const char *shapes);
   void MedianVoltage(short *vm);
   void MeanVoltage(short *vm, int tInc, int tCut);
   void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2);
