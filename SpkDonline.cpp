@@ -160,7 +160,9 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
     //   std::cout << Qd[x] << " ";
     // }
     // std::cout << "\n";
-    aGlobalFile << t0 + t - MaxSl - tCut + 1 << " " << Aglobal[t-tCut] << "\n";
+    if(t0 + t - MaxSl - tCut + 1 < 1000) {
+      aGlobalFile << t0 + t - MaxSl - tCut + 1 << " " << Aglobal[t-tCut] << "\n";
+    }
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME
       // if (((vm[i + t*NChannels] + 4) % NChannels) < 10) {
