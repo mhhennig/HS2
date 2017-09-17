@@ -193,7 +193,9 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         } else if (a < -Qd[i]) {
           Qm[i] -= Qd[i] / Tau_m0 / 2;
         }
-        baseline << t << " " <<  ChInd[i] << " " << Qm[i] << "\n";
+        if(t < 1000) {
+          baseline << t << " " <<  ChInd[i] << " " << Qm[i] << "\n";
+        }
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
           //std::cout << "*";
