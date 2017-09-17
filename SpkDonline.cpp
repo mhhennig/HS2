@@ -169,7 +169,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
       //   if (A[i] <
       //       artT) { // reset only when it starts leaving the linear regime
       //     Sl[i] = 0;
-      //     // std::cout << "yes it enters" << "\n";
+      //     // std::cout << "yes it enters" << "\n"
       //     A[i] = artT;
       //   }
       // }
