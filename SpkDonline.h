@@ -44,6 +44,7 @@ class Detection {
   std::ofstream wShapes; // for shapes
   std::ofstream baseline;
   std::ofstream wCount; // for count
+  std::ofstream aGlobalFile; // for count
   // std::ofstream wVar; // for variability
   int *Aglobal;
   int *Slice;
@@ -68,7 +69,7 @@ public:
                      long int *Indices, int agl, short *ChIndN, int tpref, int tpostf);
   void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl);
   void openSpikeFile(const char *name);
-  void openFiles(const char *spikes, const char *shapes, const char *baselines);
+  void openFiles(const char *spikes, const char *shapes, const char *baselines, const char *aGlobals);
   void MedianVoltage(short *vm);
   void MeanVoltage(short *vm, int tInc, int tCut);
   void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2);

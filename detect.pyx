@@ -16,14 +16,14 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, short * ChIndN, int tpref, int tpostf)
         void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl)
         void openSpikeFile(const char * name)
-        void openFiles(const char * spikes, const char * shapes, const char * baselines)
+        void openFiles(const char * spikes, const char * shapes, const char * baselines, const char * aGlobals)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2)
         void FinishDetection()
 
 
-def detectData(data, neighbours, spikefilename, shapefilename, baselinefilename, channels, sfd, thres, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
+def detectData(data, neighbours, spikefilename, shapefilename, baselinefilename, aglobalfilename, channels, sfd, thres, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
     """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
     # d = np.loadtxt(rawfilename)
     # f = np.load(rawfilename)
@@ -84,9 +84,10 @@ def detectData(data, neighbours, spikefilename, shapefilename, baselinefilename,
     spikefilename = str.encode(spikefilename)
     shapefilename = str.encode(shapefilename)
     baselinefilename = str.encode(baselinefilename)
+    aGlobalfilename = str.encode(aglobalfilename)
 
 
-    det.openFiles(spikefilename, shapefilename, baselinefilename)
+    det.openFiles(spikefilename, shapefilename, baselinefilename, aGlobalfilename)
 
     # cdef np.ndarray[unsigned short, ndim = 1, mode = "c"] vm =
     # np.zeros(len(d), dtype=ctypes.c_ushort)
