@@ -96,9 +96,10 @@ void Detection::openSpikeFile(const char *name) {
   // w = new StreamWriter(fs);
 }
 
-void Detection::openFiles(const char *spikes, const char *shapes) {
+void Detection::openFiles(const char *spikes, const char *shapes, const char *baselines) {
   w.open(spikes);
   wShapes.open(shapes);
+  baseline.open(baselines);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -192,6 +193,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         } else if (a < -Qd[i]) {
           Qm[i] -= Qd[i] / Tau_m0 / 2;
         }
+        baseline << ChInd << " " << Qm[i] << "\n";
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
           //std::cout << "*";
@@ -289,6 +291,7 @@ void Detection::FinishDetection() // write spikes in interval after last
 {
   w.close();
   wShapes.close();
+  baseline.close();
   wCount.open("count");
   wCount << spikeCount;
   wCount.close();
