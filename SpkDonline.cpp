@@ -160,6 +160,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
     //   std::cout << Qd[x] << " ";
     // }
     // std::cout << "\n";
+    aGlobalFile << t0 + t - MaxSl - tCut + 1 << " " << Aglobal[t-tCut] << "\n";
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME
       // if (((vm[i + t*NChannels] + 4) % NChannels) < 10) {
@@ -196,7 +197,6 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         }
         if(t0 + t - MaxSl - tCut + 1 < 1000) {
           baseline << t0 + t - MaxSl - tCut + 1 << " " <<  ChInd[i] << " " << Qm[i] << "\n";
-          aGlobalFile << t0 + t - MaxSl - tCut + 1 << " " << ChInd[i] << " " << Aglobal[t-tCut] << "\n";
         }
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
