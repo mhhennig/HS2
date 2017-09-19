@@ -220,9 +220,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               spikeCount += 1;
 
               // Write spikes to file
-              std::cout << Amp[i] << '\n';
               w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                << -Amp[i] * Ascale / Qd[i] << "\n";
+                << -Amp[i] * Ascale / Qd[i] << Amp[i] << "\n";
 
               // wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 // << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
