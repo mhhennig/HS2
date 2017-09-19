@@ -197,6 +197,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         } else if (a < -Qd[i]) {
           Qm[i] -= Qd[i] / Tau_m0 / 2;
         }
+        a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i] // should tCut be subtracted here??
         if(t0 + t - MaxSl - tCut + 1 < 1000) {
           baseline << t0 + t - MaxSl - tCut + 1 << " " <<  ChInd[i] << " " << Qm[i] << "\n";
         }
@@ -221,7 +222,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
 
               // Write spikes to file
               w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                << -Amp[i] * Ascale / Qd[i] << Amp[i] << "\n";
+                << -Amp[i] * Ascale / Qd[i] <<  "\n";
 
               // wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
                 // << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
