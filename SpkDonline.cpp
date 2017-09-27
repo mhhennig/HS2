@@ -1,15 +1,15 @@
 #include "SpkDonline.h"
+#include "SpikeHandler.h"
 
 namespace SpkDonline {
 Detection::Detection() {}
 
-void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
-                              long ti, long *Indices, int agl, short *ChIndN, int tpref, int tpostf
-                              ) {
+void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long *Indices, int agl, int tpref, int tpostf) {
   NChannels = NCh;
   tInc = ti;
   Qd = new int[NChannels];      // noise amplitude
   Qm = new int[NChannels];      // median
+  Qms = new int*[NChannels];    // Stores 5 frames of medians ending with current median
   Sl = new int[NChannels];      // counter for spike length
   AHP = new bool[NChannels];    // counter for repolarizing current
   Amp = new int[NChannels];     // buffers spike amplitude
@@ -35,6 +35,9 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
     ChInd[i] = Indices[i];
     // Qdmean[i] = 0;
   }
+  for (int i = 0; i < NChannels; i++) {
+      Qms[i] = new int[6];
+  }
 
   spikeCount = 0;
   // frameCount = 0;
@@ -42,11 +45,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   fpre = tpref;
   fpost = tpostf;
 
-  // Create matrix with channel neighbours
-  ChInd10 = new short[NChannels*10];
-  for (int i = 0; i < NChannels*10; i++) {
-    ChInd10[i] = ChIndN[i];
-  }
+
 
   // 10 neighbours
   // for (int i = 0; i < NChannels-1; i++) {
@@ -75,7 +74,8 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   // std::cout << "init";
 }
 
-void Detection::SetInitialParams(int thres, int maa, int ahpthr, int maxsl,
+void Detection::SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
+                         		 int noise_amp, int max_neighbors, int start_cutout, int end_cutout, bool to_localize, int thres, int maa, int ahpthr, int maxsl,
                                  int minsl) {
   // set the detection parameters
   threshold = thres;
@@ -83,6 +83,15 @@ void Detection::SetInitialParams(int thres, int maa, int ahpthr, int maxsl,
   AHPthr = ahpthr;
   MaxSl = maxsl;
   MinSl = minsl;
+  int** channel_positions;
+  int**neighbor_matrix;
+  channel_positions = createPositionMatrix(num_recording_channels);
+  neighbor_matrix = createNeighborMatrix(num_recording_channels, max_neighbors);
+  buildPositionsMatrix(channel_positions, "positions", num_recording_channels, 2);
+  buildNeighborMatrix(neighbor_matrix, "neighbormatrix", num_recording_channels, max_neighbors);
+
+  setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
+									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, start_cutout , end_cutout);
 }
 
 // don't know how to make multiple threads write to the same file,
@@ -90,17 +99,14 @@ void Detection::SetInitialParams(int thres, int maa, int ahpthr, int maxsl,
 // instead of a void)
 // and then write spikes for each block
 void Detection::openSpikeFile(const char *name) {
-  std::cout << "# Writing to: " << name << "\n";
-  w.open(name);
+  cout << "# Writing to: " << name << "\n";
+  //w.open(name);
   // fs = new FileStream(name, FileMode.OpenOrCreate, FileAccess.Write);
   // w = new StreamWriter(fs);
 }
 
-void Detection::openFiles(const char *spikes, const char *shapes, const char *baselines, const char *aGlobals){
-  w.open(spikes);
-  wShapes.open(shapes);
-  baseline.open(baselines);
-  aGlobalFile.open(aGlobals);
+void Detection::openFiles(const char *spikes){
+  //w.open(spikes);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -114,7 +120,7 @@ void Detection::MedianVoltage(short *vm) // easier to interpret, though
     for (int i = 0; i < NChannels; i++) { // loop across channels
       Slice[i] = vm[i + t*NChannels];        // vm [i] [t];
     }
-    std::sort(Slice, Slice + sizeof Slice / sizeof Slice[0]);
+    sort(Slice, Slice + sizeof Slice / sizeof Slice[0]);
     Aglobal[t] = Slice[NChannels / 2];
   }
 }
@@ -132,14 +138,14 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
     for (int i = 0; i < NChannels; i++) { // loop across channels
       // if (((vm[i * tInc + t] + 4) % 4096) > 10) {
       if (i + t*NChannels > (tInc + tCut)*NChannels) {
-        std::cout << "line 125" << "\n";
+        cout << "line 125" << "\n";
       }
       Vsum += (vm[i + t*NChannels]);
       n++;
       // }
     }
     if (t-tCut > tInc) {
-      std::cout << "line 133" << "\n";
+      cout << "line 133" << "\n";
     }
     Aglobal[t-tCut] = Vsum / n;
   }
@@ -151,6 +157,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   int CurrNghbr;
   // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
   // std::cout.flush();
+  int currQmsPosition = -1;
+  loadRawData(vm);
   for (int t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
@@ -159,10 +167,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
     // for (int x = 0; x < NChannels; x++) {
     //   std::cout << Qd[x] << " ";
     // }
-    // std::cout << "\n";
-    if(t0 + t - MaxSl - tCut + 1 < 1000) {
-      aGlobalFile << t0 + t - MaxSl - tCut + 1 << " " << Aglobal[t-tCut] << "\n";
-    }
+    // std::cout << "\n"
+    currQmsPosition += 1; 
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME
       // if (((vm[i + t*NChannels] + 4) % NChannels) < 10) {
@@ -177,7 +183,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
       // else if (A[i] == 0) {
       // if (A[i] == 0) {
         if (t-tCut >= tInc) {
-          std::cout << "line 154: referencing index too large" << "\n";
+          cout << "line 154: referencing index too large" << "\n";
         }
         a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - // should tCut be subtracted here??
         // a = (vm[i + t*NChannels] - Aglobal[t]) * Ascale -
@@ -197,10 +203,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         } else if (a < -Qd[i]) {
           Qm[i] -= Qd[i] / Tau_m0 / 2;
         }
+        Qms[i][currQmsPosition % 6] = Qm[i];
         a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i]; // should tCut be subtracted here??
-        if(t0 + t - MaxSl - tCut + 1 < 1000) {
-          baseline << t0 + t - MaxSl - tCut + 1 << " " <<  ChInd[i] << " " << Qm[i] << "\n";
-        }
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
           //std::cout << "*";
@@ -221,30 +225,13 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               spikeCount += 1;
 
               // Write spikes to file
-              w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                << -Amp[i] * Ascale / Qd[i] <<  "\n";
+              int correctBaseline = Qms[i][(currQmsPosition - 5) % 6];
+              //w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
+              //  << -Amp[i] * Ascale / Qd[i] <<   "\n";
+              setLocalizationParameters(Aglobal[t-tCut], Qm);
+			  addSpike(ChInd[i], t0 + t - MaxSl - tCut + 1, -Amp[i] * Ascale / Qd[i]);
 
-              // wShapes << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-                // << -Amp[i] * Ascale / Qd[i] << " " << b << " ";
-              wShapes << b << " ";
 
-              // Write cut out for neighbours to file
-              for (int j = 0; j < 10; j++) {
-                CurrNghbr = ChInd10[i*10 + j];
-                if (CurrNghbr != -1) {
-                  wShapes << CurrNghbr << " " << Qd[CurrNghbr] << " ";
-                  for (int k=0; k < fpre + fpost + 1; k++) {
-                    wShapes << vm[CurrNghbr + NChannels*(t - MaxSl + 1 - fpre + k)] << " ";
-                    if (CurrNghbr + NChannels*(t - MaxSl + 1 - fpre + k) < 0) {
-                    	std::cout << "index < 0: t0 = " << t0 << ", t = " << t << ", k = " << k << "\n";
-                    }
-                    if (CurrNghbr + NChannels*(t - MaxSl + 1 - fpre + k) > NChannels * (tInc + tCut + tCut2)) {
-                      std::cout << "index > length: t0 = " << t0 << ", t =  " << t << ", k = " << k << "\n";
-                    }
-                  }
-                }
-              }
-              wShapes << "\n";
             }
             Sl[i] = 0;
           }
@@ -256,7 +243,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
             SpkArea[i] += a; // not resetting this one (anyway don't need to
                              // care if the spike is wide)
             if (t-tCut >= tInc) {
-            std::cout << "line 223: referencing index too large" << "\n";
+            cout << "line 223: referencing index too large" << "\n";
             }
             b = Aglobal[t - tCut];// Qm[i]; // Again, should tCut be subtracted here?
             // b = Aglobal[t];
@@ -296,17 +283,122 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
 void Detection::FinishDetection() // write spikes in interval after last
                                   // recalibration; close file
 {
-  w.close();
-  wShapes.close();
-  baseline.close();
-  aGlobalFile.close();
-  wCount.open("count");
-  wCount << spikeCount;
-  wCount.close();
+	terminateSpikeHandler();
+ // w.close();
+  //wCount.open("count");
+  //wCount << spikeCount;
+  //wCount.close();
   // wVar.open("variability");
   // for (int i = 0; i < NChannels; i++) {
   //   wVar << Qdmean[i] << " ";
   // }
   // wVar.close();
+}
+
+void buildPositionsMatrix(int** _channel_positions, string positions_file_path, int rows, int cols)
+{
+	/**
+    Reads from a string file and fills an array that contains coordinate positions 
+    of each channel in the probe.
+
+    Parameters
+	----------
+	channel_positions: 2D int array
+		A 2D array where each index has the X and Y position of every channel.
+	*/
+	int line_count;
+	int coordinate;
+	string line;
+	ifstream positions_file (positions_file_path);
+	line_count = 0; 
+	string::size_type sz;
+
+	if (positions_file.is_open())
+	{
+    	while ( getline (positions_file,line) )
+    	{
+    		stringstream ss(line);
+    		string token;
+    		int index = 0;
+    		while (getline(ss,token, ','))
+    		{
+    			coordinate = stoi(token,&sz);
+    			_channel_positions[line_count][index] = coordinate;
+    			++index;
+			}
+			ss.str(string());
+			index = 0;
+    		++line_count;
+    	}
+    	positions_file.close();
+	}
+}
+
+void buildNeighborMatrix(int** _neighbor_matrix, string neighbors_file_path, int rows, int cols)
+{
+	/**
+    Reads from a string file and fills an array which contains the neighbors
+    of each channel. Neighbors are channels that also receive waves from the 
+    same neural spike.
+
+    Parameters
+	----------
+	neighbor_matrix: 2D int array
+		A 2D array with each index representing channel numbers that 
+		correspond to integer array values that contain the channel
+		numbers that the index channel is neighboring.
+	*/
+	int line_count;
+	int neighbor;
+	string line;
+	ifstream neighbor_matrix_file (neighbors_file_path);
+	line_count = 0; 
+	string::size_type sz;
+
+	if (neighbor_matrix_file.is_open())
+	{
+    	while ( getline (neighbor_matrix_file,line) )
+    	{
+    		stringstream ss(line);
+    		string token;
+    		int index = 0;
+    		while (getline(ss,token, ','))
+    		{
+    			neighbor = stoi(token,&sz);
+    			_neighbor_matrix[line_count][index] = neighbor;
+    			++index;
+			}
+			while(index < cols) {
+				_neighbor_matrix[line_count][index] = -1;
+				++index;
+			}
+			ss.str(string());
+			index = 0;
+    		++line_count;
+    	}
+    	neighbor_matrix_file.close();
+	}
+}
+
+int** createPositionMatrix(int position_rows) {
+        int **_channel_positions;
+
+        _channel_positions = new int*[position_rows];
+        for (int i = 0; i < position_rows; i++) {
+                _channel_positions[i] = new int[2];
+        }
+
+        return _channel_positions;
+}
+
+int** createNeighborMatrix(int channel_rows, int channel_cols) {
+        int **_neighbor_matrix;
+
+        _neighbor_matrix = new int*[channel_rows];
+        for (int i = 0; i < channel_rows; i++) {
+                _neighbor_matrix[i] = new int[channel_cols];
+        }
+
+        return _neighbor_matrix;
 }
 }

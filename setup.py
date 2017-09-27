@@ -15,7 +15,7 @@ setup(
     url='http://github.com/',
     ext_modules=cythonize(Extension(
            "detect",
-           sources=["detect.pyx", "SpkDonline.cpp"],
+           sources=["detect.pyx", "SpkDonline.cpp", "SpikeHandler.cpp", "ProcessSpikes.cpp", "FilterSpikes.cpp"],
            language="c++",
            extra_compile_args=['-std=c++11', '-O3'],
     )),
