@@ -142,5 +142,6 @@ void terminateSpikeHandler() {
 			ProcessSpikes::filterSpikes(spikes_filtered_file); 
 		}	
 	}
+	spikes_filtered_file << "done" << '\n';
 	spikes_filtered_file.close();
 }

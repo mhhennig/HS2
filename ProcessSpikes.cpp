@@ -109,6 +109,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 		//tuple<int,int> position = LocalizeSpikes::localizeSpike(curr_original_spike);
 		int position = LocalizeSpikes::localizeSpike(curr_original_spike);
 		t = clock() - t;
+		cout << "Size of amps: " << Parameters::amps.size() << '\n';
 		Parameters::filtered_spikes += 1;
 		cout << "Spikes Wrten Out: " <<  Parameters::filtered_spikes << "in " << t << " clicks" <<  '\n';
 		//spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << '\n';
