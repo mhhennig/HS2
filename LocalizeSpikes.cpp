@@ -1,61 +1,109 @@
 #include "LocalizeSpikes.h"
 
-tuple<float, float> tuple<float,float> localizeSpike(Spike spike_to_be_localized)
+tuple<float,float> centerOfMass(vector<float>* amps, int spike_channel)
+{
+	float X = 0;
+	float Y = 0;
+	float X_numerator = 0;
+	float Y_numerator = 0;
+	float denominator = 0;
+	int X_coordinate;
+	int Y_coordinate;
+	int channel;
+	float weight;
+	int amps_size = amps->size();
+
+	for(int i = 0; i < amps_size; i++) {
+		if(amps->at(i) < 0) {
+			continue;
+		}
+		else {
+			channel = Parameters::neighbor_matrix[spike_channel][i];
+			X_coordinate = Parameters::channel_positions[channel][0];
+			Y_coordinate = Parameters::channel_positions[channel][1];
+			weight = amps->at(i);
+			X_numerator += weight * X_coordinate;
+			Y_numerator += weight * Y_coordinate;
+			denominator += weight;
+		}
+	}
+
+	X = X_numerator / denominator;
+	Y = Y_numerator / denominator;
+
+	return make_tuple(X, Y);
+}
+
+int getNumNeighbors(int channel)
+{
+	int num_neighbors = 0;
+	for(int i = 0; i < Parameters::max_neighbors; i++) {
+		if(Parameters::neighbor_matrix[channel][i] != -1) {
+			num_neighbors += 1;
+		}
+		else {
+			break;
+		}
+	}
+	return num_neighbors;
+}
+
+tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 {
 	/*Estimates the X and Y position of where a spike occured on the probe.
 
 	Parameters
 	----------
-	neighbor_matrix: np.array
-		A array with each index representing channel
-		numbers that correspond to integer array values that contain the channel
-		numbers that the index channel is neighboring.
-	spike_to_be_localized: list
-		The spike that will be used to determine where the spike occurred. Each
-		spike is represented by a list containing channel number, frame, and amplitude.
-	baselines: dict
-		A dictionary of dictionaries that contains all frames up to 1000
-		and at each frame, every channel stores a baseline value
-	aGlobals: dict
-		A dictionary of frames with their corresponding noise amplitudes
-	raw_data: numpy.core.memmap.memmap
-		Contains all raw data from the sensors
-	channel_positions: list
-		A list of tuples that stores the X and Y positions of every channel
-	wave_delay:
-		How many frames back the spike occurs after the frame the spike is detected.
+	spike_to_be_localized: Spike
+		The spike that will be used to determine where the origin of the spike occurred.
 	Returns
 	-------
-	position: tuple
-		An X and Y coordinate tuple that corresponds to where the spike occurred
+	position: tuple<float, float>
+		An X and Y coordinate tuple that corresponds to where the spike occurred.
 	*/
 	int ASCALE = -64;
 	int spike_channel = spike_to_be_localized.channel;
 	int spike_frame = spike_to_be_localized.frame;
-	int spike_start_frame = spike_frame - wave_delay;
-	int spike_end_frame = spike_frame + wave_delay;
-	tuple<int,int> channel_amps[Parameters::max_neighbors];
-	int curr_largest_amp = 10000;
-	int curr_reading, curr_amp, start_cutout, end_cutout, curr_neighbor_channel;
+	int spike_start_frame = spike_frame - Parameters::spike_delay;
+	int spike_end_frame = spike_frame + Parameters::spike_delay;
+	int num_neighbors = getNumNeighbors(spike_channel);
+	vector<float> amps;
+	float curr_largest_amp = -100000; //arbitrarily small to make sure that it is immediately overwritten
+	int curr_reading, start_cutout, end_cutout, curr_neighbor_channel;
+	float curr_amp;
 
-	for(int i = 0; i < MAX_NEIGHBORS; i++) {
-		curr_neighbor_channel = neighbor_matrix[spike_channel][i];
-		//Out of neighbors
-		if(curr_neighbor_channel = -1) {
-			break;
-		}
-		start_cutout = spike_start_frame*MAX_CHANNELS + curr_neighbor_channel;
-		end_cutout = spike_end_frame*MAX_CHANNELS + curr_neighbor_channel;
+	for(int i = 0; i < num_neighbors; i++) {
+		curr_neighbor_channel = Parameters::neighbor_matrix[spike_channel][i];
+		start_cutout = spike_start_frame*Parameters::num_channels + curr_neighbor_channel;
+		end_cutout = spike_end_frame*Parameters::num_channels + curr_neighbor_channel;
 		for(int j = 0; j < end_cutout; j++) {
-			curr_reading = raw_data[start_cutout + j];
-			curr_amp = curr_reading - aGlobal * ASCALE - baselines[curr_neighbor_channel];
-			if(curr_amp < curr_largest_amp) {
+			curr_reading = Parameters::raw_data[start_cutout + j];
+			curr_amp = float(-1*(curr_reading - Parameters::aGlobal * ASCALE - Parameters::baselines[curr_neighbor_channel]));
+			if(curr_amp > curr_largest_amp) {
 				curr_largest_amp = curr_amp;
 			}
 		}
-		channel_amps[i] = make_tuple(curr_neighbor_channel, curr_largest_amp);
+		amps.push_back(curr_largest_amp);
 	}
 
-	tuple<float,float> centerOfMass = centerOfMass(channel_amps, channel_positions);
-	return centerOfMass;
+	sort(begin(amps), end(amps)); //sort the array
+	
+	//Find median of array
+	int amps_size = amps.size();
+	float median;
+	if(amps_size % 2 == 0) {
+		median = (amps.at(amps_size/2) + amps.at(amps_size/2 + 1))/2.0;
+	}
+	else {
+		median = amps.at(amps_size/2);	
+	}
+
+	//Center amplitudes
+	for(int i = 0; i < amps_size; i++) {
+		amps.at(i) = amps.at(i) - median;
+	}
+
+	tuple<float,float> position = centerOfMass(&amps, spike_channel);
+
+	return position;
 }

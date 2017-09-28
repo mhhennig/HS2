@@ -2,6 +2,16 @@
 #define PARAMETERS_H 
 
 #include <deque>
+#include <iostream>
+#include <stdio.h>
+#include <string>
+#include <iomanip>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <deque>
+#include <tuple>
+#include <vector>
 
 using namespace std;
 
