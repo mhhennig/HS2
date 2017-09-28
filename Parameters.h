@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <deque>
 #include <tuple>
-#include <vector>
 
 using namespace std;
 
@@ -40,6 +39,8 @@ extern int start_cutout;
 extern int end_cutout;
 extern int filtered_spikes;
 extern short* raw_data;
+extern deque<int> amps;
+
 };
 
 #endif

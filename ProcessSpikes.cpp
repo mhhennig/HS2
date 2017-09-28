@@ -43,7 +43,7 @@ void filterSpikes(ofstream& spikes_filtered_file)
 			}
 		}
 		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
-		//cout << "Filtered Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
+		//cout << "Filtred Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
 		Parameters::filtered_spikes += 1;
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isFinished = true;
@@ -82,7 +82,9 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 	while(!isFinished) {
 		bool isOriginalSpikeFound = false;
 		while(!isOriginalSpikeFound) {
+			//cout << "Removing Dups" << '\n';
 			curr_original_spike = FilterSpikes::filterSpikes(curr_original_spike);
+			//cout << "Done removing Dups" << '\n';
 			isOriginalSpikeFound = true;
 			deque<Spike>::iterator it;
 			it = Parameters::spikes_to_be_processed.begin();
@@ -99,12 +101,19 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 						}
 					}
 				}
-				++it; 		
+				++it; 			
 			}
 		}
-		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
-		//cout << "Filtered Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
+		clock_t t;
+  		t = clock();
+		//tuple<int,int> position = LocalizeSpikes::localizeSpike(curr_original_spike);
+		int position = LocalizeSpikes::localizeSpike(curr_original_spike);
+		t = clock() - t;
 		Parameters::filtered_spikes += 1;
+		cout << "Spikes Wrten Out: " <<  Parameters::filtered_spikes << "in " << t << " clicks" <<  '\n';
+		//spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << '\n';
+		//delete position;
+		//cout << "Filtered Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isFinished = true;
 		}

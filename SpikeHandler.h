@@ -1,14 +1,6 @@
 #ifndef SPIKEHANDLER_H  
 #define SPIKEHANDLER_H 
 
-#include <iostream>
-#include <stdio.h>
-#include <string>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <algorithm>
-#include <deque>
 #include "ProcessSpikes.h"
 
 using namespace std;

@@ -1,5 +1,4 @@
 #include "FilterSpikes.h"
-#include <iostream>
 
 using namespace std;
 
@@ -59,7 +58,6 @@ Spike filterSpikes(Spike curr_original_spike)
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
 		curr_frame = it->frame;
-		//cout << "Are Neighbors" << '\n';
 		bool channelsAreNeighbors = areNeighbors(first_spike_channel, curr_channel);
 		//cout << "Are neighbors OK" << '\n';
 		if(channelsAreNeighbors && curr_amp >= curr_original_spike_amp + Parameters::noise_amp) {

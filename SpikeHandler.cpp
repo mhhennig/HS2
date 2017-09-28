@@ -15,6 +15,7 @@ int* Parameters::baselines;
 int Parameters::start_cutout;
 int Parameters::end_cutout;
 int Parameters::filtered_spikes;
+deque<int> Parameters::amps;
 short* Parameters::raw_data;
 deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream spikes_filtered_file;
@@ -113,12 +114,11 @@ void addSpike(int channel, int frame, int amplitude) {
 				//cout << spikes_to_be_processed.size() << '\n';
 				if(current_frame > first_frame + (Parameters::spike_peak_duration + Parameters::noise_duration)) {
 					if(Parameters::to_localize) {
-						//cout << "Filtering Spike" << '\n';
 						ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file);
 						//cout << "Done filtering Spike" << '\n';
 					}
 					else {
-						//cout << "Filtering Spike" << '\n';
+						//cout << "Filtering Spik" << '\n';
 						ProcessSpikes::filterSpikes(spikes_filtered_file);
 						//cout << "Done filtering Spike" << '\n';
 
@@ -134,8 +134,13 @@ void addSpike(int channel, int frame, int amplitude) {
 }
 void terminateSpikeHandler() {
 	while(Parameters::spikes_to_be_processed.size() != 0){
-		cout << "Trying" << '\n';
-		ProcessSpikes::filterSpikes(spikes_filtered_file); 		
+		cout << "Tryin" << '\n';
+		if(Parameters::to_localize) {
+			ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file); 
+		}
+		else {
+			ProcessSpikes::filterSpikes(spikes_filtered_file); 
+		}	
 	}
 	spikes_filtered_file.close();
 }

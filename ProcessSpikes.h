@@ -1,16 +1,10 @@
 #ifndef PROCESSSPIKES_H  
-#define PROCESSSPIKES_H 
+#define PROCESSSPIKES_H
 
-#include <iostream>
-#include <stdio.h>
-#include <string>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <algorithm>
-#include <deque>
 #include "Parameters.h"
 #include "FilterSpikes.h"
+#include "LocalizeSpikes.h"
+#include <time.h>       /* clock_t, clock, CLOCKS_PER_SEC */
 
 
 using namespace std;

@@ -1,7 +1,6 @@
 #ifndef FILTERSPIKES_H  
 #define FILTERSPIKES_H 
 
-#include <deque>
 #include "Parameters.h"
 
 using namespace std;
