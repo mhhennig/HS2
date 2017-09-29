@@ -42,7 +42,9 @@ void filterSpikes(ofstream& spikes_filtered_file)
 				++it; 			
 			}
 		}
-		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
+		stringstream cutout;
+		copy(curr_original_spike.written_cutout.begin(), curr_original_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
+		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << cutout.str() << '\n';
 		//cout << "Filtred Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
 		Parameters::filtered_spikes += 1;
 		if(Parameters::spikes_to_be_processed.size() == 0) {
