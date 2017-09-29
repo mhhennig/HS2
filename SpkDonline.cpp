@@ -9,7 +9,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   tInc = ti;
   Qd = new int[NChannels];      // noise amplitude
   Qm = new int[NChannels];      // median
-  Qms = new int*[NChannels];    // Stores 5 frames of medians ending with current median
+  int** Qms;    // Stores 5 frames of medians ending with current median
   Sl = new int[NChannels];      // counter for spike length
   AHP = new bool[NChannels];    // counter for repolarizing current
   Amp = new int[NChannels];     // buffers spike amplitude
@@ -17,6 +17,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   A = new int[NChannels];       // control parameter for amplifier effects
   ChInd = new int[NChannels];
   Slice = new int[NChannels];
+
   // Qdmean = new int[NChannels];
   // MaxSl = 8; //sf / 1000 + 1;
   // MinSl = 3; //sf / 3000 + 2;
@@ -34,9 +35,6 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
     SpkArea[i] = 0;
     ChInd[i] = Indices[i];
     // Qdmean[i] = 0;
-  }
-  for (int i = 0; i < NChannels; i++) {
-      Qms[i] = new int[6];
   }
 
   spikeCount = 0;
@@ -75,7 +73,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
 }
 
 void Detection::SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                         		 int noise_amp, int max_neighbors, int start_cutout, int end_cutout, bool to_localize, int thres, int maa, int ahpthr, int maxsl,
+                         		 int noise_amp, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl,
                                  int minsl) {
   // set the detection parameters
   threshold = thres;
@@ -89,9 +87,10 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   neighbor_matrix = createNeighborMatrix(num_recording_channels, max_neighbors);
   buildPositionsMatrix(channel_positions, "positions", num_recording_channels, 2);
   buildNeighborMatrix(neighbor_matrix, "neighbormatrix", num_recording_channels, max_neighbors);
+  Qms = createBaselinesMatrix(num_channels, spike_peak_duration + 1);
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, start_cutout , end_cutout);
+									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length);
 }
 
 // don't know how to make multiple threads write to the same file,
@@ -158,7 +157,9 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
   // std::cout.flush();
   int currQmsPosition = -1;
-  loadRawData(vm);
+  loadRawData(vm, iterations, 100000, tCut);
+  ++iterations;
+  //cout << "iterations: " << iterations << '\n';
   for (int t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
@@ -228,8 +229,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               int correctBaseline = Qms[i][(currQmsPosition - 5) % 6];
               //w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
               //  << -Amp[i] * Ascale / Qd[i] <<   "\n";
-              setLocalizationParameters(Aglobal[t-tCut], Qm);
-			        addSpike(ChInd[i], t0 + t - MaxSl - tCut + 1, -Amp[i] * Ascale / Qd[i]);
+              setLocalizationParameters(Aglobal[t-tCut], Qms);
+			        addSpike(ChInd[i], t0 + t - tCut + 1, -Amp[i] * Ascale / Qd[i]);
 
 
             }
@@ -400,5 +401,16 @@ int** createNeighborMatrix(int channel_rows, int channel_cols) {
         }
 
         return _neighbor_matrix;
+}
+
+int** createBaselinesMatrix(int channel_rows, int channel_cols) {
+        int **_Qms;
+
+        _Qms = new int*[channel_rows];
+        for (int i = 0; i < channel_rows; i++) {
+                _Qms[i] = new int[channel_cols];
+        }
+
+        return _Qms;
 }
 }

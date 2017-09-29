@@ -51,7 +51,7 @@ void filterSpikes(ofstream& spikes_filtered_file)
 		else {
 			curr_original_spike = Parameters::spikes_to_be_processed.front();
 			curr_frame = curr_original_spike.frame;
-			if(curr_frame != frame_to_be_filtered) {
+			if(curr_frame > frame_to_be_filtered + Parameters::noise_duration) {
 				isFinished = true;
 			}
 			else {
@@ -74,13 +74,14 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 	bool isFinished = false;
 	Spike first_spike = Parameters::spikes_to_be_processed.front();
 	Parameters::spikes_to_be_processed.pop_front();
-	int first_frame = first_spike.frame;
+	int first_frame;
 	int frame_to_be_filtered = first_spike.frame;
 	Spike curr_original_spike;
 	curr_original_spike = first_spike;
 
 	while(!isFinished) {
 		bool isOriginalSpikeFound = false;
+		first_frame = curr_original_spike.frame;
 		while(!isOriginalSpikeFound) {
 			//cout << "Removing Dups" << '\n';
 			curr_original_spike = FilterSpikes::filterSpikes(curr_original_spike);
@@ -104,15 +105,21 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 				++it; 			
 			}
 		}
-		clock_t t;
-  		t = clock();
-		//tuple<int,int> position = LocalizeSpikes::localizeSpike(curr_original_spike);
-		int position = LocalizeSpikes::localizeSpike(curr_original_spike);
-		t = clock() - t;
-		cout << "Size of amps: " << Parameters::amps.size() << '\n';
-		Parameters::filtered_spikes += 1;
-		cout << "Spikes Wrten Out: " <<  Parameters::filtered_spikes << "in " << t << " clicks" <<  '\n';
-		//spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << '\n';
+		//clock_t t;
+  		//t = clock();
+  		//if(curr_original_spike.frame - first_frame != 0) {
+  		//	Parameters::baseline_corrections += 1;
+  		//}
+  		//cout << "baseline corrections: " << Parameters::baseline_corrections << '\n';
+		tuple<int,int> position = LocalizeSpikes::localizeSpike(curr_original_spike, curr_original_spike.frame - first_frame);
+		//int position = LocalizeSpikes::localizeSpike(curr_original_spike, curr_original_spike.frame - first_frame);
+		//t = clock() - t;
+		//cout << "Size of amps: " << Parameters::amps.size() << '\n';
+		//Parameters::filtered_spikes += 1;
+		//cout << "Spikes Wrten Out: " <<  Parameters::filtered_spikes << "in " << t << " clicks" <<  '\n';
+		stringstream cutout;
+		copy(curr_original_spike.written_cutout.begin(), curr_original_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
+		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << " " << cutout.str() <<'\n';
 		//delete position;
 		//cout << "Filtered Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
 		if(Parameters::spikes_to_be_processed.size() == 0) {
@@ -121,7 +128,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 		else {
 			curr_original_spike = Parameters::spikes_to_be_processed.front();
 			curr_frame = curr_original_spike.frame;
-			if(curr_frame != frame_to_be_filtered) {
+			if(curr_frame > frame_to_be_filtered + Parameters::noise_duration) {
 				isFinished = true;
 			}
 			else {

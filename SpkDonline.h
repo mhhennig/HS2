@@ -18,6 +18,7 @@ class Detection {
   int *Qd; // noise amplitude
   int *Qm; // median
   int **Qms;
+  int iterations = 0;
   // Variables for the spike detection
   int *Sl;      // counter for spike length
   bool *AHP;    // counter for repolarizing current
@@ -33,7 +34,7 @@ class Detection {
   int MaxSl;     // dead time in frames after peak, used for further testing
   int MinAvgAmp; // minimal avg. amplitude of peak (in units of Qd)
   int MinSl;     // length considered for determining avg. spike amplitude
-  // Parameters for reading data
+  // Parameters for 
   long tInc; // 100, increment for reading data, has to be changed in main
              // program as well
   const int Ascale = -64; // factor to multiply to raw traces to increase
@@ -68,7 +69,7 @@ public:
   ~Detection();
   void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl, int tpref, int tpostf);
   void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                        int noise_amp, int max_neighbors, int start_cutout, int end_cutout, bool to_localize, int thres, int maa, int ahpthr, int maxsl, \
+                        int noise_amp, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl, \
                         int minsl);
   void openSpikeFile(const char *name);
   void openFiles(const char *spikes);
@@ -81,5 +82,5 @@ public:
   void buildNeighborMatrix(int** _neighbor_matrix, string neighbors_file_path, int rows, int cols);
   int** createPositionMatrix(int position_rows);
   int** createNeighborMatrix(int channel_rows, int channel_cols);
-
+int** createBaselinesMatrix(int channel_rows, int channel_cols);
 };

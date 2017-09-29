@@ -11,10 +11,13 @@ int** Parameters::neighbor_matrix;
 int** Parameters::channel_positions;
 int Parameters::aGlobal;
 bool Parameters::to_localize;
-int* Parameters::baselines;
-int Parameters::start_cutout;
-int Parameters::end_cutout;
+int** Parameters::baselines;
 int Parameters::filtered_spikes;
+int Parameters::baseline_corrections;
+int Parameters::iterations;
+int Parameters::frames;
+int Parameters::cutout_length;
+int Parameters::index_data;
 deque<int> Parameters::amps;
 short* Parameters::raw_data;
 deque<Spike> Parameters::spikes_to_be_processed;
@@ -22,7 +25,7 @@ std::ofstream spikes_filtered_file;
 
 void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
 						  int _noise_duration, int _noise_amp, int** _channel_positions, int** _neighbor_matrix, \
-						  int _max_neighbors, bool _to_localize, int _start_cutout, int _end_coutout) 
+						  int _max_neighbors, bool _to_localize, int _cutout_length) 
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
 
@@ -80,26 +83,50 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::to_localize = _to_localize;
 	Parameters::channel_positions = _channel_positions;
 	Parameters::neighbor_matrix = _neighbor_matrix;
-	Parameters::start_cutout = _start_cutout;
-	Parameters::end_cutout = _end_coutout;
 	Parameters::filtered_spikes = 0;
+	Parameters::baseline_corrections = 0;
+	Parameters::cutout_length = _cutout_length;
 	spikes_filtered_file.open("SpikesFiltered");
 
 }
-void loadRawData(short* _raw_data) {
+void loadRawData(short* _raw_data, int _iterations, int _frames, int _index_data) {
 	Parameters::raw_data = _raw_data;
+	Parameters::iterations = _iterations;
+	Parameters::frames = _frames;
+	Parameters::index_data = _index_data;
 }
-void setLocalizationParameters(int _aGlobal, int* _baselines) {
+void setLocalizationParameters(int _aGlobal, int** _baselines) {
 	Parameters::aGlobal = _aGlobal;
 	Parameters::baselines = _baselines;
 }
 
 void addSpike(int channel, int frame, int amplitude) {
 	if(channel < Parameters::num_recording_channels && channel > 0) {
+		int curr_neighbor_channel, curr_reading;
 		Spike spike_to_be_added;
 		spike_to_be_added.channel = channel;
 		spike_to_be_added.frame = frame;
 		spike_to_be_added.amplitude = amplitude;
+		//Give cutouts
+		//cout << channel << " " << frame << " " << amplitude << endl;
+		for(int i = 0; i < Parameters::cutout_length; i++) {
+			curr_reading = Parameters::raw_data[(frame - Parameters::cutout_length/2 - Parameters::frames*Parameters::iterations + Parameters::index_data + i)*Parameters::num_channels + channel];
+			spike_to_be_added.written_cutout.push_back(curr_reading); 
+		}
+
+		for(int i = 0; i < Parameters::max_neighbors; i++) {
+			curr_neighbor_channel = Parameters::neighbor_matrix[channel][i];
+			if(curr_neighbor_channel != -1) {
+				for(int j = 0; j < Parameters::spike_delay*2; j++) {
+					curr_reading = Parameters::raw_data[(frame - Parameters::spike_delay - Parameters::frames*Parameters::iterations + Parameters::index_data + j)*Parameters::num_channels + curr_neighbor_channel];
+					spike_to_be_added.amp_cutouts.push_back(curr_reading);
+				} 
+			}
+		}
+		//cout << "he2re" << endl;
+
+		
+
 		//cout << "Adding Spike" << '\n';
 		bool isAdded = false;
 		while(!isAdded) {
@@ -134,7 +161,7 @@ void addSpike(int channel, int frame, int amplitude) {
 }
 void terminateSpikeHandler() {
 	while(Parameters::spikes_to_be_processed.size() != 0){
-		cout << "Tryin" << '\n';
+		//cout << "Tryin" << '\n';
 		if(Parameters::to_localize) {
 			ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file); 
 		}
@@ -142,6 +169,5 @@ void terminateSpikeHandler() {
 			ProcessSpikes::filterSpikes(spikes_filtered_file); 
 		}	
 	}
-	spikes_filtered_file << "done" << '\n';
 	spikes_filtered_file.close();
 }

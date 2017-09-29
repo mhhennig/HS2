@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <deque>
 #include <tuple>
+#include <iterator>
 
 using namespace std;
 
@@ -18,6 +19,8 @@ struct Spike {
 	int amplitude;
 	int channel;
 	int frame;
+	deque<int> amp_cutouts;
+	deque<int> written_cutout;
 };
 
 namespace Parameters {
@@ -32,14 +35,17 @@ extern int max_neighbors;
 extern int** neighbor_matrix;
 extern int** channel_positions;
 extern int aGlobal;
-extern int* baselines;
+extern int** baselines;
 extern bool to_localize;
 extern deque<Spike> spikes_to_be_processed;
-extern int start_cutout;
-extern int end_cutout;
+extern int cutout_length;
 extern int filtered_spikes;
 extern short* raw_data;
 extern deque<int> amps;
+extern int baseline_corrections;
+extern int iterations;
+extern int frames;
+extern int index_data;
 
 };
 

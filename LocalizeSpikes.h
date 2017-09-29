@@ -9,9 +9,9 @@ using namespace std;
 namespace LocalizeSpikes {
 
 //tuple<int,int> centerOfMass(int spike_channel);
-int centerOfMass(int spike_channel);
+tuple<int, int> centerOfMass(int spike_channel);
 //tuple<int,int> localizeSpike(Spike spike_to_be_localized);
-int localizeSpike(Spike spike_to_be_localized);
+tuple<int, int> localizeSpike(Spike spike_to_be_localized, int baseline_frame);
 
 };
 
