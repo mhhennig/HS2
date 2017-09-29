@@ -230,7 +230,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               //w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
               //  << -Amp[i] * Ascale / Qd[i] <<   "\n";
               setLocalizationParameters(Aglobal[t-tCut], Qms);
-			        addSpike(ChInd[i], t0 + t - tCut + 1, -Amp[i] * Ascale / Qd[i]);
+			        addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale / Qd[i]);
 
 
             }
