@@ -4,8 +4,6 @@
 #include "Parameters.h"
 #include "FilterSpikes.h"
 #include "LocalizeSpikes.h"
-#include <time.h>       /* clock_t, clock, CLOCKS_PER_SEC */
-
 
 using namespace std;
 

@@ -46,23 +46,14 @@ class Detection {
   int *A;              // control parameter for amplifier effects
   // Files to save the spikes etc.
   int Sampling;
-  //std::ofstream w; // for spikes
-  //std::ofstream wCount; // for count
-  // std::ofstream wVar; // for variability
   int *Aglobal;
   int *Slice;
   int a; // buffer for Iterate()
 
-  // Shapes print out parameters
   int fpre; // Change this to change size of pre cutout
   int fpost; // Change this to change size of post cutout
 
-  // spike count
   int spikeCount;
-  // frame count
-  // int frameCount;
-  // variability means
-  // int *Qdmean;
 
 public:
   Detection();
@@ -71,8 +62,6 @@ public:
   void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
                         int noise_amp, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl, \
                         int minsl);
-  void openSpikeFile(const char *name);
-  void openFiles(const char *spikes);
   void MedianVoltage(short *vm);
   void MeanVoltage(short *vm, int tInc, int tCut);
   void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2);

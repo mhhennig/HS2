@@ -38,6 +38,7 @@ Spike filterSpikes(Spike curr_original_spike)
 	----------
 	curr_original_spike: Spike
 		The original candidate for largest amplitude spike.
+
     Returns
     -------
 	original_spike: Spike
@@ -59,7 +60,6 @@ Spike filterSpikes(Spike curr_original_spike)
 		curr_amp = it->amplitude;
 		curr_frame = it->frame;
 		bool channelsAreNeighbors = areNeighbors(first_spike_channel, curr_channel);
-		//cout << "Are neighbors OK" << '\n';
 		if(channelsAreNeighbors && curr_amp >= curr_original_spike_amp + Parameters::noise_amp) {
 			if(curr_frame <= frame_of_orginal_spike + Parameters::noise_duration) {
 				it = Parameters::spikes_to_be_processed.erase(it);

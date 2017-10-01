@@ -18,9 +18,6 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   ChInd = new int[NChannels];
   Slice = new int[NChannels];
 
-  // Qdmean = new int[NChannels];
-  // MaxSl = 8; //sf / 1000 + 1;
-  // MinSl = 3; //sf / 3000 + 2;
   Sampling = sf;
   Aglobal = new int[tInc];
   for (int i = 0; i < tInc; i++)
@@ -34,42 +31,12 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
     A[i] = artT; // start like after an out-of-linear-regime event
     SpkArea[i] = 0;
     ChInd[i] = Indices[i];
-    // Qdmean[i] = 0;
   }
 
   spikeCount = 0;
-  // frameCount = 0;
 
   fpre = tpref;
   fpost = tpostf;
-
-
-
-  // 10 neighbours
-  // for (int i = 0; i < NChannels-1; i++) {
-  //   if (i % 2 == 0) {
-  //     for (int j = 0; j < 10; j++) {
-  //       if (i - 4 + j >= 0 && i - 4 + j < NChannels-1) {
-  //         ChInd10[i][j] = i - 4 + j;
-  //       }
-  //     }
-  //   } else if (i % 2 == 1) {
-  //     for (int j = 0; j < 10; j++) {
-  //       if (i - 5 + j >= 0 && i - 5 + j < NChannels-1) {
-  //         ChInd10[i][j] = i - 5 + j;
-  //       }
-  //     }
-  //   }
-  // }
-  // Print out ChInd10
-  // std::cout << "\n";
-  // for (int i =0; i < NChannels - 1; i++) {
-  //   for (int j=0; j < 10; j++) {
-  //     std::cout << ChInd10[i*10 + j] << " ";
-  //   }
-  //   std::cout << "\n";
-  // }
-  // std::cout << "init";
 }
 
 void Detection::SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
@@ -91,21 +58,6 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
 									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length);
-}
-
-// don't know how to make multiple threads write to the same file,
-// maybe you'll have to buffer values during the detection (make Iterate a list
-// instead of a void)
-// and then write spikes for each block
-void Detection::openSpikeFile(const char *name) {
-  cout << "# Writing to: " << name << "\n";
-  //w.open(name);
-  // fs = new FileStream(name, FileMode.OpenOrCreate, FileAccess.Write);
-  // w = new StreamWriter(fs);
-}
-
-void Detection::openFiles(const char *spikes){
-  //w.open(spikes);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -153,42 +105,19 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
 void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   // MeanVoltage(vm, tInc, tCut);
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
-  int CurrNghbr;
-  // std::cout << NChannels << " " << t0 << " " << tInc << "\n";
-  // std::cout.flush();
   int currQmsPosition = -1;
-  loadRawData(vm, iterations, 100000, tCut);
+  loadRawData(vm, tCut, iterations, 100000);
   ++iterations;
-  //cout << "iterations: " << iterations << '\n';
   for (int t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
-    // frameCount += 1;
-    // std::cout << "\n";
-    // for (int x = 0; x < NChannels; x++) {
-    //   std::cout << Qd[x] << " ";
-    // }
-    // std::cout << "\n"
     currQmsPosition += 1; 
     for (int i = 0; i < NChannels; i++) { // loop across channels
-                                          // CHANNEL OUT OF LINEAR REGIME
-      // if (((vm[i + t*NChannels] + 4) % NChannels) < 10) {
-      //   if (A[i] <
-      //       artT) { // reset only when it starts leaving the linear regime
-      //     Sl[i] = 0;
-      //     // std::cout << "yes it enters" << "\n"
-      //     A[i] = artT;
-      //   }
-      // }
-      // DEFAULT OPERATIONS
-      // else if (A[i] == 0) {
-      // if (A[i] == 0) {
+                                          // CHANNEL OUT OF LINEAR REGIME) {
         if (t-tCut >= tInc) {
           cout << "line 154: referencing index too large" << "\n";
         }
-        a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - // should tCut be subtracted here??
-        // a = (vm[i + t*NChannels] - Aglobal[t]) * Ascale -
-            Qm[i]; // difference between ADC counts and Qm
+        a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i]; // difference between ADC counts and Qm
         // UPDATE Qm and Qd
         if (a > 0) {
           if (a > Qd[i]) {
@@ -208,8 +137,6 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i]; // should tCut be subtracted here??
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
-          //std::cout << "*";
-          // default
           Sl[i] = (Sl[i] + 1) % (MaxSl + 1); // increment Sl[i]
           if (Sl[i] < MinSl) { // calculate area under first and second frame
                                // after spike
@@ -225,11 +152,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               // increase spike count
               spikeCount += 1;
 
-              // Write spikes to file
-              int correctBaseline = Qms[i][(currQmsPosition - 5) % 6];
-              //w << ChInd[i] << " " << t0 + t - MaxSl - tCut + 1 << " "
-              //  << -Amp[i] * Ascale / Qd[i] <<   "\n";
-              setLocalizationParameters(Aglobal[t-tCut], Qms);
+              setLocalizationParameters(Aglobal[t-tCut], Qms, currQmsPosition % 6);
 			        addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale / Qd[i]);
 
 
@@ -247,7 +170,6 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
             cout << "line 223: referencing index too large" << "\n";
             }
             b = Aglobal[t - tCut];// Qm[i]; // Again, should tCut be subtracted here?
-            // b = Aglobal[t];
           }
         }
         // check for threshold crossings
@@ -257,43 +179,14 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
           AHP[i] = false;
           SpkArea[i] = a;
         }
-      // }
-      // // AFTER CHANNEL WAS OUT OF LINEAR REGIME
-      // else {
-      //   Qm[i] = (2 * Qm[i] + (vm[i + t*NChannels] - Aglobal[t]) * Ascale +
-      //            2 * Qd[i]) /
-      //           3; // update Qm
-      //   A[i]--;
-      // }
-      // for (int v = 0; v <NChannels; v++) {
-      //   Qdmean[v] = (frameCount * Qdmean[v] + Qd[v])/(frameCount + 1);
-      // }
     }
   }
-  // for (int i = 0; i < NChannels; i++) { // reset params after each chunk
-  //   Qd[i] = 400;
-  //   Qm[i] = Voffset * Ascale;
-  //   Sl[i] = 0;
-  //   AHP[i] = false;
-  //   Amp[i] = 0;
-  //   A[i] = artT; // start like after an out-of-linear-regime event
-  //   SpkArea[i] = 0;
-  // }
 } // Iterate
 
 void Detection::FinishDetection() // write spikes in interval after last
                                   // recalibration; close file
 {
 	terminateSpikeHandler();
- // w.close();
-  //wCount.open("count");
-  //wCount << spikeCount;
-  //wCount.close();
-  // wVar.open("variability");
-  // for (int i = 0; i < NChannels; i++) {
-  //   wVar << Qdmean[i] << " ";
-  // }
-  // wVar.close();
 }
 
 void buildPositionsMatrix(int** _channel_positions, string positions_file_path, int rows, int cols)

@@ -17,8 +17,6 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
         void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
                               int noise_amp, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl, int minsl)
-        void openSpikeFile(const char * name)
-        void openFiles(const char * spikes)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2)
@@ -28,13 +26,6 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
                _noise_duration, _noise_amp, _max_neighbors, _to_localize, _cutout_length, \
                sfd, thres, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
     """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
-    # d = np.loadtxt(rawfilename)
-    # f = np.load(rawfilename)
-    # d = f['data']
-    # d = -d + np.mean(d) + 20000
-    # d = -d
-    # rf = h5py.File(data, 'r')
-    # d = rf['Raw']
     d = np.memmap(data, dtype=np.int16, mode='r')
     nRecCh = _num_channels
     nFrames = len(d)/nRecCh
@@ -65,9 +56,6 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
 
     cdef Detection * det = new Detection()
 
-    # det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0)
-    # set params
-    # maa = None, maxsl = None, minsl = None, ahpthr = None
     if not maa:
         maa = 5
     if not maxsl:
@@ -95,16 +83,7 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     det.SetInitialParams(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
                          noise_amp, max_neighbors, cutout_length, to_localize, thres, maa, ahpthr, maxsl, minsl)
 
-    # open output file
-    #spikefilename = str.encode(spikefilename)
-
-
-    #det.openFiles(spikefilename)
-
-    # cdef np.ndarray[unsigned short, ndim = 1, mode = "c"] vm =
-    # np.zeros(len(d), dtype=ctypes.c_ushort)
     startTime = datetime.now()
-    #vm = d.flatten('F').astype(dtype=ctypes.c_ushort)
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
