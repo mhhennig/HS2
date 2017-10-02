@@ -8,8 +8,8 @@ using namespace std;
 
 namespace LocalizeSpikes {
 
-tuple<int, int> centerOfMass(int spike_channel);
-tuple<int, int> localizeSpike(Spike spike_to_be_localized, int baseline_frame);
+tuple<float, float> centerOfMass(int spike_channel);
+tuple<float, float> localizeSpike(Spike spike_to_be_localized, int baseline_frame);
 
 };
 

@@ -2,7 +2,7 @@
 
 namespace LocalizeSpikes {
 
-tuple<int, int> centerOfMass(int spike_channel)
+tuple<float, float> centerOfMass(int spike_channel)
 {
 	/*Calculates the center of mass of a spike to calculate where it occurred using a weighted average.
 
@@ -16,8 +16,8 @@ tuple<int, int> centerOfMass(int spike_channel)
 	position: tuple<float, float>
 		An X and Y coordinate tuple that corresponds to where the spike occurred.
 	*/
-	int X = 0;
-	int Y = 0;
+	float X = 0;
+	float Y = 0;
 	int X_numerator = 0;
 	int Y_numerator = 0;
 	int denominator = 0;
@@ -39,13 +39,13 @@ tuple<int, int> centerOfMass(int spike_channel)
 		}
 	}
 
-	X = X_numerator / denominator;
-	Y = Y_numerator / denominator;
+	X = (float)(X_numerator) / (float)(denominator);
+	Y = (float)(Y_numerator) / (float)(denominator);
 
 	return make_tuple(X, Y);
 }
 
-tuple<int, int> localizeSpike(Spike spike_to_be_localized, int baseline_frame)
+tuple<float, float> localizeSpike(Spike spike_to_be_localized, int baseline_frame)
 {
 	/*Estimates the X and Y position of where a spike occured on the probe.
 
@@ -99,7 +99,7 @@ tuple<int, int> localizeSpike(Spike spike_to_be_localized, int baseline_frame)
 		Parameters::amps.at(i) = Parameters::amps.at(i) - median;
 	}
 	
-	tuple<int,int> position = centerOfMass(spike_channel);
+	tuple<float,float> position = centerOfMass(spike_channel);
 	Parameters::amps.clear();
 	return position;
 }

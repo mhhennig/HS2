@@ -113,7 +113,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 				++it; 			
 			}
 		}
-		tuple<int,int> position = LocalizeSpikes::localizeSpike(curr_original_spike, curr_original_spike.frame - first_frame);
+		tuple<float,float> position = LocalizeSpikes::localizeSpike(curr_original_spike, curr_original_spike.frame - first_frame);
 		//Parameters::filtered_spikes += 1;
 		//cout << "Spikes Wrten Out: " <<  Parameters::filtered_spikes << "in " << t << " clicks" <<  '\n';
 		stringstream cutout;
