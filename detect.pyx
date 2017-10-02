@@ -28,7 +28,8 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
     d = np.memmap(data, dtype=np.int16, mode='r')
     nRecCh = _num_channels
-    nFrames = len(d)/nRecCh
+    assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
+    nFrames = len(d)//nRecCh
     sf = int(sfd)
     nSec = nFrames / sfd  # the duration in seconds of the recording
     nSec = nFrames / sfd
