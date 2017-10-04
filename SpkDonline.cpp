@@ -54,10 +54,10 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   neighbor_matrix = createNeighborMatrix(num_recording_channels, max_neighbors);
   buildPositionsMatrix(channel_positions, "positions", num_recording_channels, 2);
   buildNeighborMatrix(neighbor_matrix, "neighbormatrix", num_recording_channels, max_neighbors);
-  Qms = createBaselinesMatrix(num_channels, spike_peak_duration + 1);
+  Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length);
+									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length, maxsl);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -108,10 +108,10 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   int currQmsPosition = -1;
   loadRawData(vm, tCut, iterations, 100000);
   ++iterations;
-  for (int t = tCut; t < tInc + tCut;
-       t++) { // loop over data, will be removed for an online algorithm
+  for (int t = tCut; t < tInc + tCut; t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     currQmsPosition += 1; 
+    //cout << t << endl;
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME) {
         if (t-tCut >= tInc) {
@@ -133,7 +133,10 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         } else if (a < -Qd[i]) {
           Qm[i] -= Qd[i] / Tau_m0 / 2;
         }
-        Qms[i][currQmsPosition % 6] = Qm[i];
+        Qms[i][currQmsPosition % 17] = Qm[i];
+        if(t == tCut + 6) {
+          //cout << "channel: " << i << "= " << Qm[i] << "at " << t << endl;
+        }
         a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i]; // should tCut be subtracted here??
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
@@ -152,8 +155,14 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               // increase spike count
               spikeCount += 1;
 
-              setLocalizationParameters(Aglobal[t-tCut], Qms, currQmsPosition % 6);
-			        addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale / Qd[i]);
+              //cout << "set" << endl;
+              setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % 17);
+              //cout << "done set" << endl;
+              //-1*(curr_reading - Parameters::aGlobal * ASCALE - Parameters::baselines[curr_neighbor_channel][(Parameters::index_baselines) % (Parameters::spike_delay + Parameters::maxsl)])
+              //cout << "amp: " << -Amp[i] << endl;
+              //cout << "add" << endl;
+              addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) % 17]);
+             // cout << "done add" << endl;
 
 
             }

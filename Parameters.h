@@ -50,12 +50,12 @@ extern deque<Spike> spikes_to_be_processed; //Contains all spikes to be proccess
 extern int cutout_length; //The cutout length to be written out for the spike. Can't be larger than extra data tacked on to raw data.
 extern int filtered_spikes; //number of filtered spikes
 extern short* raw_data; //raw data passed in for current iteration
-extern deque<int> amps; //contains the amplitudes for the center of mass calculation. Updated each localization
 extern int index_data; //The index given to start accessing the raw data. To account for extra data tacked on for cutout purposes.
 extern int index_baselines; /*The index given to start accessing the baseline array since baseline array is size 5 and location of
 							  oldest baseline is constantly changing*/
 extern int frames; //Number of current iterations of raw data passed in. User starts this at 0 and increments it for each chunk of data;
 extern int iterations; //The number of frames passed into loadRawData EXCLUDING the buffer frames.
+extern int maxsl; //Number of frames after a detection that a spike is accepted
 
 };
 
