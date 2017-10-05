@@ -235,13 +235,8 @@ void addSpike(int channel, int frame, int amplitude) {
 						cout << "Raw Data and it parameters entered incorrectly, could not access data. Terminating SpikeHandler." << endl;
 						exit(EXIT_FAILURE);
 					}
-					//cout << "channel: " <<channel << endl;
-					//cout << "frame: " << frame << endl;
-					//cout << "data reading frame: "<< frame - Parameters::spike_delay - Parameters::frames*Parameters::iterations + Parameters::index_data + j << endl;
-					//cout << "baseline: " << Parameters::baselines[curr_neighbor_channel][(Parameters::index_baselines) % (Parameters::spike_delay + Parameters::maxsl)] << endl; 
-					//cout << "curr neighbor: " << curr_neighbor_channel << endl;
+
 					int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE - Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]);
-					//cout << curr_amp << endl;
 					spike_to_be_added.amp_cutouts.push_back(curr_amp);
 				} 
 			}
@@ -252,7 +247,6 @@ void addSpike(int channel, int frame, int amplitude) {
 			if(Parameters::spikes_to_be_processed.empty()) {
 				Parameters::spikes_to_be_processed.push_back(spike_to_be_added);
 				isAdded = true;
-				//cout << "Added Spike: " << spikes_to_be_processed.channel << " " << spikes_to_be_processed.frame << " " << spikes_to_be_processed.amplitude << '\n';
 			}
 			else {
 				Spike first_spike = Parameters::spikes_to_be_processed.front();
@@ -262,9 +256,7 @@ void addSpike(int channel, int frame, int amplitude) {
 					if(Parameters::to_localize) {
 						try {
 							ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file);
-							//spikes_filtered_file.close();
-							//cout << "Done" << endl;
-							//exit(EXIT_FAILURE);
+
 						} catch (...) { 
 							spikes_filtered_file.close();
 							cout << "Baseline matrix or its parameters entered incorrectly. Terminating SpikeHandler." << endl;
@@ -278,7 +270,6 @@ void addSpike(int channel, int frame, int amplitude) {
 				else {
 					Parameters::spikes_to_be_processed.push_back(spike_to_be_added);
 					isAdded = true;
-					//cout << "Added Spike: " << spikes_to_be_processed.channel << " " << spikes_to_be_processed.frame << " " << spikes_to_be_processed.amplitude << '\n';
 				}
 			}
 		}

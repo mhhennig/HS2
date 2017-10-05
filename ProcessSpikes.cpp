@@ -82,18 +82,14 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 	bool isFinished = false;
 	Spike first_spike = Parameters::spikes_to_be_processed.front();
 	Parameters::spikes_to_be_processed.pop_front();
-	int first_frame;
 	int frame_to_be_filtered = first_spike.frame;
 	Spike curr_original_spike;
 	curr_original_spike = first_spike;
 
 	while(!isFinished) {
 		bool isOriginalSpikeFound = false;
-		first_frame = curr_original_spike.frame;
 		while(!isOriginalSpikeFound) {
-			//cout << "Removing Dups" << '\n';
 			curr_original_spike = FilterSpikes::filterSpikes(curr_original_spike);
-			//cout << "Done removing Dups" << '\n';
 			isOriginalSpikeFound = true;
 			deque<Spike>::iterator it;
 			it = Parameters::spikes_to_be_processed.begin();
@@ -115,11 +111,9 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 		}
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(curr_original_spike);
 		//Parameters::filtered_spikes += 1;
-		//cout << "Spikes Wrten Out: " <<  Parameters::filtered_spikes << "in " << t << " clicks" <<  '\n';
 		stringstream cutout;
 		copy(curr_original_spike.written_cutout.begin(), curr_original_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
 		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << " " << cutout.str() <<'\n';
-		//cout << "Filtered Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isFinished = true;
 		}

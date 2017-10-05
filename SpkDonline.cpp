@@ -9,7 +9,6 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   tInc = ti;
   Qd = new int[NChannels];      // noise amplitude
   Qm = new int[NChannels];      // median
-  int** Qms;    // Stores 5 frames of medians ending with current median
   Sl = new int[NChannels];      // counter for spike length
   AHP = new bool[NChannels];    // counter for repolarizing current
   Amp = new int[NChannels];     // buffers spike amplitude
@@ -56,7 +55,7 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   buildNeighborMatrix(neighbor_matrix, "neighbormatrix", num_recording_channels, max_neighbors);
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
   currQmsPosition = -1;
-
+  _spike_delay = spike_delay;
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
 									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length, maxsl);
@@ -132,10 +131,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
         } else if (a < -Qd[i]) {
           Qm[i] -= Qd[i] / Tau_m0 / 2;
         }
-        Qms[i][currQmsPosition % 17] = Qm[i];
-        if(t == tCut + 6) {
-          //cout << "channel: " << i << "= " << Qm[i] << "at " << t << endl;
-        }
+        Qms[i][currQmsPosition % (MaxSl + _spike_delay)] = Qm[i];
+
         a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i]; // should tCut be subtracted here??
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) { // Sl frames after peak value
@@ -155,13 +152,13 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               spikeCount += 1;
 
               if(t - tCut - MaxSl + 1 > 0) {
-                setLocalizationParameters(Aglobal[t - tCut - MaxSl + 1], Qms, (currQmsPosition + 1) % 17);
+                setLocalizationParameters(Aglobal[t - tCut - MaxSl + 1], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
               }
               else {
-                setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % 17);
+                setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
               }
 
-              addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) % 17]);
+              addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) %  (MaxSl + _spike_delay)]);
 
 
             }

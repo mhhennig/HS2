@@ -70,7 +70,7 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 	deque<tuple<int, int>> amps;
 	int spike_channel = spike_to_be_localized.channel;
 	int curr_largest_amp = -100000; //arbitrarily small to make sure that it is immediately overwritten
-	int curr_reading, curr_neighbor_channel;
+	int curr_neighbor_channel;
 	int curr_amp;
 
 	int amp_cutout_size = spike_to_be_localized.amp_cutouts.size();

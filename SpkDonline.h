@@ -17,7 +17,7 @@ class Detection {
   // Variables for variance and mean
   int *Qd; // noise amplitude
   int *Qm; // median
-  int **Qms;
+  int **Qms; //stores spike_delay + MaxSl baseline values;
   int iterations = 0;
   // Variables for the spike detection
   int *Sl;      // counter for spike length
@@ -55,6 +55,7 @@ class Detection {
 
   int spikeCount;
   int currQmsPosition;
+  int _spike_delay;
 
 public:
   Detection();
