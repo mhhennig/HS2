@@ -25,7 +25,7 @@ std::ofstream spikes_filtered_file;
 
 void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
 						  int _noise_duration, int _noise_amp, int** _channel_positions, int** _neighbor_matrix, \
-						  int _max_neighbors, bool _to_localize, int _cutout_length, int _maxsl) 
+						  int _max_neighbors, bool _to_localize = false, int _cutout_length = 40, int _maxsl = 0) 
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
 
@@ -67,6 +67,8 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		The cutout length to be written out for the spike. Can't be larger than extra data tacked on to raw data.
 	_spikes_to_be_processed: Spike deque
 		Contains all spikes to be proccessed when spike_peak_duration number of frames is stored.
+	_maxsl: int
+		The number of frames until a spike is accepted when the peak value is given.
 	*/
 	if(_num_channels < 0 || _num_channels < _num_recording_channels) {
 		cout << "Number of channels given incorrectly. Terminating Spike Handler" << endl;
@@ -117,7 +119,7 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::filtered_spikes = 0;
 	Parameters::cutout_length = _cutout_length;
 	Parameters::maxsl = _maxsl;
-	spikes_filtered_file.open("FilteredSpikes");
+	spikes_filtered_file.open("ProcessedSpikes");
 
 
 }
@@ -207,7 +209,7 @@ void addSpike(int channel, int frame, int amplitude) {
 		int ASCALE = -64;
 		for(int i = 0; i < Parameters::cutout_length + 1; i++) {
 			try {
-  				curr_reading = Parameters::raw_data[(frame - Parameters::cutout_length/2 - Parameters::frames*Parameters::iterations + Parameters::index_data + i)*Parameters::num_channels + channel];
+  				curr_reading = Parameters::raw_data[(frame - Parameters::cutout_length/4 - Parameters::frames*Parameters::iterations + Parameters::index_data + i)*Parameters::num_channels + channel];
 			} catch (...) { 
 				spikes_filtered_file.close();
 				cout << "Raw Data and it parameters entered incorrectly, could not access data. Terminating SpikeHandler." << endl;

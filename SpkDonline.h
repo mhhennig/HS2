@@ -54,6 +54,7 @@ class Detection {
   int fpost; // Change this to change size of post cutout
 
   int spikeCount;
+  int currQmsPosition;
 
 public:
   Detection();

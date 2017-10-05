@@ -55,6 +55,8 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   buildPositionsMatrix(channel_positions, "positions", num_recording_channels, 2);
   buildNeighborMatrix(neighbor_matrix, "neighbormatrix", num_recording_channels, max_neighbors);
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
+  currQmsPosition = -1;
+
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
 									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length, maxsl);
@@ -87,7 +89,6 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
     n = 1; // constant offset doesn't matter, avoid zero division
     Vsum = 0;
     for (int i = 0; i < NChannels; i++) { // loop across channels
-      // if (((vm[i * tInc + t] + 4) % 4096) > 10) {
       if (i + t*NChannels > (tInc + tCut)*NChannels) {
         cout << "line 125" << "\n";
       }
@@ -105,13 +106,11 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
 void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   // MeanVoltage(vm, tInc, tCut);
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
-  int currQmsPosition = -1;
   loadRawData(vm, tCut, iterations, 100000);
   ++iterations;
   for (int t = tCut; t < tInc + tCut; t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     currQmsPosition += 1; 
-    //cout << t << endl;
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME) {
         if (t-tCut >= tInc) {
@@ -155,14 +154,14 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               // increase spike count
               spikeCount += 1;
 
-              //cout << "set" << endl;
-              setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % 17);
-              //cout << "done set" << endl;
-              //-1*(curr_reading - Parameters::aGlobal * ASCALE - Parameters::baselines[curr_neighbor_channel][(Parameters::index_baselines) % (Parameters::spike_delay + Parameters::maxsl)])
-              //cout << "amp: " << -Amp[i] << endl;
-              //cout << "add" << endl;
+              if(t - tCut - MaxSl + 1 > 0) {
+                setLocalizationParameters(Aglobal[t - tCut - MaxSl + 1], Qms, (currQmsPosition + 1) % 17);
+              }
+              else {
+                setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % 17);
+              }
+
               addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) % 17]);
-             // cout << "done add" << endl;
 
 
             }
