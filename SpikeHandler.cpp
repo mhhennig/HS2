@@ -209,7 +209,7 @@ void addSpike(int channel, int frame, int amplitude) {
 		int ASCALE = -64;
 		for(int i = 0; i < Parameters::cutout_length + 1; i++) {
 			try {
-  				curr_reading = Parameters::raw_data[(frame - Parameters::cutout_length/4 - Parameters::frames*Parameters::iterations + Parameters::index_data + i)*Parameters::num_channels + channel];
+  				curr_reading = Parameters::raw_data[(frame - Parameters::cutout_length/2 - Parameters::frames*Parameters::iterations + Parameters::index_data + i)*Parameters::num_channels + channel];
 			} catch (...) { 
 				spikes_filtered_file.close();
 				cout << "Raw Data and it parameters entered incorrectly, could not access data. Terminating SpikeHandler." << endl;
