@@ -12,50 +12,27 @@ void filterSpikes(ofstream& spikes_filtered_file)
 	spike_to_be_filtered_file: ofstream&
 		The address to the file to be written out to passed in by opened and closed by ProcessSpikes.
 	*/
-	int curr_channel, curr_frame, curr_amp;
-	deque<Spike>::iterator it;
-	bool isFinished = false;
 	Spike first_spike = Parameters::spikes_to_be_processed.front();
 	Parameters::spikes_to_be_processed.pop_front();
-	int frame_to_be_filtered = first_spike.frame;
-	Spike curr_original_spike;
-	curr_original_spike = first_spike;
+	Spike max_spike;
+	max_spike = first_spike;
+	bool isProcessed = false;
 
-	while(!isFinished) {
-		bool isOriginalSpikeFound = false;
-		while(!isOriginalSpikeFound) {
-			curr_original_spike = FilterSpikes::filterSpikes(curr_original_spike);
-			isOriginalSpikeFound = true;
-			deque<Spike>::iterator it;
-			it = Parameters::spikes_to_be_processed.begin();
-			while(it != Parameters::spikes_to_be_processed.end())
-			{
-				curr_channel = it->channel;
-				curr_amp = it->amplitude;
-				for(int i = 0; i < Parameters::max_neighbors; i++) {
-					if(Parameters::neighbor_matrix[curr_original_spike.channel][i] == curr_channel) {
-						if(curr_amp < curr_original_spike.amplitude) {
-							isOriginalSpikeFound = false;
-							break;
-						}
-					}
-				}
-				++it; 			
-			}
-		}
-		stringstream cutout;
-		copy(curr_original_spike.written_cutout.begin(), curr_original_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
-		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << cutout.str() << '\n';
-		//cout << "Filtred Spike: " << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << '\n';
+	while(!isProcessed) {
+		max_spike = FilterSpikes::filterSpikes(max_spike);
+		//cout << "Max Spike: " << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << endl;
 		Parameters::filtered_spikes += 1;
+		stringstream cutout;
+		copy(max_spike.written_cutout.begin(), max_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
+		spikes_filtered_file << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " " << " " << cutout.str() <<'\n';
+		
 		if(Parameters::spikes_to_be_processed.size() == 0) {
-			isFinished = true;
+			isProcessed = true;
 		}
 		else {
-			curr_original_spike = Parameters::spikes_to_be_processed.front();
-			curr_frame = curr_original_spike.frame;
-			if(curr_frame > frame_to_be_filtered + Parameters::noise_duration) {
-				isFinished = true;
+			max_spike = Parameters::spikes_to_be_processed.front();
+			if(max_spike.frame > first_spike.frame + Parameters::noise_duration) {
+				isProcessed = true;
 			}
 			else {
 				Parameters::spikes_to_be_processed.pop_front();
@@ -77,51 +54,28 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 		The address to the file to be written out to passed in by opened and closed by ProcessSpikes.
 	*/
 
-	int curr_channel, curr_frame, curr_amp;
-	deque<Spike>::iterator it;
-	bool isFinished = false;
 	Spike first_spike = Parameters::spikes_to_be_processed.front();
 	Parameters::spikes_to_be_processed.pop_front();
-	int frame_to_be_filtered = first_spike.frame;
-	Spike curr_original_spike;
-	curr_original_spike = first_spike;
+	Spike max_spike;
+	max_spike = first_spike;
+	bool isProcessed = false;
 
-	while(!isFinished) {
-		bool isOriginalSpikeFound = false;
-		while(!isOriginalSpikeFound) {
-			curr_original_spike = FilterSpikes::filterSpikes(curr_original_spike);
-			isOriginalSpikeFound = true;
-			deque<Spike>::iterator it;
-			it = Parameters::spikes_to_be_processed.begin();
-			while(it != Parameters::spikes_to_be_processed.end())
-			{
-				curr_channel = it->channel;
-				curr_amp = it->amplitude;
-				//Checks to see if any duplicate events still exist in the deque
-				for(int i = 0; i < Parameters::max_neighbors; i++) {
-					if(Parameters::neighbor_matrix[curr_original_spike.channel][i] == curr_channel) {
-						if(curr_amp < curr_original_spike.amplitude) {
-							isOriginalSpikeFound = false;
-							break;
-						}
-					}
-				}
-				++it; 			
-			}
-		}
-		tuple<float,float> position = LocalizeSpikes::localizeSpike(curr_original_spike);
-		//Parameters::filtered_spikes += 1;
+	while(!isProcessed) {
+		max_spike = FilterSpikes::filterSpikes(max_spike);
+		//cout << "Max Spike: " << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << endl;
+		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
+		Parameters::filtered_spikes += 1;
 		stringstream cutout;
-		copy(curr_original_spike.written_cutout.begin(), curr_original_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
-		spikes_filtered_file << curr_original_spike.channel << " " << curr_original_spike.frame << " " << curr_original_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << " " << cutout.str() <<'\n';
+		copy(max_spike.written_cutout.begin(), max_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
+		spikes_filtered_file << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << " " << cutout.str() <<'\n';
+		
 		if(Parameters::spikes_to_be_processed.size() == 0) {
-			isFinished = true;
+			isProcessed = true;
 		}
 		else {
-			curr_original_spike = Parameters::spikes_to_be_processed.front();
-			curr_frame = curr_original_spike.frame;
-			if(curr_frame > frame_to_be_filtered + Parameters::noise_duration) {
-				isFinished = true;
+			max_spike = Parameters::spikes_to_be_processed.front();
+			if(max_spike.frame > first_spike.frame + Parameters::noise_duration) {
+				isProcessed = true;
 			}
 			else {
 				Parameters::spikes_to_be_processed.pop_front();

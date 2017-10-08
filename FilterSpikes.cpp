@@ -25,58 +25,104 @@ bool areNeighbors(int channel_one, int channel_two)
 	for(int i = 0; i < Parameters::max_neighbors; i++) {
 		if(Parameters::neighbor_matrix[channel_one][i] == channel_two) {
 			areNeighbors = true;
+			break;
 		}
 	}
 	return areNeighbors;
 }
 
-Spike filterSpikes(Spike curr_original_spike)
+void eliminateDuplicates(Spike max_spike) {
+
+	deque<Spike>::iterator it;
+	it = Parameters::spikes_to_be_processed.begin();
+	Spike curr_spike;
+	int curr_channel, curr_amp;
+	
+	while(it != Parameters::spikes_to_be_processed.end())
+	{
+		curr_spike = *it;
+		curr_channel = it->channel;
+		curr_amp = it->amplitude;
+		bool channelsAreNeighbors = areNeighbors(max_spike.channel, curr_channel);
+		if(channelsAreNeighbors) {
+			if(max_spike.amplitude > curr_amp) {
+				//cout << "Eliminated Dups" << endl;
+				//cout << "Spike: " << curr_channel << " " << curr_amp << endl;
+				it = Parameters::spikes_to_be_processed.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+Spike filterSpikes(Spike max_spike)
 {
-	/*Removes all duplicate spikes and returns the original spike
+	/*Removes all duplicate spikes and returns the max spike
 
 	Parameters
 	----------
-	curr_original_spike: Spike
-		The original candidate for largest amplitude spike.
+	max_spike: Spike
+		The max candidate for largest amplitude spike.
 
     Returns
     -------
-	original_spike: Spike
-		Returns the spike in the neighbors of the original spike that has the
+	max_spike: Spike
+		Returns the spike in the neighbors of the max spike that has the
 		largest amplitude.
 	*/
-	int first_spike_channel = curr_original_spike.channel;
-	int curr_original_spike_amp = curr_original_spike.amplitude;
-	int frame_of_orginal_spike = curr_original_spike.frame;
-	deque<Spike>::iterator it;
-
-	it = Parameters::spikes_to_be_processed.begin();
+	int first_spike_channel = max_spike.channel;
+	int max_spike_amp = max_spike.amplitude;
+	int frame_of_orginal_spike = max_spike.frame;
 	int curr_channel, curr_amp, curr_frame;
+	//cout << "Original Spike: " << first_spike_channel << " " << max_spike.frame << " " << max_spike_amp << endl;
 	Spike curr_spike;
+	deque<Spike>::iterator it;
+	it = Parameters::spikes_to_be_processed.begin();
+
 	while(it != Parameters::spikes_to_be_processed.end())
 	{
 		curr_spike = *it;
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
 		curr_frame = it->frame;
-		bool channelsAreNeighbors = areNeighbors(first_spike_channel, curr_channel);
-		if(channelsAreNeighbors && curr_amp >= curr_original_spike_amp + Parameters::noise_amp) {
-			if(curr_frame <= frame_of_orginal_spike + Parameters::noise_duration) {
+		//bool channelsAreNeighbors = areNeighbors(first_spike_channel, curr_channel);
+		//Four cases - neighbors and slightly bigger amp, neighbors and much bigger amp, neighbors and smaller amp, not neighbors
+		//if(Parameters::neighbor_check_matrix[first_spike_channel][curr_channel]) {
+		if(areNeighbors(first_spike_channel, curr_channel)) {
+			if(curr_amp >= max_spike_amp + Parameters::noise_amp) {
+				if(curr_frame <= frame_of_orginal_spike + Parameters::noise_duration) {
+					it = Parameters::spikes_to_be_processed.erase(it);
+					max_spike = curr_spike;
+					max_spike_amp = curr_amp;
+				}
+				else {
+					++it;
+				}
+			}
+			else if(curr_amp > max_spike.amplitude) {
 				it = Parameters::spikes_to_be_processed.erase(it);
-				curr_original_spike = curr_spike;
-				curr_original_spike_amp = curr_amp;
+				max_spike = curr_spike;
+				max_spike_amp = curr_amp;
 			}
 			else {
-				++it;
+				it = Parameters::spikes_to_be_processed.erase(it);
 			}
-		}
-		else if(channelsAreNeighbors) {
-			it = Parameters::spikes_to_be_processed.erase(it);
 		}
 		else {
 			++it;
 		}
 	}
-	return curr_original_spike;
+
+	if(Parameters::spikes_to_be_processed.size() != 0) {
+		eliminateDuplicates(max_spike);
+	}
+
+	return max_spike;
 }
+
 }

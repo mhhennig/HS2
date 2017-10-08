@@ -69,21 +69,26 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 	*/
 	deque<tuple<int, int>> amps;
 	int spike_channel = spike_to_be_localized.channel;
-	int curr_largest_amp = -100000; //arbitrarily small to make sure that it is immediately overwritten
+	int curr_largest_amp = INT_MIN; //arbitrarily small to make sure that it is immediately overwritten
 	int curr_neighbor_channel;
 	int curr_amp;
 
 	int amp_cutout_size = spike_to_be_localized.amp_cutouts.size();
-	for(int i = 0; i < amp_cutout_size; i++) {
-		curr_neighbor_channel = Parameters::neighbor_matrix[spike_channel][i /(Parameters::spike_delay*2 + 1)];
-		curr_amp = spike_to_be_localized.amp_cutouts.at(i);
-		if(curr_amp > curr_largest_amp) {
-			curr_largest_amp = curr_amp;
+	int neighbor_frame_span = Parameters::spike_delay * 2 + 1;
+	int neighbor_count = amp_cutout_size / neighbor_frame_span;
+	int matrix_offset = 0;
+
+	for (int i = 0; i < neighbor_count; i++) {
+		curr_neighbor_channel = Parameters::neighbor_matrix[spike_channel][i];
+		for (int j = 0; j < neighbor_frame_span; j++) {
+			curr_amp = spike_to_be_localized.amp_cutouts.at(j + matrix_offset);
+			if(curr_amp > curr_largest_amp) {
+				curr_largest_amp = curr_amp;
+			}
 		}
-		if(i % (Parameters::spike_delay*2 + 1) == Parameters::spike_delay*2) {
-			amps.push_back(make_tuple(curr_neighbor_channel, curr_largest_amp));
-			curr_largest_amp = -10000;
-		}
+		amps.push_back(make_tuple(curr_neighbor_channel, curr_largest_amp));
+		curr_largest_amp = INT_MIN;
+		matrix_offset += neighbor_frame_span;
 	}
 
 	sort(begin(amps), end(amps), CustomLessThan()); //sort the array

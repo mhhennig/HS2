@@ -14,7 +14,9 @@
 #include <deque>
 #include <tuple>
 #include <iterator>
+#include <vector>
 #include <stdlib.h> 
+#include <limits.h>
 
 using namespace std;
 
@@ -23,8 +25,8 @@ struct Spike {
 	int amplitude;
 	int channel;
 	int frame;
-	deque<int> amp_cutouts;
-	deque<int> written_cutout;
+	vector<int> amp_cutouts;
+	vector<int> written_cutout;
 };
 
 namespace Parameters {
