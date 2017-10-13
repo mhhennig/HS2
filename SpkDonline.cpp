@@ -105,14 +105,14 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
 void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
   // MeanVoltage(vm, tInc, tCut);
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
-  loadRawData(vm, tCut, iterations, 100000);
+  loadRawData(vm, tCut, iterations, 100000, tCut2);
   ++iterations;
-  for (int t = tCut; t < tInc + tCut; t++) { // loop over data, will be removed for an online algorithm
+  for (int t = tCut; t < tInc + tCut2; t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     currQmsPosition += 1; 
     for (int i = 0; i < NChannels; i++) { // loop across channels
                                           // CHANNEL OUT OF LINEAR REGIME) {
-        if (t-tCut >= tInc) {
+        if (t-tCut2 >= tInc) {
           cout << "line 154: referencing index too large" << "\n";
         }
         a = (vm[i + t*NChannels] - Aglobal[t-tCut]) * Ascale - Qm[i]; // difference between ADC counts and Qm
@@ -171,7 +171,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
             AHP[i] = false;  // reset AHP
             SpkArea[i] += a; // not resetting this one (anyway don't need to
                              // care if the spike is wide)
-            if (t-tCut >= tInc) {
+            if (t-tCut2 >= tInc) {
             cout << "line 223: referencing index too large" << "\n";
             }
             b = Aglobal[t - tCut];// Qm[i]; // Again, should tCut be subtracted here?

@@ -58,7 +58,8 @@ extern int index_baselines; /*The index given to start accessing the baseline ar
 extern int frames; //Number of current iterations of raw data passed in. User starts this at 0 and increments it for each chunk of data;
 extern int iterations; //The number of frames passed into loadRawData EXCLUDING the buffer frames.
 extern int maxsl; //Number of frames after a detection that a spike is accepted
-
+extern int end_raw_data; //index of the end of the raw data
+extern int bad_index;
 };
 
 #endif
