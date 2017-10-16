@@ -19,9 +19,19 @@ class herdingspikes(object):
                    max_neighbors, to_localize, cutout_length, fps, threshold,
                    maa, maxsl, minsl, ahpthr)
         sp = np.loadtxt('ProcessedSpikes')
-        self.spikes = pd.DataFrame({'Channel': sp[:, 0].astype(int)
-                                    'Time': sp[:, 1].astype(int)
-                                    'Amplitude': sp[:, 2]
-                                    'x': sp[:, 3]
+        self.spikes = pd.DataFrame({'Channel': sp[:, 0].astype(int),
+                                    'Time': sp[:, 1].astype(int),
+                                    'Amplitude': sp[:, 2],
+                                    'x': sp[:, 3],
                                     'y': sp[:, 4]
                                     })
+        f = open('neighbormatrix', 'r')
+        self.neighs = []
+        for l in f.readlines():
+            self.neighs.append(np.array(l[:-2].split(',')).astype(int))
+        f.close()
+        f = open('positions', 'r')
+        self.pos = []
+        for l in f.readlines():
+            self.pos.append(np.array(l[:-2].split(',')).astype(int))
+        f.close()
