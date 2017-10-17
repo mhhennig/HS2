@@ -20,50 +20,6 @@ class NeuralProbe(object):
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
 
-    #Parameters they may want to change after testing on the data
-    def setSpikeDelay(self, spike_delay):
-    	self.spike_delay = spike_delay
-
-    def setSpikePeakDuration(self, spike_peak_duration):
-    	self.spike_peak_duration = spike_peak_duration
-
-    def setNoiseDuration(self, noise_duration):
-    	self.noise_duration = noise_duration
-
-    def setNoiseAmp(self, noise_amp):
-    	self.noise_amp = noise_amp
-
-    #Parameters they may be interested in looking at outside of the detection	
-    def getSpikeDelay(self):
-    	return self.spike_delay
-
-    def getSpikePeakDuration(self):
-    	return self.spike_peak_duration
-
-    def getNoiseDuration(self):
-    	return self.noise_duration
-
-    def getNoiseAmp(self):
-    	return self.noise_amp
-
-    def getFps(self):
-    	return self.fps
-
-    def getNumChannels(self):
-        return self.num_channels
-
-    def getNumRecordingChannels(self):
-    	return self.num_recording_channels
-
-    def getPositions(self):
-    	return self.positions
-
-    def getNeighbors(self):
-    	return self.neighbors
-
-    def getMaxNeighbors(self):
-    	return self.max_neighbors
-
     #Load in neighbor and positions files
     def loadNeighbors(self, neighbors_file_path):
         neighbor_file = open(neighbors_file_path, 'r')
