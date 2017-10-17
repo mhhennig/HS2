@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay,
                  spike_peak_duration, noise_duration, noise_amp,
-                 fps):
+                 fps, positions_file_path, neighbors_file_path):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -16,6 +16,9 @@ class NeuralProbe(object):
         self.positions = None;
         self.neighbors = None;
         self.max_neighbors = None;
+
+        self.loadPositions(positions_file_path)
+        self.loadNeighbors(neighbors_file_path)
 
     #Parameters they may want to change after testing on the data
     def setSpikeDelay(self, spike_delay):
@@ -47,28 +50,18 @@ class NeuralProbe(object):
     	return self.fps
 
     def getNumChannels(self):
-        if self.num_channels == None:
-            print("num_channels not set yet")
         return self.num_channels
 
     def getNumRecordingChannels(self):
-    	if self.num_recording_channels == None:
-    		print("num_recording_channels not set yet")
     	return self.num_recording_channels
 
     def getPositions(self):
-    	if type(self.positions) is not np.ndarray:
-    		print("positions not set yet")
     	return self.positions
 
     def getNeighbors(self):
-    	if type(self.neighbors) is not np.ndarray:
-    		print("neighbors not set yet")
     	return self.neighbors
 
     def getMaxNeighbors(self):
-    	if self.max_neighbors == None:
-    		print("max_neighbors not set yet")
     	return self.max_neighbors
 
     #Load in neighbor and positions files
@@ -113,6 +106,6 @@ class NeuroPixel(NeuralProbe):
     def __init__(self):
         NeuralProbe.__init__(self, num_channels=385, spike_delay=5,
         					 spike_peak_duration=5, noise_duration=3,
-        					 noise_amp = 80000, fps=30000)
-       	self.loadNeighbors("neighbormatrix")
-       	self.loadPositions('positions')
+        					 noise_amp = 80000, fps=30000,
+                             positions_file_path='positions', 
+                             neighbors_file_path = 'neighbormatrix')
