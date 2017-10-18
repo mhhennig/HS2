@@ -34,6 +34,12 @@ class herdingspikes(object):
     #     store.close()
 
     def LoadDetected(self, probe):
+        """
+        Reads the `ProcessedSpikes` file present in the current directory.
+
+        Arguments:
+        probe -- a `NeuralProbe` object.
+        """
         sp = np.loadtxt('ProcessedSpikes')
         self.spikes = pd.DataFrame({'ch': sp[:, 0].astype(int),
                                     't': sp[:, 1].astype(int),
@@ -48,6 +54,23 @@ class herdingspikes(object):
     def DetectFromRaw(self, datapath, probe,
                       to_localize, cutout_length, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0):
+        """
+        This function is a wrapper of the C function `detectData`. It takes
+        the raw data file, performs detection and localisation, saves the result
+        to `ProcessedSpikes` and loads the latter into memory by calling
+        `LoadDetected`.
+
+        Arguments:
+        datapath -- the path to the raw data file.
+        probe -- a `NeuralProbe` object.
+        to_localize
+        cutout_length
+        threshold
+        maa
+        maxsl
+        minsl
+        ahpthr
+        """
         detectData(datapath, probe.num_channels, probe.num_recording_channels,
                    probe.spike_delay, probe.spike_peak_duration,
                    probe.noise_duration, probe.noise_amp, probe.max_neighbors,
