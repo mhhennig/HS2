@@ -64,8 +64,8 @@ class herdingspikes(object):
                            dtype=np.int16).reshape((1800000, 385))
 
         event = self.spikes.loc[eventid]
-        print(event.ch)
-        print(event.t)
+        print("Spike detected at channel: ", event.ch)
+        print("Spike detected at frame: ", event.t)
         cutlen = len(event.Shape)
 
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
