@@ -12,35 +12,31 @@ class NeuralProbe(object):
         self.noise_duration = noise_duration
         self.noise_amp_percent = noise_amp_percent
         self.fps = fps
-        self.num_recording_channels = None;
-        self.positions = None;
-        self.neighbors = None;
-        self.max_neighbors = None;
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
 
-    #Load in neighbor and positions files
+    # Load in neighbor and positions files
     def loadNeighbors(self, neighbors_file_path):
         neighbor_file = open(neighbors_file_path, 'r')
         neighbors = []
         for neighbor in neighbor_file.readlines():
             neighbors.append(np.array(neighbor[:-2].split(',')).astype(int))
         neighbor_file.close()
-        #assert len(neighbors) == len(pos)
+        # assert len(neighbors) == len(pos)
         self.num_recording_channels = len(neighbors)
         self.neighbors = neighbors
         self.max_neighbors = max([len(n) for n in neighbors])
 
     def loadPositions(self, positions_file_path):
-    	position_file = open(positions_file_path, 'r')
+        position_file = open(positions_file_path, 'r')
         positions = []
         for position in position_file.readlines():
             positions.append(np.array(position[:-2].split(',')).astype(int))
         self.positions = np.asarray(positions)
         position_file.close()
 
-    #Show visualization of probe
+    # Show visualization of probe
     def show(self, show_neighbors=[10], figwidth=3):
         xmax, ymax = self.positions.max(0)
         xmin, ymin = self.positions.min(0)
@@ -57,11 +53,11 @@ class NeuralProbe(object):
         plt.ylim([0, ymax+ymin])
         plt.xlim([0, xmax+xmin])
 
-class NeuroPixel(NeuralProbe):
 
-    def __init__(self):
+class NeuroPixel(NeuralProbe):
+    def __init__(self, fps=30000):
         NeuralProbe.__init__(self, num_channels=385, spike_delay=5,
-        					 spike_peak_duration=5, noise_duration=2,
-        					 noise_amp_percent = .95, fps=30000,
-                             positions_file_path='positions', 
-                             neighbors_file_path = 'neighbormatrix')
+                             spike_peak_duration=5, noise_duration=2,
+                             noise_amp_percent=.95, fps=fps,
+                             positions_file_path='positions',
+                             neighbors_file_path='neighbormatrix')
