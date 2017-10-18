@@ -39,7 +39,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
 }
 
 void Detection::SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                         		 int noise_amp, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl,
+                         		 float noise_amp_percent, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl,
                                  int minsl) {
   // set the detection parameters
   threshold = thres;
@@ -56,9 +56,11 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
   currQmsPosition = -1;
   _spike_delay = spike_delay;
+  //spikes_file.open("Spikes");
+
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-									   noise_amp, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length, maxsl);
+									   noise_amp_percent, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length, maxsl);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -157,7 +159,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
               else {
                 setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
               }
-
+              //spikes_file << ChInd[i] << " " << t0 - MaxSl + t - tCut + 1 << " " << -Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) %  (MaxSl + _spike_delay)] << endl;
               addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, -Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) %  (MaxSl + _spike_delay)]);
 
 
@@ -192,6 +194,7 @@ void Detection::FinishDetection() // write spikes in interval after last
                                   // recalibration; close file
 {
 	terminateSpikeHandler();
+  //spikes_file.close();
 }
 
 void buildPositionsMatrix(int** _channel_positions, string positions_file_path, int rows, int cols)

@@ -36,7 +36,7 @@ extern int num_recording_channels; //Number of channels to be used for spike dat
 extern int spike_delay; //The number of frames back a spike occurred after it was detected (where the beginning of the spike was).
 extern int spike_peak_duration; //The number of frames it takes a spike amplitude to fully decay.
 extern int noise_duration; //The number of frames that the true spike can occur after the first detection.
-extern int noise_amp; //Amplitude difference allowed to differentiate between increasing amplitude duplicates
+extern float noise_amp_percent; //Amplitude percentage allowed to differentiate between decreasing amplitude duplicate spike
 extern int max_neighbors;//Maximum number of neighbors a channel can have in the probe
 extern int** neighbor_matrix;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each 
 							  index contains pointer to another array which contains channel number of all its neighbors.

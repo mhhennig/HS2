@@ -4,13 +4,13 @@ from matplotlib import pyplot as plt
 
 class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay,
-                 spike_peak_duration, noise_duration, noise_amp,
+                 spike_peak_duration, noise_duration, noise_amp_percent,
                  fps, positions_file_path, neighbors_file_path):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
         self.noise_duration = noise_duration
-        self.noise_amp = noise_amp
+        self.noise_amp_percent = noise_amp_percent
         self.fps = fps
         self.num_recording_channels = None;
         self.positions = None;
@@ -61,7 +61,7 @@ class NeuroPixel(NeuralProbe):
 
     def __init__(self):
         NeuralProbe.__init__(self, num_channels=385, spike_delay=5,
-        					 spike_peak_duration=5, noise_duration=3,
-        					 noise_amp = 80000, fps=30000,
+        					 spike_peak_duration=5, noise_duration=2,
+        					 noise_amp_percent = .95, fps=30000,
                              positions_file_path='positions', 
                              neighbors_file_path = 'neighbormatrix')

@@ -16,14 +16,14 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
         void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                              int noise_amp, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl, int minsl)
+                              float noise_amp_percent, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl, int minsl)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2)
         void FinishDetection()
 
 def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
-               _noise_duration, _noise_amp, _max_neighbors, _to_localize, _cutout_length, \
+               _noise_duration, _noise_amp_percent, _max_neighbors, _to_localize, _cutout_length, \
                sfd, thres, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
     """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
     d = np.memmap(data, dtype=np.int16, mode='r')
@@ -40,7 +40,7 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     spike_delay = int(_spike_delay)
     spike_peak_duration = int(_spike_peak_duration)
     noise_duration = int(_noise_duration)
-    noise_amp = int(_noise_amp)
+    noise_amp_percent = float(_noise_amp_percent)
     max_neighbors = int(_max_neighbors)
     cutout_length = int(_cutout_length)
     to_localize = _to_localize
@@ -82,7 +82,7 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
     det.SetInitialParams(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-                         noise_amp, max_neighbors, cutout_length, to_localize, thres, maa, ahpthr, maxsl, minsl)
+                         noise_amp_percent, max_neighbors, cutout_length, to_localize, thres, maa, ahpthr, maxsl, minsl)
 
     startTime = datetime.now()
     t0 = 0

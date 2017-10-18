@@ -5,7 +5,7 @@ int Parameters::num_recording_channels;
 int Parameters::spike_delay;
 int Parameters::spike_peak_duration;
 int Parameters::noise_duration;
-int Parameters::noise_amp;
+float Parameters::noise_amp_percent;
 int Parameters::max_neighbors;
 int** Parameters::neighbor_matrix;
 int** Parameters::channel_positions;
@@ -27,7 +27,7 @@ std::ofstream spikes_filtered_file;
 
 
 void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
-						  int _noise_duration, int _noise_amp, int** _channel_positions, int** _neighbor_matrix, \
+						  int _noise_duration, float _noise_amp_percent, int** _channel_positions, int** _neighbor_matrix, \
 						  int _max_neighbors, bool _to_localize = false, int _cutout_length = 40, int _maxsl = 0) 
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
@@ -47,11 +47,11 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		Ideally, the _noise_duration would be zero if there is no noise (then the first spike 
 		that occurs is the original spike), but sometimes the true spike is detected after
 		a duplicate.
-	_noise_amp: int
-		The amplitude difference at which two spikes can be considered the duplicates 
-		even if the spike detected after has a larger amplitude (with zero _noise_amp, 
-		two concurrent spikes where the second spike has a slightly larger amplitude 
-		will be considered unique).
+	_noise_amp_percent: float
+		The amplitude percent difference at which two spikes can be considered unique 
+		even if the spike detected after has a smaller amplitude (with zero _noise_amp_percent, 
+		two concurrent spikes where the second spike has a slightly smaller amplitude 
+		will be considered duplicates).
 	_channel_positions: 2D int array
 		Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each 
 		index contains pointer to another array which contains X and Y position of the channel. User creates 
@@ -93,8 +93,8 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		cout << "Spike Peak Duration less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
-	if(_noise_amp < 0) {
-		cout << "Noise Amplitude less than 0. Terminating Spike Handler" << endl;
+	if(_noise_amp_percent < 0 || _noise_amp_percent > 1) {
+		cout << "Noise Amplitude Percent not a valid percentage. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
 	if(_noise_duration < 0) {
@@ -115,7 +115,7 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::spike_delay = _spike_delay;
 	Parameters::spike_peak_duration = _spike_peak_duration;
 	Parameters::noise_duration = _noise_duration;
-	Parameters::noise_amp = _noise_amp;
+	Parameters::noise_amp_percent = _noise_amp_percent;
 	Parameters::to_localize = _to_localize;
 	Parameters::channel_positions = _channel_positions;
 	Parameters::neighbor_matrix = _neighbor_matrix;
@@ -216,7 +216,7 @@ void addSpike(int channel, int frame, int amplitude) {
 	int amp_cutout_size = Parameters::spike_delay*2 + 1;
 	int frames_processed = Parameters::frames*Parameters::iterations;
 
-	if(channel < Parameters::num_recording_channels && channel > 0) {
+	if(channel < Parameters::num_recording_channels && channel >= 0) {
 		int curr_neighbor_channel, curr_reading;
 		Spike spike_to_be_added;
 		spike_to_be_added.channel = channel;

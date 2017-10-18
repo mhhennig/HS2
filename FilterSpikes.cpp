@@ -43,8 +43,7 @@ void eliminateDuplicates(Spike max_spike) {
 		curr_spike = *it;
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
-		bool channelsAreNeighbors = areNeighbors(max_spike.channel, curr_channel);
-		if(channelsAreNeighbors) {
+		if(areNeighbors(max_spike.channel, curr_channel)) {
 			if(max_spike.amplitude > curr_amp) {
 				//cout << "Eliminated Dups" << endl;
 				//cout << "Spike: " << curr_channel << " " << curr_amp << endl;
@@ -90,27 +89,24 @@ Spike filterSpikes(Spike max_spike)
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
 		curr_frame = it->frame;
-		//bool channelsAreNeighbors = areNeighbors(first_spike_channel, curr_channel);
-		//Four cases - neighbors and slightly bigger amp, neighbors and much bigger amp, neighbors and smaller amp, not neighbors
-		//if(Parameters::neighbor_check_matrix[first_spike_channel][curr_channel]) {
 		if(areNeighbors(first_spike_channel, curr_channel)) {
-			if(curr_amp >= max_spike_amp + Parameters::noise_amp) {
-				if(curr_frame <= frame_of_orginal_spike + Parameters::noise_duration) {
+			if(curr_frame <= frame_of_orginal_spike + Parameters::noise_duration) {
+				if(curr_amp >= max_spike_amp) {
 					it = Parameters::spikes_to_be_processed.erase(it);
 					max_spike = curr_spike;
 					max_spike_amp = curr_amp;
 				}
 				else {
-					++it;
+					it = Parameters::spikes_to_be_processed.erase(it);
 				}
 			}
-			else if(curr_amp > max_spike.amplitude) {
-				it = Parameters::spikes_to_be_processed.erase(it);
-				max_spike = curr_spike;
-				max_spike_amp = curr_amp;
-			}
 			else {
-				it = Parameters::spikes_to_be_processed.erase(it);
+				if(curr_amp >= max_spike_amp - max_spike_amp*Parameters::noise_amp_percent) {
+					++it;
+				}
+				else {
+					it = Parameters::spikes_to_be_processed.erase(it);
+				}
 			}
 		}
 		else {
