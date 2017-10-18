@@ -10,13 +10,14 @@ from ctypes import CDLL
 import ctypes
 from datetime import datetime
 from libcpp cimport bool
+from libcpp.string cimport string
 import sys
 
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
-        void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, 
+        void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, 
                               int spike_peak_duration, int noise_duration, float noise_amp_percent, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl)
@@ -28,7 +29,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
 def read_flat(d, t0, t1, nch):
   return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
-def detectData(filename, _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
+def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
                _noise_duration, _noise_amp_percent, _max_neighbors, _to_localize, sfd, thres, \
                _cutout_start=10, _cutout_end=20, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2, data_format='flat'):
     """ Read data from a file and pipe it to the spike detector. """
@@ -70,6 +71,9 @@ def detectData(filename, _num_channels, _num_recording_channels, _spike_delay, _
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
+    positions_file_path = str(_positions_file_path)
+    neighbors_file_path = str(_neighbors_file_path)
+
 
     print("# Sampling rate: " + str(sf))
     print("# Number of recorded channels: " + str(nRecCh))
@@ -112,7 +116,7 @@ def detectData(filename, _num_channels, _num_recording_channels, _spike_delay, _
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(num_channels, num_recording_channels, spike_delay, spike_peak_duration,        
+    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration,        
                          noise_duration, noise_amp_percent, max_neighbors,
                          to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
 

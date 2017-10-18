@@ -12,6 +12,8 @@ class NeuralProbe(object):
         self.noise_duration = noise_duration
         self.noise_amp_percent = noise_amp_percent
         self.fps = fps
+        self.positions_file_path = positions_file_path
+        self.neighbors_file_path = neighbors_file_path
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)

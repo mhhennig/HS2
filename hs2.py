@@ -87,7 +87,8 @@ class herdingspikes(object):
         ahpthr
         """
         probe = self.probe
-        detectData(datapath, probe.num_channels, probe.num_recording_channels,
+        detectData(datapath, probe.positions_file_path, probe.neighbors_file_path,
+                   probe.num_channels, probe.num_recording_channels,
                    probe.spike_delay, probe.spike_peak_duration,
                    probe.noise_duration, probe.noise_amp_percent,
                    probe.max_neighbors,

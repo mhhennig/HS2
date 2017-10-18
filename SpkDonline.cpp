@@ -38,7 +38,7 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   fpost = tpostf;
 }
 
-void Detection::SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
+void Detection::SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
                                  float noise_amp_percent, int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl,
                                  int minsl) {
   // set the detection parameters
@@ -52,8 +52,8 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   int**neighbor_matrix;
   channel_positions = createPositionMatrix(num_recording_channels);
   neighbor_matrix = createNeighborMatrix(num_recording_channels, max_neighbors);
-  buildPositionsMatrix(channel_positions, "positions", num_recording_channels, 2);
-  buildNeighborMatrix(neighbor_matrix, "neighbormatrix", num_recording_channels, max_neighbors);
+  buildPositionsMatrix(channel_positions, positions_file_path, num_recording_channels, 2);
+  buildNeighborMatrix(neighbor_matrix, neighbors_file_path, num_recording_channels, max_neighbors);
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
   currQmsPosition = -1;
   _spike_delay = spike_delay;

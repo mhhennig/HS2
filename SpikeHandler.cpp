@@ -126,8 +126,6 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::cutout_start = _cutout_start;
 	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
-	cout << Parameters::cutout_start << endl;
-	cout << Parameters::cutout_end << endl;
 
 	spikes_filtered_file.open("ProcessedSpikes");
 
