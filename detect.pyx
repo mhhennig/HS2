@@ -10,28 +10,52 @@ from ctypes import CDLL
 import ctypes
 from datetime import datetime
 from libcpp cimport bool
+import sys
 
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
-        void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                              float noise_amp_percent, int max_neighbors, bool to_localize, \
-                              int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl)
+        void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, 
+                              int spike_peak_duration, int noise_duration, float noise_amp_percent, \
+                              int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
+                              int maa, int ahpthr, int maxsl, int minsl)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
         void FinishDetection()
 
-def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
+def read_flat(d, t0, t1, nch):
+  return d[t0*nch:t1*nch].astype(ctypes.c_short)
+
+def detectData(filename, _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
                _noise_duration, _noise_amp_percent, _max_neighbors, _to_localize, sfd, thres, \
-               _cutout_start=10, _cutout_end=20, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
-    """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
-    d = np.memmap(data, dtype=np.int16, mode='r')
-    nRecCh = _num_channels
-    assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
-    nFrames = len(d)//nRecCh
-    sf = int(sfd)
+               _cutout_start=10, _cutout_end=20, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2, data_format='flat'):
+    """ Read data from a file and pipe it to the spike detector. """
+
+    if data_format is 'flat':
+      d = np.memmap(filename, dtype=np.int16, mode='r')
+      nRecCh = _num_channels
+      assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
+      nFrames = len(d)//nRecCh
+      sf = int(sfd)
+      read_function = read_flat
+    elif data_format is 'biocam':
+      from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
+      d = openHDF5file(filename)
+      nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
+      _num_channels = nRecCh
+      _num_recording_channels = nRecCh
+      sf = int(sfd)
+      if file_format == 100:
+          read_function = readHDF5t_100
+      else:
+          read_function = readHDF5t_101
+    else:
+      raise NotImplementedError('Unknown file format')
+
+    # nFrames = 14000
+
     nSec = nFrames / sfd  # the duration in seconds of the recording
     nSec = nFrames / sfd
     tpref = int(tpre*sf/1000)
@@ -46,9 +70,6 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
-
-
-
 
     print("# Sampling rate: " + str(sf))
     print("# Number of recorded channels: " + str(nRecCh))
@@ -69,10 +90,17 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
         ahpthr = 0
 
     #set tCut, tCut2 and tInc
-    tCut = tpref + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
-    tCut2 = tpostf + 1 - maxsl
-    tInc = min(nFrames-tCut-tCut2, 100000) # cap at specified number of frames
-    maxFramesProcessed = tInc
+    # tCut = tpref + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
+    # FIX: make sure enough data points are available:
+    tCut = max((tpref + maxsl, cutout_start+maxsl))
+    # tCut2 = tpostf + 1 - maxsl
+    # FIX: make sure enough data points are available:
+    tCut2 = max(tpostf + 1 - maxsl, cutout_end+maxsl)
+    print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
+
+    tInc = min(nFrames-tCut-tCut2, 200000) # cap at specified number of frames
+    # tInc = 10000
+    maxFramesProcessed = tInc;
     print('tInc:'+str(tInc))
     # ! To be consistent, X and Y have to be swappped
     cdef np.ndarray[long, mode = "c"] Indices = np.zeros(nRecCh, dtype=ctypes.c_long)
@@ -84,24 +112,33 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-                         noise_amp_percent, max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
+    det.SetInitialParams(num_channels, num_recording_channels, spike_delay, spike_peak_duration,        
+                         noise_duration, noise_amp_percent, max_neighbors,
+                         to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
 
     startTime = datetime.now()
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
         print('Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
-        print('t0 = ' + str(t0) + ', t1 = ' +str(t1))
+        print('t0 = ' + str(t0) + ', t1 = ' +str(t1)+', from '+str(t0-tCut))
         # # slice data
         if t0 == 0:
-            vm = np.hstack((np.zeros(nRecCh * tCut), d[:(t1+tCut2) * nRecCh])).astype(ctypes.c_short)
+            #vm = np.hstack((np.zeros(nRecCh * tCut), d[:(t1+tCut2) * nRecCh])).astype(ctypes.c_short)
+            vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), read_function(d, 0, t1+tCut2, nRecCh)))
         else:
-            vm = d[(t0-tCut) * nRecCh:(t1+tCut2) * nRecCh].astype(ctypes.c_short)
+            #vm = d[(t0-tCut) * nRecCh:(t1+tCut2) * nRecCh].astype(ctypes.c_short)
+            vm = read_function(d, t0-tCut, t1+tCut2, nRecCh)
         # detect spikes
+        print('read data')
+        sys.stdout.flush()
         det.MeanVoltage( &vm[0], tInc, tCut)
+        sys.stdout.flush()
+        print('mean voltage')
+        sys.stdout.flush()
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
-
+        #print('iterate')
+        sys.stdout.flush()
         t0 += tInc
         if t0 < nFrames - tCut2:
             tInc = min(tInc, nFrames - tCut2 - t0)
@@ -111,4 +148,4 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     print('Time taken for detection: ' + str(endTime - startTime))
     print('Time per frame: ' + str(1000 * (endTime - startTime) / (nFrames)))
     print('Time per sample: ' + str(1000 *
-                                    (endTime - startTime) / (nRecCh * nFrames)))
+(endTime - startTime) / (nRecCh * nFrames)))
