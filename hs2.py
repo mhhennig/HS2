@@ -73,7 +73,7 @@ class herdingspikes(object):
         """
         detectData(datapath, probe.num_channels, probe.num_recording_channels,
                    probe.spike_delay, probe.spike_peak_duration,
-                   probe.noise_duration, probe.noise_amp, probe.max_neighbors,
+                   probe.noise_duration, probe.noise_amp_percent, probe.max_neighbors,
                    to_localize, cutout_length, probe.fps, threshold,
                    maa, maxsl, minsl, ahpthr)
         # reload data into memory
@@ -87,6 +87,8 @@ class herdingspikes(object):
                            dtype=np.int16).reshape((1800000, 385))
 
         event = self.spikes.loc[eventid]
+        print(event.ch)
+        print(event.t)
         cutlen = len(event.Shape)
 
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
