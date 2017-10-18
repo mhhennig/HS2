@@ -101,7 +101,7 @@ Spike filterSpikes(Spike max_spike)
 				}
 			}
 			else {
-				if(curr_amp >= max_spike_amp - max_spike_amp*Parameters::noise_amp_percent) {
+				if(curr_amp >= max_spike_amp*Parameters::noise_amp_percent) {
 					++it;
 				}
 				else {
