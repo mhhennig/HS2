@@ -39,8 +39,9 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
 }
 
 void Detection::SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                         		 float noise_amp_percent, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl,
+                                 float noise_amp_percent, int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl,
                                  int minsl) {
+  // set the detection parameters
   // set the detection parameters
   threshold = thres;
   MinAvgAmp = maa;
@@ -56,11 +57,9 @@ void Detection::SetInitialParams(int num_channels, int num_recording_channels, i
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
   currQmsPosition = -1;
   _spike_delay = spike_delay;
-  //spikes_file.open("Spikes");
-
 
   setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-									   noise_amp_percent, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_length, maxsl);
+                       noise_amp_percent, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_start, cutout_end, maxsl);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -104,10 +103,10 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
   }
 }
 
-void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2) {
+void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed) {
   // MeanVoltage(vm, tInc, tCut);
   int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
-  loadRawData(vm, tCut, iterations, 100000, tCut2);
+  loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
   ++iterations;
   for (int t = tCut; t < tInc + tCut2; t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION

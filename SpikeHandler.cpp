@@ -12,8 +12,8 @@ int** Parameters::channel_positions;
 int Parameters::aGlobal;
 bool Parameters::to_localize;
 int** Parameters::baselines;
-int Parameters::filtered_spikes;
-int Parameters::cutout_length;
+int Parameters::cutout_start;
+int Parameters::cutout_end;
 int Parameters::index_data;
 int Parameters::index_baselines;
 int Parameters::iterations;
@@ -28,7 +28,7 @@ std::ofstream spikes_filtered_file;
 
 void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
 						  int _noise_duration, float _noise_amp_percent, int** _channel_positions, int** _neighbor_matrix, \
-						  int _max_neighbors, bool _to_localize = false, int _cutout_length = 40, int _maxsl = 0) 
+						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0) 
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
 
@@ -101,8 +101,12 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		cout << "Cutout Length less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
-	if(_cutout_length < 0) {
-		cout << "Cutout Length less than 0. Terminating Spike Handler" << endl;
+	if(_cutout_start < 0) {
+		cout << "Cutout Start less than 0. Terminating Spike Handler" << endl;
+		exit(EXIT_FAILURE);
+	}
+	if(_cutout_end < 0) {
+		cout << "Cutout End less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
 	if(_maxsl < 0) {
@@ -119,9 +123,11 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::to_localize = _to_localize;
 	Parameters::channel_positions = _channel_positions;
 	Parameters::neighbor_matrix = _neighbor_matrix;
-	Parameters::filtered_spikes = 0;
-	Parameters::cutout_length = _cutout_length;
+	Parameters::cutout_start = _cutout_start;
+	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
+	cout << Parameters::cutout_start << endl;
+	cout << Parameters::cutout_end << endl;
 
 	spikes_filtered_file.open("ProcessedSpikes");
 
@@ -211,8 +217,7 @@ void addSpike(int channel, int frame, int amplitude) {
 	amplitude: int
 		The amplitude at which the spike is detected.
 	*/
-	int cutout_size = Parameters::cutout_length + 1;
-	int cutout_quarter_size = Parameters::cutout_length/4;
+	int cutout_size = Parameters::cutout_start + Parameters::cutout_end + 1;
 	int amp_cutout_size = Parameters::spike_delay*2 + 1;
 	int frames_processed = Parameters::frames*Parameters::iterations;
 
@@ -223,9 +228,10 @@ void addSpike(int channel, int frame, int amplitude) {
 		spike_to_be_added.frame = frame;
 		spike_to_be_added.amplitude = amplitude;
 		int ASCALE = -64;
+
 		for(int i = 0; i < cutout_size; i++) {
 			try {
-				int curr_reading_index = (frame - cutout_quarter_size - frames_processed + Parameters::index_data + i)*Parameters::num_channels + channel;
+				int curr_reading_index = (frame - Parameters::cutout_start - frames_processed + Parameters::index_data + i)*Parameters::num_channels + channel;
 				if(curr_reading_index < 0 || curr_reading_index > Parameters::end_raw_data) {
 					Parameters::bad_index += 1;
 					curr_reading = 0;
@@ -233,13 +239,13 @@ void addSpike(int channel, int frame, int amplitude) {
 				else {
 					curr_reading = Parameters::raw_data[curr_reading_index];
 				}
-			} catch (...) { 
+			} catch (...) {
 				spikes_filtered_file.close();
 				cout << "Raw Data and it parameters entered incorrectly, could not access data. Terminating SpikeHandler." << endl;
 				exit(EXIT_FAILURE);
-			} 
-			spike_to_be_added.written_cutout.push_back(curr_reading); 
-		}
+			}
+			spike_to_be_added.written_cutout.push_back(curr_reading);
+}
 
 		for(int i = 0; i < Parameters::max_neighbors; i++) {
 			try {

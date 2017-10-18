@@ -21,7 +21,6 @@ void filterSpikes(ofstream& spikes_filtered_file)
 	while(!isProcessed) {
 		max_spike = FilterSpikes::filterSpikes(max_spike);
 		//cout << "Max Spike: " << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << endl;
-		Parameters::filtered_spikes += 1;
 		stringstream cutout;
 		copy(max_spike.written_cutout.begin(), max_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
 		spikes_filtered_file << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " " << " " << cutout.str() <<'\n';
@@ -64,7 +63,6 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 		max_spike = FilterSpikes::filterSpikes(max_spike);
 		//cout << "Max Spike: " << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << endl;
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
-		Parameters::filtered_spikes += 1;
 		stringstream cutout;
 		copy(max_spike.written_cutout.begin(), max_spike.written_cutout.end(), ostream_iterator<int>(cutout, " "));
 		spikes_filtered_file << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " " << get<0>(position) << " " << get<1>(position) << " " << cutout.str() <<'\n';

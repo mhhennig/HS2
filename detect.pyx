@@ -16,15 +16,16 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
         void SetInitialParams(int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                              float noise_amp_percent, int max_neighbors, int cutout_length, bool to_localize, int thres, int maa, int ahpthr, int maxsl, int minsl)
+                              float noise_amp_percent, int max_neighbors, bool to_localize, \
+                              int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
-        void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2)
+        void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
         void FinishDetection()
 
 def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
-               _noise_duration, _noise_amp_percent, _max_neighbors, _to_localize, _cutout_length, \
-               sfd, thres, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
+               _noise_duration, _noise_amp_percent, _max_neighbors, _to_localize, sfd, thres, \
+               _cutout_start=10, _cutout_end=20, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
     """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
     d = np.memmap(data, dtype=np.int16, mode='r')
     nRecCh = _num_channels
@@ -42,7 +43,8 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     noise_duration = int(_noise_duration)
     noise_amp_percent = float(_noise_amp_percent)
     max_neighbors = int(_max_neighbors)
-    cutout_length = int(_cutout_length)
+    cutout_start = int(_cutout_start)
+    cutout_end = int(_cutout_end)
     to_localize = _to_localize
 
 
@@ -70,6 +72,7 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     tCut = tpref + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
     tCut2 = tpostf + 1 - maxsl
     tInc = min(nFrames-tCut-tCut2, 100000) # cap at specified number of frames
+    maxFramesProcessed = tInc
     print('tInc:'+str(tInc))
     # ! To be consistent, X and Y have to be swappped
     cdef np.ndarray[long, mode = "c"] Indices = np.zeros(nRecCh, dtype=ctypes.c_long)
@@ -82,7 +85,7 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
     det.SetInitialParams(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
-                         noise_amp_percent, max_neighbors, cutout_length, to_localize, thres, maa, ahpthr, maxsl, minsl)
+                         noise_amp_percent, max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
 
     startTime = datetime.now()
     t0 = 0
@@ -97,7 +100,7 @@ def detectData(data, _num_channels, _num_recording_channels, _spike_delay, _spik
             vm = d[(t0-tCut) * nRecCh:(t1+tCut2) * nRecCh].astype(ctypes.c_short)
         # detect spikes
         det.MeanVoltage( &vm[0], tInc, tCut)
-        det.Iterate(&vm[0], t0, tInc, tCut, tCut2)
+        det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
 
         t0 += tInc
         if t0 < nFrames - tCut2:
