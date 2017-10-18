@@ -7,12 +7,31 @@ from sklearn.decomposition import PCA
 
 
 class herdingspikes(object):
-    def __init__(self):
-        print("""You can now load your data in three ways: with LoadDetected()
-        (automatically loads ProcessedSpikes, neighbormatrix and positions);
-        with DetectFromRaw (takes a path to the raw data and all detection
-        parameters) or with LoadH5 (takes a previously saved instance of
-        this class)""")
+    """
+    This class provides a simple interface to the detection, localisation and
+    clustering of spike data from dense multielectrode arrays according to the
+    methods described in the following papers:
+
+    Muthmann, J. O., Amin, H., Sernagor, E., Maccione, A., Panas, D.,
+    Berdondini, L., ... & Hennig, M. H. (2015). Spike detection for large neural
+    populations using high density multielectrode arrays.
+    Frontiers in neuroinformatics, 9.
+
+    Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
+    Ullo, S., ... & Murino, V. (2017). Unsupervised spike sorting for
+    large-scale, high-density multielectrode arrays.
+    Cell reports, 18(10), 2521-2532.
+
+    Usage:
+    1. call the constructor with a single argument -- a NeuralProbe object:
+        HS = herdingspikes(Probe)
+    2. You can now load your data in three ways: with LoadDetected()
+    (automatically loads ProcessedSpikes); with DetectFromRaw (takes a path
+    to the raw data and all detection parameters) or with LoadH5 (takes a
+    previously saved instance of this class)
+    """
+    def __init__(self, probe):
+        self.probe = probe
 
     # def SaveH5(self, filename):
     #     store = pd.HDFStore(filename)
@@ -33,12 +52,9 @@ class herdingspikes(object):
     #         self.IsClustered = False
     #     store.close()
 
-    def LoadDetected(self, probe):
+    def LoadDetected(self):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
-
-        Arguments:
-        probe -- a `NeuralProbe` object.
         """
         sp = np.loadtxt('ProcessedSpikes')
         self.spikes = pd.DataFrame({'ch': sp[:, 0].astype(int),
@@ -48,10 +64,9 @@ class herdingspikes(object):
                                     'y': sp[:, 4],
                                     'Shape': list(sp[:, 5:])
                                     })
-        self.probe = probe
         self.IsClustered = False
 
-    def DetectFromRaw(self, datapath, probe,
+    def DetectFromRaw(self, datapath,
                       to_localize, cutout_length, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0):
         """
@@ -62,7 +77,6 @@ class herdingspikes(object):
 
         Arguments:
         datapath -- the path to the raw data file.
-        probe -- a `NeuralProbe` object.
         to_localize
         cutout_length
         threshold
@@ -71,15 +85,28 @@ class herdingspikes(object):
         minsl
         ahpthr
         """
+        probe = self.probe
         detectData(datapath, probe.num_channels, probe.num_recording_channels,
                    probe.spike_delay, probe.spike_peak_duration,
-                   probe.noise_duration, probe.noise_amp_percent, probe.max_neighbors,
+                   probe.noise_duration, probe.noise_amp_percent,
+                   probe.max_neighbors,
                    to_localize, cutout_length, probe.fps, threshold,
                    maa, maxsl, minsl, ahpthr)
         # reload data into memory
-        self.LoadDetected(probe)
+        self.LoadDetected()
 
     def PlotTracesChannels(self, datapath, eventid, ax=None):
+        """
+        Draw a figure with an electrode and its neighbours, showing the raw
+        traces and events. Note that this requires loading the raw data in
+        memory again.
+
+        Arguments:
+        datapath -- the path to the raw data file.
+        eventid -- centers, spatially and temporally, the plot to a specific
+        event id.
+        ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        """
         if ax is None:
             ax = plt.gca()
         pos, neighs = self.probe.positions, self.probe.neighbors
@@ -123,6 +150,18 @@ class herdingspikes(object):
         return h, xb, yb
 
     def PlotAll(self, invert=False, show_labels=False, ax=None, **kwargs):
+        """
+        Plots all the spikes currently stored in the class, in (x, y) space.
+        If clustering has been performed, each spike is coloured according to
+        the cluster it belongs to.
+
+        Arguments:
+        invert -- (boolean, optional) if True, flips x and y
+        show_labels -- (boolean, optional) if True, annotates each cluster
+        centre with its cluster ID.
+        ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        **kwargs -- additional arguments are passed to pyplot.scatter
+        """
         if ax is None:
             ax = plt.gca()
         x, y = self.spikes.x, self.spikes.y
@@ -141,6 +180,22 @@ class herdingspikes(object):
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
                            pca_ncomponents=2, pca_whiten=True,
                            **kwargs):
+        """
+        Performs PCA on the available spike shapes, and clusters spikes based
+        on their (x, y) location and on the principal components of the shape.
+        Cluster memberships are available as self.spikes.cl.
+        Cluster information is available in the self.clusters dataframe.
+
+        Arguments:
+        alpha -- the weight given to PCA components (spatial components are
+        assigned weight 1).
+        clustering_algorithm -- a sklearn.cluster class, defaults to
+        sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN was also tested.
+        pca_ncomponents -- number of PCA components to be considered (def. 2).
+        pca_whiten -- whiten option of the PCA algorithm.
+        **kwargs -- additional arguments are passed to the clustering class.
+        This may include n_jobs > 1 for parallelisation.
+        """
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         cutouts_pca = pca.fit_transform(np.array(list(self.spikes.Shape)))
         fourvec = np.vstack(([self.spikes.x], [self.spikes.y],
@@ -168,6 +223,15 @@ class herdingspikes(object):
         self.IsClustered = True
 
     def PlotShapes(self, units, nshapes=100, ncols=4):
+        """
+        Plot a sample of the spike shapes contained in a given set of clusters
+        and their average.
+
+        Arguments:
+        units -- a list of the cluster IDs to be considered.
+        nshapes -- the number of shapes to plot (default 100).
+        ncols -- the number of columns under which to distribute the plots.
+        """
         nrows = np.ceil(len(units)/ncols)
         plt.figure(figsize=(3*ncols, 3*nrows))
         cutouts = np.array(list(self.spikes.Shape))
