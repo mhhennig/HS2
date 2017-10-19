@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay,
                  spike_peak_duration, noise_duration, noise_amp_percent,
-                 fps, positions_file_path, neighbors_file_path):
+                 fps, positions_file_path, neighbors_file_path, data_format):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -14,6 +14,7 @@ class NeuralProbe(object):
         self.fps = fps
         self.positions_file_path = positions_file_path
         self.neighbors_file_path = neighbors_file_path
+        self.data_format = data_format
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
@@ -62,6 +63,7 @@ class NeuroPixel(NeuralProbe):
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=5, noise_duration=2,
             noise_amp_percent=.95, fps=fps,
+            data_format='flat',
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel')
 
@@ -71,5 +73,6 @@ class BioCam(NeuralProbe):
         NeuralProbe.__init__(self, num_channels=4096, spike_delay=5,
                              spike_peak_duration=5, noise_duration=2,
                              noise_amp_percent=.95, fps=fps,
+                             data_format='biocam',
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam')
