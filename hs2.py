@@ -68,7 +68,7 @@ class herdingspikes(object):
 
     def DetectFromRaw(self, datapath,
                       to_localize, cutout_start, cutout_end, threshold,
-                      maa=0, maxsl=12, minsl=3, ahpthr=0, data_format='flat'):
+                      maa=0, maxsl=12, minsl=3, ahpthr=0):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -87,13 +87,14 @@ class herdingspikes(object):
         ahpthr
         """
         probe = self.probe
-        detectData(datapath, probe.positions_file_path, probe.neighbors_file_path,
+        detectData(datapath, probe.positions_file_path,
+                   probe.neighbors_file_path,
                    probe.num_channels, probe.num_recording_channels,
                    probe.spike_delay, probe.spike_peak_duration,
                    probe.noise_duration, probe.noise_amp_percent,
                    probe.max_neighbors,
                    to_localize, probe.fps, threshold, cutout_start, cutout_end,
-                   maa, maxsl, minsl, ahpthr, data_format=data_format)
+                   maa, maxsl, minsl, ahpthr, data_format=probe.data_format)
         # reload data into memory
         self.LoadDetected()
 
@@ -113,7 +114,8 @@ class herdingspikes(object):
             ax = plt.gca()
         pos, neighs = self.probe.positions, self.probe.neighbors
         data = np.fromfile(datapath,
-                           dtype=np.int16).reshape((1800000, 385))
+                           dtype=np.int16).reshape((-1,
+                                                    self.probe.num_channels))
 
         event = self.spikes.loc[eventid]
         print("Spike detected at channel: ", event.ch)
