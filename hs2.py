@@ -68,7 +68,7 @@ class herdingspikes(object):
 
     def DetectFromRaw(self, datapath,
                       to_localize, cutout_start, cutout_end, threshold,
-                      maa=0, maxsl=12, minsl=3, ahpthr=0, data_format='flat'):
+                      maa=0, maxsl=12, minsl=3, ahpthr=0):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
