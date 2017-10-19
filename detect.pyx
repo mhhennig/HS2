@@ -17,7 +17,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
-        void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, 
+        void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay,
                               int spike_peak_duration, int noise_duration, float noise_amp_percent, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl)
@@ -71,8 +71,10 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
-    positions_file_path = str(_positions_file_path)
-    neighbors_file_path = str(_neighbors_file_path)
+    # positions_file_path = str(_positions_file_path)
+    # neighbors_file_path = str(_neighbors_file_path)
+    positions_file_path = _positions_file_path.encode() # <- python 3 seems to need this
+    neighbors_file_path = _neighbors_file_path.encode()
 
 
     print("# Sampling rate: " + str(sf))
@@ -105,7 +107,7 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
     tInc = min(nFrames-tCut-tCut2, 200000) # cap at specified number of frames
     # tInc = 10000
     maxFramesProcessed = tInc;
-    print('tInc:'+str(tInc))
+    print('# tInc: '+str(tInc))
     # ! To be consistent, X and Y have to be swappped
     cdef np.ndarray[long, mode = "c"] Indices = np.zeros(nRecCh, dtype=ctypes.c_long)
     for i in range(nRecCh):
@@ -116,7 +118,7 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration,        
+    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration,
                          noise_duration, noise_amp_percent, max_neighbors,
                          to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
 
@@ -124,8 +126,9 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
-        print('Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
-        print('t0 = ' + str(t0) + ', t1 = ' +str(t1)+', from '+str(t0-tCut))
+        print('# Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
+        # print('# t0 = ' + str(t0) + ', t1 = ' +str(t1)+', from '+str(t0-tCut))
+        sys.stdout.flush()
         # # slice data
         if t0 == 0:
             #vm = np.hstack((np.zeros(nRecCh * tCut), d[:(t1+tCut2) * nRecCh])).astype(ctypes.c_short)
@@ -134,22 +137,15 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
             #vm = d[(t0-tCut) * nRecCh:(t1+tCut2) * nRecCh].astype(ctypes.c_short)
             vm = read_function(d, t0-tCut, t1+tCut2, nRecCh)
         # detect spikes
-        print('read data')
-        sys.stdout.flush()
         det.MeanVoltage( &vm[0], tInc, tCut)
-        sys.stdout.flush()
-        print('mean voltage')
-        sys.stdout.flush()
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
-        #print('iterate')
-        sys.stdout.flush()
         t0 += tInc
         if t0 < nFrames - tCut2:
             tInc = min(tInc, nFrames - tCut2 - t0)
 
     det.FinishDetection()
     endTime=datetime.now()
-    print('Time taken for detection: ' + str(endTime - startTime))
-    print('Time per frame: ' + str(1000 * (endTime - startTime) / (nFrames)))
-    print('Time per sample: ' + str(1000 *
+    print('# Time taken for detection: ' + str(endTime - startTime))
+    print('# Time per frame: ' + str(1000 * (endTime - startTime) / (nFrames)))
+    print('# Time per sample: ' + str(1000 *
 (endTime - startTime) / (nRecCh * nFrames)))
