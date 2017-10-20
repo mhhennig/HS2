@@ -15,7 +15,16 @@ Ullo, S., ... & Murino, V. (2017). Unsupervised spike sorting for
 large-scale, high-density multielectrode arrays.
 Cell reports, 18(10), 2521-2532.
 
-## Examples 
+## Compilation of Cython code
+```
+cd detection_localisation
+python3 setup.py build_ext --inplace
+cd ..
+```
+Yes, you need to `cd`.
+
+
+## Examples
 
 Example data for the NeuroPixel array are on theia in:
 ``/disk/scratch/mhennig/neuropixel/data/rawDataSample.bin``
