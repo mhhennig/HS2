@@ -34,6 +34,7 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
                _cutout_start=10, _cutout_end=20, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2, data_format='flat'):
     """ Read data from a file and pipe it to the spike detector. """
 
+    # this whole part should be handles by the probe object:
     if data_format is 'flat':
       d = np.memmap(filename, dtype=np.int16, mode='r')
       nRecCh = _num_channels
@@ -42,7 +43,9 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
       sf = int(sfd)
       read_function = read_flat
     elif data_format is 'biocam':
-      from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
+      import sys
+      sys.path.append("../")
+      from probes.readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
       d = openHDF5file(filename)
       nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
       _num_channels = nRecCh

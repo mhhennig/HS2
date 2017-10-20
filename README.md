@@ -26,8 +26,9 @@ Yes, you need to `cd`.
 
 ## Examples
 
-Example data for the NeuroPixel array are on theia in:
-``/disk/scratch/mhennig/neuropixel/data/rawDataSample.bin``
+Example data for the NeuroPixel array are on theia:
+* A short sample is here: ``/disk/scratch/mhennig/neuropixel/data/rawDataSample.bin``
+* This is a whole 60 minute recording: ``/disk/scratch/mhennig/neuropixel/data/Hopkins_20160722_g0_t0.imec.ap_CAR.bin``
 
 Example data for the 3Brain Biocam array are on theia in:
 ``/disk/scratch/mhennig/P29_16_07_14/P29_16_05_14_retina02_left_stim3_fullarray_fullfieldHDF5.brw``
