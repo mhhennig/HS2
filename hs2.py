@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from detect import detectData
+from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 from sklearn.cluster import MeanShift
 from sklearn.decomposition import PCA
