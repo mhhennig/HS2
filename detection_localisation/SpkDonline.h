@@ -3,6 +3,10 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <string>
+#include <sstream>
+
+using namespace std;
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
@@ -13,6 +17,8 @@ class Detection {
   // Variables for variance and mean
   int *Qd; // noise amplitude
   int *Qm; // median
+  int **Qms; //stores spike_delay + MaxSl baseline values;
+  int iterations = 0;
   // Variables for the spike detection
   int *Sl;      // counter for spike length
   bool *AHP;    // counter for repolarizing current
@@ -28,7 +34,7 @@ class Detection {
   int MaxSl;     // dead time in frames after peak, used for further testing
   int MinAvgAmp; // minimal avg. amplitude of peak (in units of Qd)
   int MinSl;     // length considered for determining avg. spike amplitude
-  // Parameters for reading data
+  // Parameters for 
   long tInc; // 100, increment for reading data, has to be changed in main
              // program as well
   const int Ascale = -64; // factor to multiply to raw traces to increase
@@ -40,27 +46,34 @@ class Detection {
   int *A;              // control parameter for amplifier effects
   // Files to save the spikes etc.
   int Sampling;
-  std::ofstream w; // for spikes
-  std::ofstream wShapes; // for shapes
   int *Aglobal;
   int *Slice;
   int a; // buffer for Iterate()
 
-  // Shapes print out parameters
-  int** ChInd10;
-  int Window = 31; // Change this to change size of cutout
+  int fpre; // Change this to change size of pre cutout
+  int fpost; // Change this to change size of post cutout
+
+  int spikeCount;
+  int currQmsPosition;
+  int _spike_delay;
+  std::ofstream spikes_file;
+
 
 public:
   Detection();
   ~Detection();
-  void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti,
-                     long int *Indices, int agl);
-  void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl);
-  void openSpikeFile(const char *name);
-  void openFiles(const char *spikes, const char *shapes);
-  void MedianVoltage(unsigned short *vm);
-  void MeanVoltage(unsigned short *vm, int tInc);
-  void Iterate(unsigned short *vm, long t0, int tInc, int tCut);
+  void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl, int tpref, int tpostf);
+  void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
+                        float noise_amp_percent, int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl,
+                        int minsl);
+  void MedianVoltage(short *vm);
+  void MeanVoltage(short *vm, int tInc, int tCut);
+  void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed);
   void FinishDetection();
 };
+  void buildPositionsMatrix(int** _channel_positions, string positions_file_path, int rows, int cols);
+  void buildNeighborMatrix(int** _neighbor_matrix, string neighbors_file_path, int rows, int cols);
+  int** createPositionMatrix(int position_rows);
+  int** createNeighborMatrix(int channel_rows, int channel_cols);
+int** createBaselinesMatrix(int channel_rows, int channel_cols);
 };
