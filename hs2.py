@@ -66,8 +66,7 @@ class herdingspikes(object):
                                     })
         self.IsClustered = False
 
-    def DetectFromRaw(self, datapath,
-                      to_localize, cutout_start, cutout_end, threshold,
+    def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -86,15 +85,10 @@ class herdingspikes(object):
         minsl
         ahpthr
         """
-        probe = self.probe
-        detectData(datapath, probe.positions_file_path,
-                   probe.neighbors_file_path,
-                   probe.num_channels, probe.num_recording_channels,
-                   probe.spike_delay, probe.spike_peak_duration,
-                   probe.noise_duration, probe.noise_amp_percent,
-                   probe.max_neighbors,
-                   to_localize, probe.fps, threshold, cutout_start, cutout_end,
-                   maa, maxsl, minsl, ahpthr, data_format=probe.data_format)
+        detectData(self.probe,
+                   to_localize, self.probe.fps, threshold,
+                   cutout_start, cutout_end,
+                   maa, maxsl, minsl, ahpthr)
         # reload data into memory
         self.LoadDetected()
 

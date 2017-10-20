@@ -1,5 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from probes.readUtils import read_flat
+from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
 
 
 class NeuralProbe(object):
@@ -56,23 +58,46 @@ class NeuralProbe(object):
         plt.ylim([0, ymax+ymin])
         plt.xlim([0, xmax+xmin])
 
+    def Read(self, t0, t1):
+        raise NotImplementedError("The Read function is not implemented for \
+            this probe")
+
 
 class NeuroPixel(NeuralProbe):
-    def __init__(self, fps=30000):
+    def __init__(self, data_file_path, fps=30000):
+
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=5, noise_duration=2,
             noise_amp_percent=.95, fps=fps,
-            data_format='flat',
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel')
+        self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
+        nRecCh = self.num_recording_channels
+        assert len(self.d)/nRecCh == len(self.d)//nRecCh, 'Data not multiple \
+            of channel number'
+        # nFrames = len(self.d)//nRecCh
+        # sf = int(fps)
+
+    def Read(self, t0, t1):
+        return read_flat(self.d, t0, t1, self.num_channels)
 
 
 class BioCam(NeuralProbe):
-    def __init__(self, fps=0):
-        NeuralProbe.__init__(self, num_channels=4096, spike_delay=5,
+    def __init__(self, data_file_path, fps=0):
+        NeuralProbe.__init__(self, num_channels=None, spike_delay=5,
                              spike_peak_duration=5, noise_duration=2,
                              noise_amp_percent=.95, fps=fps,
-                             data_format='biocam',
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam')
+        d = openHDF5file(data_file_path)
+        nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
+        self.num_channels = nRecCh
+        assert self.num_recording_channels == self.num_channels
+        if file_format == 100:
+            self.read_function = readHDF5t_100
+        else:
+            self.read_function = readHDF5t_101
+
+    def Read(self, t0, t1):
+        return self.read_function(self.d, t0, t1, self.num_channels)
