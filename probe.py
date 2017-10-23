@@ -73,10 +73,9 @@ class NeuroPixel(NeuralProbe):
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel')
         self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
-        nRecCh = self.num_recording_channels
-        # assert len(self.d)/nRecCh == len(self.d)//nRecCh, 'Data not multiple \
-        #     of channel number'
-        self.nFrames = len(self.d)//nRecCh
+        assert len(self.d)/self.num_channels == len(self.d)//self.num_channels,\
+            'Data not multiple of channel number'
+        self.nFrames = len(self.d)//self.num_channels
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)

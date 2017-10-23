@@ -1,5 +1,5 @@
-import numpy as np
 import pandas as pd
+import numpy as np
 from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 from sklearn.cluster import MeanShift

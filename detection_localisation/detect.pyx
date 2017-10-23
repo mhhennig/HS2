@@ -74,7 +74,7 @@ def detectData(probe, _to_localize, sfd, thres,
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
-    nRecCh = probe.num_recording_channels
+    nRecCh = num_channels
     nFrames = probe.nFrames
     # positions_file_path = str(_positions_file_path)
     # neighbors_file_path = str(_neighbors_file_path)
@@ -83,7 +83,7 @@ def detectData(probe, _to_localize, sfd, thres,
 
 
     print("# Sampling rate: " + str(sf))
-    print("# Number of recorded channels: " + str(probe.num_recording_channels))
+    print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
           str(nSec))
     print("# Frames before spike in cutout: " + str(tpref))
