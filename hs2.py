@@ -107,30 +107,35 @@ class herdingspikes(object):
         if ax is None:
             ax = plt.gca()
         pos, neighs = self.probe.positions, self.probe.neighbors
-        data = np.fromfile(datapath,
-                           dtype=np.int16).reshape((-1,
-                                                    self.probe.num_channels))
+        # data = np.fromfile(datapath,
+        #                    dtype=np.int16).reshape((-1,
+        #                                             self.probe.num_channels))
 
         event = self.spikes.loc[eventid]
         print("Spike detected at channel: ", event.ch)
         print("Spike detected at frame: ", event.t)
         cutlen = len(event.Shape)
-
+        dst = pos[event.ch][0] - pos[neighs[event.ch]][:, 0]
+        interdistance = np.min(dst[dst > 0])
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
 
         t1 = np.max((0, event.t - 100))
         t2 = event.t + 100
+        scale = interdistance/220.
+        trange = (np.arange(t2-t1)-100)*scale
+        trange_blue = (np.arange(cutlen)+event.t-t1-110)*scale
+        data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
 
         for n in neighs[event.ch]:
-            plt.plot(pos[n][0]+np.arange(t2-t1)/10.-10,
-                     pos[n][1] + data[t1:t2, n]/10., 'gray')
-            plt.plot(pos[n][0]+(np.arange(cutlen)+event.t-t1-10)/10.-10,
-                     pos[n][1] + data[event.t-10:event.t+cutlen-10, n]/10.,
-                     'b')
-        plt.plot(pos[event.ch][0]+(np.arange(cutlen)+event.t-t1-10)/10.-10,
-                 pos[event.ch][1] + event.Shape/10., 'r')
+            plt.plot(pos[n][0] + trange,
+                     pos[n][1] + data[:, n]*scale, 'gray')
+            plt.plot(pos[n][0] + trange_blue,
+                     pos[n][1] + data[-110:cutlen-110, n]*scale, 'b')
+
+        plt.plot(pos[event.ch][0] + trange_blue,
+                 pos[event.ch][1] + event.Shape*scale, 'r')
         plt.scatter(event.x, event.y, s=80, c='r')
 
     def PlotDensity(self, binsize=1., invert=False, ax=None):
