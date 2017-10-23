@@ -1,13 +1,14 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from probes.readUtils import read_flat
-from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
+from probes.readUtils import openHDF5file, getHDF5params
+from probes.readUtils import readHDF5t_100, readHDF5t_101
 
 
 class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay,
                  spike_peak_duration, noise_duration, noise_amp_percent,
-                 fps, positions_file_path, neighbors_file_path, data_format):
+                 fps, positions_file_path, neighbors_file_path):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -16,7 +17,6 @@ class NeuralProbe(object):
         self.fps = fps
         self.positions_file_path = positions_file_path
         self.neighbors_file_path = neighbors_file_path
-        self.data_format = data_format
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
@@ -74,10 +74,9 @@ class NeuroPixel(NeuralProbe):
             neighbors_file_path='probes/neighbormatrix_neuropixel')
         self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
         nRecCh = self.num_recording_channels
-        assert len(self.d)/nRecCh == len(self.d)//nRecCh, 'Data not multiple \
-            of channel number'
-        # nFrames = len(self.d)//nRecCh
-        # sf = int(fps)
+        # assert len(self.d)/nRecCh == len(self.d)//nRecCh, 'Data not multiple \
+        #     of channel number'
+        self.nFrames = len(self.d)//nRecCh
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
@@ -90,8 +89,9 @@ class BioCam(NeuralProbe):
                              noise_amp_percent=.95, fps=fps,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam')
-        d = openHDF5file(data_file_path)
-        nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
+        self.d = openHDF5file(data_file_path)
+        self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
+            self.d)
         self.num_channels = nRecCh
         assert self.num_recording_channels == self.num_channels
         if file_format == 100:

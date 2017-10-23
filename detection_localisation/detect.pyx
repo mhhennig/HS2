@@ -32,8 +32,8 @@ def read_flat(d, t0, t1, nch):
 
 
 def detectData(probe, _to_localize, sfd, thres,
-               _cutout_start=10, _cutout_end=20, maa = None, maxsl = None,
-               minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2):
+               _cutout_start=10, _cutout_end=20, maa=5, maxsl=None,
+               minsl=None, ahpthr=0, tpre=1.0, tpost=2.2):
     """ Read data from a file and pipe it to the spike detector. """
 
     # if data_format is 'flat':
@@ -59,8 +59,9 @@ def detectData(probe, _to_localize, sfd, thres,
 
     # nFrames = 14000
 
-    nSec = nFrames / sfd  # the duration in seconds of the recording
-    nSec = nFrames / sfd
+    nSec = probe.nFrames / sfd  # the duration in seconds of the recording
+    nSec = probe.nFrames / sfd
+    sf = int(sfd)
     tpref = int(tpre*sf/1000)
     tpostf = int(tpost*sf/1000)
     num_channels = int(probe.num_channels)
@@ -73,6 +74,8 @@ def detectData(probe, _to_localize, sfd, thres,
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
+    nRecCh = probe.num_recording_channels
+    nFrames = probe.nFrames
     # positions_file_path = str(_positions_file_path)
     # neighbors_file_path = str(_neighbors_file_path)
     positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
@@ -80,7 +83,7 @@ def detectData(probe, _to_localize, sfd, thres,
 
 
     print("# Sampling rate: " + str(sf))
-    print("# Number of recorded channels: " + str(nRecCh))
+    print("# Number of recorded channels: " + str(probe.num_recording_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
           str(nSec))
     print("# Frames before spike in cutout: " + str(tpref))
@@ -88,14 +91,10 @@ def detectData(probe, _to_localize, sfd, thres,
 
     cdef Detection * det = new Detection()
 
-    if not maa:
-        maa = 5
     if not maxsl:
         maxsl = int(sf*1/1000 + 0.5)
     if not minsl:
         minsl = int(sf*0.3/1000 + 0.5)
-    if not ahpthr:
-        ahpthr = 0
 
     # set tCut, tCut2 and tInc
     # tCut = tpref + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?

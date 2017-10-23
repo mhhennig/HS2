@@ -67,7 +67,7 @@ class herdingspikes(object):
         self.IsClustered = False
 
     def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
-                      maa=0, maxsl=12, minsl=3, ahpthr=0):
+                      maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -88,7 +88,7 @@ class herdingspikes(object):
         detectData(self.probe,
                    to_localize, self.probe.fps, threshold,
                    cutout_start, cutout_end,
-                   maa, maxsl, minsl, ahpthr)
+                   maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
         self.LoadDetected()
 
@@ -147,7 +147,7 @@ class herdingspikes(object):
                   interpolation='none', origin='lower')
         return h, xb, yb
 
-    def PlotAll(self, invert=False, show_labels=False, ax=None, show_clustered=True, show_unclustered=True, **kwargs):
+    def PlotAll(self, invert=False, show_labels=False, ax=None, **kwargs):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
         If clustering has been performed, each spike is coloured according to
@@ -165,16 +165,9 @@ class herdingspikes(object):
         x, y = self.spikes.x, self.spikes.y
         if invert:
             x, y = y, x
-        # c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
-        #     if self.IsClustered else 'r'
         c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
             if self.IsClustered else 'r'
-        inds = self.spikes.cl>-1 \
-            if self.IsClustered else np.zeros(self.spikes.shape[0],dtype=bool)
-        if (show_unclustered) or (self.IsClustered):
-            ax.scatter(x[~inds], y[~inds], c='r', **kwargs)
-        if (show_clustered) and (self.IsClustered):
-            ax.scatter(x[inds], y[inds], c=c[inds], **kwargs)
+        ax.scatter(x, y, c=c, **kwargs)
         if show_labels and self.IsClustered:
             ctr_x, ctr_y = self.clusters.ctr_x, self.clusters.ctr_y
             if invert:
