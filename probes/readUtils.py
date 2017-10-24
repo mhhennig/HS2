@@ -63,7 +63,6 @@ def readHDF5t_100(rf, t0, t1, nch):
         return d
     else:  # Reversed read
         raise Exception('Not sure about this one.')
-
         return 2048 - rf['3BData/Raw'][t1:t0].flatten(
                     'F').astype(ctypes.c_short)
 
@@ -72,7 +71,8 @@ def readHDF5t_101(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
         return rf['3BData/Raw'][nch*t0:nch*t1].reshape(
-            (-1, nch), order='C').flatten('F').astype(ctypes.c_short)
+            (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
     else:  # Reversed read
+        raise Exception('Not sure about this one.')
         return rf['3BData/Raw'][nch*t1:nch*t0].reshape(
-            (-1, nch), order='C').flatten('F').astype(ctypes.c_short)
+            (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
