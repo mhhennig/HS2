@@ -1,6 +1,13 @@
 from Cython.Build import cythonize
 from setuptools import setup, Extension
 import numpy
+# Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
+import distutils.sysconfig
+cfg_vars = distutils.sysconfig.get_config_vars()
+for key, value in cfg_vars.items():
+    if type(value) == str:
+        cfg_vars[key] = value.replace("-Wstrict-prototypes", "")
+# ==================================
 
 long_descr = """`See
 <http://github.com/>`_.

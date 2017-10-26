@@ -105,7 +105,7 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
 
 void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed) {
   // MeanVoltage(vm, tInc, tCut);
-  int a, b=0; // to buffer the difference between ADC counts and Qm, and basline
+  int a; // to buffer the difference between ADC counts and Qm, and basline
   loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
   ++iterations;
   for (int t = tCut; t < tInc + tCut2; t++) { // loop over data, will be removed for an online algorithm
@@ -175,7 +175,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
             if (t-tCut2 >= tInc) {
             cout << "line 223: referencing index too large" << "\n";
             }
-            b = Aglobal[t - tCut];// Qm[i]; // Again, should tCut be subtracted here?
+            //b = Aglobal[t - tCut];// Qm[i]; // Again, should tCut be subtracted here?
           }
         }
         // check for threshold crossings
