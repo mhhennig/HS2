@@ -26,64 +26,62 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
         void FinishDetection()
 
+
 def read_flat(d, t0, t1, nch):
   return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
-def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_channels, _num_recording_channels, _spike_delay, _spike_peak_duration, \
-               _noise_duration, _noise_amp_percent, _max_neighbors, _to_localize, sfd, thres, \
-               _cutout_start=10, _cutout_end=20, maa = None, maxsl = None, minsl = None, ahpthr = None, tpre = 1.0, tpost = 2.2, data_format='flat'):
+
+def detectData(probe, _to_localize, sfd, thres,
+               _cutout_start=10, _cutout_end=20, maa=5, maxsl=None,
+               minsl=None, ahpthr=0, tpre=1.0, tpost=2.2):
     """ Read data from a file and pipe it to the spike detector. """
 
-    # this whole part should be handles by the probe object:
-    if data_format is 'flat':
-      import sys
-      sys.path.append("../")
-      d = np.memmap(filename, dtype=np.int16, mode='r')
-      nRecCh = _num_channels
-      assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
-      nFrames = len(d)//nRecCh
-      sf = int(sfd)
-      read_function = read_flat
-    elif data_format is 'biocam':
-      import sys
-      sys.path.append("../")
-      from probes.readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
-      d = openHDF5file(filename)
-      nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
-      _num_channels = nRecCh
-      _num_recording_channels = nRecCh
-      sf = int(sfd)
-      if file_format == 100:
-          read_function = readHDF5t_100
-      else:
-          read_function = readHDF5t_101
-    else:
-      raise NotImplementedError('Unknown file format')
+    # if data_format is 'flat':
+    #   d = np.memmap(filename, dtype=np.int16, mode='r')
+    #   nRecCh = _num_channels
+    #   assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
+    #   nFrames = len(d)//nRecCh
+    #   sf = int(sfd)
+    #   read_function = read_flat
+    # elif data_format is 'biocam':
+    #   from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
+    #   d = openHDF5file(filename)
+    #   nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
+    #   _num_channels = nRecCh
+    #   _num_recording_channels = nRecCh
+    #
+    #   if file_format == 100:
+    #       read_function = readHDF5t_100
+    #   else:
+    #       read_function = readHDF5t_101
+    # else:
+    #   raise NotImplementedError('Unknown file format')
 
-    # nFrames = 14000
-
-    nSec = nFrames / sfd  # the duration in seconds of the recording
-    nSec = nFrames / sfd
+    nSec = probe.nFrames / sfd  # the duration in seconds of the recording
+    nSec = probe.nFrames / sfd
+    sf = int(sfd)
     tpref = int(tpre*sf/1000)
     tpostf = int(tpost*sf/1000)
-    num_channels = int(_num_channels)
-    num_recording_channels = int(_num_recording_channels)
-    spike_delay = int(_spike_delay)
-    spike_peak_duration = int(_spike_peak_duration)
-    noise_duration = int(_noise_duration)
-    noise_amp_percent = float(_noise_amp_percent)
-    max_neighbors = int(_max_neighbors)
+    num_channels = int(probe.num_channels)
+    num_recording_channels = int(probe.num_recording_channels)
+    spike_delay = int(probe.spike_delay)
+    spike_peak_duration = int(probe.spike_peak_duration)
+    noise_duration = int(probe.noise_duration)
+    noise_amp_percent = float(probe.noise_amp_percent)
+    max_neighbors = int(probe.max_neighbors)
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
+    nRecCh = num_channels
+    nFrames = probe.nFrames
     # positions_file_path = str(_positions_file_path)
     # neighbors_file_path = str(_neighbors_file_path)
-    positions_file_path = _positions_file_path.encode() # <- python 3 seems to need this
-    neighbors_file_path = _neighbors_file_path.encode()
+    positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
+    neighbors_file_path = probe.neighbors_file_path.encode()
 
 
     print("# Sampling rate: " + str(sf))
-    print("# Number of recorded channels: " + str(nRecCh))
+    print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
           str(nSec))
     print("# Frames before spike in cutout: " + str(tpref))
@@ -91,16 +89,12 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
 
     cdef Detection * det = new Detection()
 
-    if not maa:
-        maa = 5
     if not maxsl:
         maxsl = int(sf*1/1000 + 0.5)
     if not minsl:
         minsl = int(sf*0.3/1000 + 0.5)
-    if not ahpthr:
-        ahpthr = 0
 
-    #set tCut, tCut2 and tInc
+    # set tCut, tCut2 and tInc
     # tCut = tpref + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
     # FIX: make sure enough data points are available:
     tCut = max((tpref + maxsl, cutout_start+maxsl))
@@ -137,10 +131,10 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
         # # slice data
         if t0 == 0:
             #vm = np.hstack((np.zeros(nRecCh * tCut), d[:(t1+tCut2) * nRecCh])).astype(ctypes.c_short)
-            vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), read_function(d, 0, t1+tCut2, nRecCh)))
+            vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), probe.Read(0, t1+tCut2)))
         else:
             #vm = d[(t0-tCut) * nRecCh:(t1+tCut2) * nRecCh].astype(ctypes.c_short)
-            vm = read_function(d, t0-tCut, t1+tCut2, nRecCh)
+            vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
         det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)

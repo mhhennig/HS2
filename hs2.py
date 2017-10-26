@@ -1,5 +1,5 @@
-import numpy as np
 import pandas as pd
+import numpy as np
 from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 from sklearn.cluster import MeanShift
@@ -66,9 +66,8 @@ class herdingspikes(object):
                                     })
         self.IsClustered = False
 
-    def DetectFromRaw(self, datapath,
-                      to_localize, cutout_start, cutout_end, threshold,
-                      maa=0, maxsl=12, minsl=3, ahpthr=0):
+    def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
+                      maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -86,19 +85,14 @@ class herdingspikes(object):
         minsl
         ahpthr
         """
-        probe = self.probe
-        detectData(datapath, probe.positions_file_path,
-                   probe.neighbors_file_path,
-                   probe.num_channels, probe.num_recording_channels,
-                   probe.spike_delay, probe.spike_peak_duration,
-                   probe.noise_duration, probe.noise_amp_percent,
-                   probe.max_neighbors,
-                   to_localize, probe.fps, threshold, cutout_start, cutout_end,
-                   maa, maxsl, minsl, ahpthr, data_format=probe.data_format)
+        detectData(self.probe,
+                   to_localize, self.probe.fps, threshold,
+                   cutout_start, cutout_end,
+                   maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
         self.LoadDetected()
 
-    def PlotTracesChannels(self, datapath, eventid, ax=None):
+    def PlotTracesChannels(self, datapath, eventid, ax=None, window_size = 200, cutout_start = 6):
         """
         Draw a figure with an electrode and its neighbours, showing the raw
         traces and events. Note that this requires loading the raw data in
@@ -109,34 +103,42 @@ class herdingspikes(object):
         eventid -- centers, spatially and temporally, the plot to a specific
         event id.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        window_size -- number of samples shown around a spike
+        cutout_start -- numbe frames recorded before the spike peak in the coutout
         """
-        if ax is None:
-            ax = plt.gca()
         pos, neighs = self.probe.positions, self.probe.neighbors
-        data = np.fromfile(datapath,
-                           dtype=np.int16).reshape((-1,
-                                                    self.probe.num_channels))
+        # data = np.fromfile(datapath,
+        #                    dtype=np.int16).reshape((-1,
+        #                                             self.probe.num_channels))
 
         event = self.spikes.loc[eventid]
         print("Spike detected at channel: ", event.ch)
         print("Spike detected at frame: ", event.t)
         cutlen = len(event.Shape)
-
+        assert window_size > cutlen, "window_size is too small"
+        dst = pos[event.ch][0] - pos[neighs[event.ch]][:, 0]
+        interdistance = np.min(dst[dst > 0])
+        if ax is None:
+            ax = plt.gca()
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
 
-        t1 = np.max((0, event.t - 100))
-        t2 = event.t + 100
+        t1 = np.max((0, event.t - window_size//2))
+        t2 = event.t + window_size//2
+        scale = interdistance/220.
+        trange = (np.arange(t2-t1)-window_size//2)*scale
+        trange_bluered = (np.arange(cutlen)+event.t-t1-window_size//2-cutout_start)*scale
+        data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
 
         for n in neighs[event.ch]:
-            plt.plot(pos[n][0]+np.arange(t2-t1)/10.-10,
-                     pos[n][1] + data[t1:t2, n]/10., 'gray')
-            plt.plot(pos[n][0]+(np.arange(cutlen)+event.t-t1-10)/10.-10,
-                     pos[n][1] + data[event.t-10:event.t+cutlen-10, n]/10.,
-                     'b')
-        plt.plot(pos[event.ch][0]+(np.arange(cutlen)+event.t-t1-10)/10.-10,
-                 pos[event.ch][1] + event.Shape/10., 'r')
+            plt.plot(pos[n][0] + trange,
+                     pos[n][1] + data[:, n]*scale, 'gray')
+            plt.plot(pos[n][0] + trange_bluered,
+                     pos[n][1] + data[window_size//2-cutout_start:window_size//2-cutout_start+cutlen, n]*scale, 'b')
+
+        plt.plot(pos[event.ch][0] + trange_bluered,
+                 pos[event.ch][1] + event.Shape*scale, 'r')
         plt.scatter(event.x, event.y, s=80, c='r')
 
     def PlotDensity(self, binsize=1., invert=False, ax=None):
@@ -153,7 +155,7 @@ class herdingspikes(object):
                   interpolation='none', origin='lower')
         return h, xb, yb
 
-    def PlotAll(self, invert=False, show_labels=False, ax=None, show_clustered=True, show_unclustered=True, **kwargs):
+    def PlotAll(self, invert=False, show_labels=False, ax=None, **kwargs):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
         If clustering has been performed, each spike is coloured according to
@@ -171,16 +173,9 @@ class herdingspikes(object):
         x, y = self.spikes.x, self.spikes.y
         if invert:
             x, y = y, x
-        # c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
-        #     if self.IsClustered else 'r'
         c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
             if self.IsClustered else 'r'
-        inds = self.spikes.cl>-1 \
-            if self.IsClustered else np.zeros(self.spikes.shape[0],dtype=bool)
-        if (show_unclustered) or (self.IsClustered):
-            ax.scatter(x[~inds], y[~inds], c='r', **kwargs)
-        if (show_clustered) and (self.IsClustered):
-            ax.scatter(x[inds], y[inds], c=c[inds], **kwargs)
+        ax.scatter(x, y, c=c, **kwargs)
         if show_labels and self.IsClustered:
             ctr_x, ctr_y = self.clusters.ctr_x, self.clusters.ctr_y
             if invert:
