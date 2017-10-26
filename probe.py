@@ -3,12 +3,14 @@ from matplotlib import pyplot as plt
 from probes.readUtils import read_flat
 from probes.readUtils import openHDF5file, getHDF5params
 from probes.readUtils import readHDF5t_100, readHDF5t_101
+from sklearn.neighbors import KDTree
 
 
 class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay,
                  spike_peak_duration, noise_duration, noise_amp_percent,
-                 fps, positions_file_path, neighbors_file_path):
+                 fps, positions_file_path, neighbors_file_path=None,
+                 neighborhood_radius=None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -19,7 +21,10 @@ class NeuralProbe(object):
         self.neighbors_file_path = neighbors_file_path
 
         self.loadPositions(positions_file_path)
-        self.loadNeighbors(neighbors_file_path)
+        if neighbors_file_path is not None:
+            self.loadNeighbors(neighbors_file_path)
+        else:
+            self.computeNeighbors(neighborhood_radius)
 
     # Load in neighbor and positions files
     def loadNeighbors(self, neighbors_file_path):
@@ -32,6 +37,11 @@ class NeuralProbe(object):
         self.num_recording_channels = len(neighbors)
         self.neighbors = neighbors
         self.max_neighbors = max([len(n) for n in neighbors])
+
+    def computeNeighbors(self, radius):
+        tree = KDTree(self.positions)
+        self.neighbors = list(tree.query_radius(self.positions, r=radius))
+        return self.neighbors
 
     def loadPositions(self, positions_file_path):
         position_file = open(positions_file_path, 'r')
@@ -65,7 +75,7 @@ class NeuralProbe(object):
 
 class NeuroPixel(NeuralProbe):
     def __init__(self, data_file_path, fps=30000):
-
+        # can also use computeNeighbors(radius=78.)
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=5, noise_duration=2,
@@ -83,6 +93,7 @@ class NeuroPixel(NeuralProbe):
 
 class BioCam(NeuralProbe):
     def __init__(self, data_file_path, fps=0):
+        # can also use computeNeighbors(radius=2.)
         NeuralProbe.__init__(self, num_channels=None, spike_delay=5,
                              spike_peak_duration=5, noise_duration=2,
                              noise_amp_percent=.95, fps=fps,
