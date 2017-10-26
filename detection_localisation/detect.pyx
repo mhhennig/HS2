@@ -36,6 +36,8 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
 
     # this whole part should be handles by the probe object:
     if data_format is 'flat':
+      import sys
+      sys.path.append("../")
       d = np.memmap(filename, dtype=np.int16, mode='r')
       nRecCh = _num_channels
       assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
@@ -107,7 +109,7 @@ def detectData(filename, _positions_file_path, _neighbors_file_path,  _num_chann
     tCut2 = max(tpostf + 1 - maxsl, cutout_end+maxsl)
     print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
 
-    tInc = min(nFrames-tCut-tCut2, 200000) # cap at specified number of frames
+    tInc = min(nFrames-tCut-tCut2, 100000) # cap at specified number of frames
     # tInc = 10000
     maxFramesProcessed = tInc;
     print('# tInc: '+str(tInc))

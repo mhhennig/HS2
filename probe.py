@@ -59,13 +59,12 @@ class NeuralProbe(object):
 
 class NeuroPixel(NeuralProbe):
     def __init__(self, fps=30000):
-        NeuralProbe.__init__(
-            self, num_channels=385, spike_delay=5,
-            spike_peak_duration=5, noise_duration=2,
-            noise_amp_percent=.95, fps=fps,
-            data_format='flat',
-            positions_file_path='probes/positions_neuropixel',
-            neighbors_file_path='probes/neighbormatrix_neuropixel')
+        NeuralProbe.__init__(self, num_channels=385, spike_delay=5,
+                             spike_peak_duration=5, noise_duration=2,
+                             noise_amp_percent=.95, fps=fps,
+                             data_format='flat',
+                             positions_file_path='probes/positions_neuropixel',
+                             neighbors_file_path='probes/neighbormatrix_neuropixel')
 
 
 class BioCam(NeuralProbe):
