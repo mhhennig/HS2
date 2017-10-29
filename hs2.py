@@ -181,7 +181,10 @@ class herdingspikes(object):
             if invert:
                 ctr_x, ctr_y = ctr_y, ctr_x
             for cl in range(self.NClusters):
-                ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16)
+                if ~np.isnan(ctr_y[cl]): # hack, why are positions NaN in DBScan?
+                    ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16) # seems this is a problem when zooming with x/ylim
+                    # ax.text(ctr_x[cl], ctr_y[cl], str(cl), fontsize=16)
+        return ax
 
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
                            pca_ncomponents=2, pca_whiten=True,
@@ -228,7 +231,7 @@ class herdingspikes(object):
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
-    def PlotShapes(self, units, nshapes=100, ncols=4):
+    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None):
         """
         Plot a sample of the spike shapes contained in a given set of clusters
         and their average.
@@ -239,13 +242,15 @@ class herdingspikes(object):
         ncols -- the number of columns under which to distribute the plots.
         """
         nrows = np.ceil(len(units)/ncols)
-        plt.figure(figsize=(3*ncols, 3*nrows))
+        if ax is None:
+            plt.figure(figsize=(3*ncols, 3*nrows))
         cutouts = np.array(list(self.spikes.Shape))
         for i, cl in enumerate(units):
             inds = np.where(self.spikes.cl == cl)[0]
-            plt.subplot(nrows, ncols, i+1)
+            if ax is None:
+                plt.subplot(nrows, ncols, i+1)
             plt.plot(cutouts[inds[:100], :].T, 'gray')
             plt.plot(np.mean(cutouts[inds, :], axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
-            plt.ylim((-130, 90))
+            plt.ylim((-200, 150))
             plt.title("Cluster "+str(cl))
