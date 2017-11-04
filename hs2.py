@@ -52,11 +52,11 @@ class herdingspikes(object):
     #         self.IsClustered = False
     #     store.close()
 
-    def LoadDetected(self):
+    def LoadDetected(self, file_name):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
         """
-        sp = np.loadtxt('ProcessedSpikes')
+        sp = np.loadtxt(file_name)
         self.spikes = pd.DataFrame({'ch': sp[:, 0].astype(int),
                                     't': sp[:, 1].astype(int),
                                     'Amplitude': sp[:, 2],
@@ -66,7 +66,7 @@ class herdingspikes(object):
                                     })
         self.IsClustered = False
 
-    def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
+    def DetectFromRaw(self, to_localize, file_name, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -85,12 +85,12 @@ class herdingspikes(object):
         minsl
         ahpthr
         """
-        detectData(self.probe,
+        detectData(self.probe, str.encode(file_name),
                    to_localize, self.probe.fps, threshold,
                    cutout_start, cutout_end,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
-        self.LoadDetected()
+        self.LoadDetected(file_name)
 
     def PlotTracesChannels(self, datapath, eventid, ax=None, window_size = 200, cutout_start = 6):
         """

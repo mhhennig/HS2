@@ -18,7 +18,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
         void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay,
-                              int spike_peak_duration, int noise_duration, float noise_amp_percent, \
+                              int spike_peak_duration, string file_name, int noise_duration, float noise_amp_percent, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl)
         void MedianVoltage(short * vm)
@@ -31,7 +31,7 @@ def read_flat(d, t0, t1, nch):
   return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
 
-def detectData(probe, _to_localize, sfd, thres,
+def detectData(probe, _file_name, _to_localize, sfd, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None,
                minsl=None, ahpthr=0, tpre=1.0, tpost=2.2):
     """ Read data from a file and pipe it to the spike detector. """
@@ -119,10 +119,9 @@ def detectData(probe, _to_localize, sfd, thres,
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration,
-                         noise_duration, noise_amp_percent, max_neighbors,
-                         to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
-
+    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration, 
+                         _file_name, noise_duration, noise_amp_percent, max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, 
+                         ahpthr, maxsl, minsl)
     startTime = datetime.now()
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:

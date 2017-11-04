@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
+void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, int** _channel_positions, int** _neighbor_matrix, \
 						  int _max_neighbors, bool _to_localize, int _cutout_start, int _cutout_end, int _maxsl);
 void loadRawData(short* _raw_data, int _index_data, int _iterations, int _frames, int _additional_data);

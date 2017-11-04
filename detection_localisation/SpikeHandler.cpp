@@ -26,7 +26,7 @@ deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream spikes_filtered_file;
 
 
-void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
+void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, int** _channel_positions, int** _neighbor_matrix, \
 						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0) 
 {
@@ -127,7 +127,7 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
 
-	spikes_filtered_file.open("ProcessedSpikes");
+	spikes_filtered_file.open(file_name);
 
 
 }
