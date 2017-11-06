@@ -52,16 +52,20 @@ class herdingspikes(object):
     #         self.IsClustered = False
     #     store.close()
 
-    def LoadDetected(self, file_name):
+    def LoadDetected(self, file_name, cutout_length):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
         """
-        sp = np.loadtxt(file_name)
-        self.spikes = pd.DataFrame({'ch': sp[:, 0].astype(int),
-                                    't': sp[:, 1].astype(int),
+        #dt = np.dtype([('spike', np.int32, 3), ('position', np.int64, 2), ('cutout', np.int32, cutout_length)])
+        #sp = np.loadtxt(file_name)
+        sp = np.fromfile(file_name + ".bin", np.int32)
+        sp = sp.reshape(-1, 5 + cutout_length)
+        self.sp = sp
+        self.spikes = pd.DataFrame({'ch': sp[:, 0],
+                                    't': sp[:, 1],
                                     'Amplitude': sp[:, 2],
-                                    'x': sp[:, 3],
-                                    'y': sp[:, 4],
+                                    'x': sp[:, 3]/1000,
+                                    'y': sp[:, 4]/1000,
                                     'Shape': list(sp[:, 5:])
                                     })
         self.IsClustered = False
@@ -90,7 +94,8 @@ class herdingspikes(object):
                    cutout_start, cutout_end,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
-        self.LoadDetected(file_name)
+        cutout_length = cutout_start + cutout_end + 1
+        self.LoadDetected(file_name, cutout_length)
 
     def PlotTracesChannels(self, datapath, eventid, ax=None, window_size = 200, cutout_start = 6):
         """
@@ -217,7 +222,9 @@ class herdingspikes(object):
         in_cl = []
         for i in np.arange(self.NClusters):
             in_cl.append(list(np.where(self.spikes.cl == i)[0]))
+        self.fourvec = fourvec
         centers = np.asarray([np.mean(fourvec[cl], axis=0) for cl in in_cl])
+        self.centerz = centers
         dic_cls = {'ctr_x': centers[:, 0],
                    'ctr_y': centers[:, 1],
                    'Color': 1.*np.random.permutation(

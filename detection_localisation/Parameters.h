@@ -17,6 +17,8 @@
 #include <vector>
 #include <stdlib.h> 
 #include <limits.h>
+#include <stdint.h>
+
 
 using namespace std;
 
@@ -26,8 +28,17 @@ struct Spike {
 	int channel;
 	int frame;
 	vector<int> amp_cutouts;
-	vector<int> written_cutout;
+	vector<int32_t> written_cutout;
 };
+
+// struct WriteOutSpike {
+// 	int32_t channel;
+// 	int32_t frame;
+// 	int32_t amplitude;
+// 	float X;
+// 	float Y;
+// 	vector<int32_t> cutout;
+// };
 
 namespace Parameters {
 
