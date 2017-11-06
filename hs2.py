@@ -56,11 +56,8 @@ class herdingspikes(object):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
         """
-        #dt = np.dtype([('spike', np.int32, 3), ('position', np.int64, 2), ('cutout', np.int32, cutout_length)])
-        #sp = np.loadtxt(file_name)
         sp = np.fromfile(file_name + ".bin", np.int32)
         sp = sp.reshape(-1, 5 + cutout_length)
-        self.sp = sp
         self.spikes = pd.DataFrame({'ch': sp[:, 0],
                                     't': sp[:, 1],
                                     'Amplitude': sp[:, 2],

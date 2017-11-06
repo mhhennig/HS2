@@ -31,15 +31,6 @@ struct Spike {
 	vector<int32_t> written_cutout;
 };
 
-// struct WriteOutSpike {
-// 	int32_t channel;
-// 	int32_t frame;
-// 	int32_t amplitude;
-// 	float X;
-// 	float Y;
-// 	vector<int32_t> cutout;
-// };
-
 namespace Parameters {
 
 extern int num_channels; //Number of channels on the probe
@@ -70,7 +61,6 @@ extern int frames; //Number of current iterations of raw data passed in. User st
 extern int iterations; //The number of frames passed into loadRawData EXCLUDING the buffer frames.
 extern int maxsl; //Number of frames after a detection that a spike is accepted
 extern int end_raw_data; //index of the end of the raw data
-extern int bad_index;
 };
 
 #endif

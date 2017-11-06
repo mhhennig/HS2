@@ -20,7 +20,6 @@ int Parameters::iterations;
 int Parameters::frames;
 int Parameters::maxsl;
 int Parameters::end_raw_data;
-int Parameters::bad_index = 0;
 short* Parameters::raw_data;
 deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream spikes_filtered_file;
@@ -233,7 +232,6 @@ void addSpike(int channel, int frame, int amplitude) {
 			try {
 				int curr_reading_index = (frame - Parameters::cutout_start - frames_processed + Parameters::index_data + i)*Parameters::num_channels + channel;
 				if(curr_reading_index < 0 || curr_reading_index > Parameters::end_raw_data) {
-					Parameters::bad_index += 1;
 					curr_written_reading = (int32_t) 0;
 				}
 				else {
@@ -321,6 +319,5 @@ void terminateSpikeHandler() {
 			ProcessSpikes::filterSpikes(spikes_filtered_file); 
 		}	
 	}
-	cout << "Cutouts that had to be changed to 0 because not in data: " <<  Parameters::bad_index << endl;
 	spikes_filtered_file.close();
 }
