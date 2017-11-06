@@ -20,13 +20,12 @@ int Parameters::iterations;
 int Parameters::frames;
 int Parameters::maxsl;
 int Parameters::end_raw_data;
-int Parameters::bad_index = 0;
 short* Parameters::raw_data;
 deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream spikes_filtered_file;
 
 
-void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, \
+void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, int** _channel_positions, int** _neighbor_matrix, \
 						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0) 
 {
@@ -127,7 +126,8 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
 
-	spikes_filtered_file.open("ProcessedSpikes");
+	spikes_filtered_file.open(file_name + ".bin", ios::binary);
+	//spikes_filtered_file.open(file_name, ios::binary);
 
 
 }
@@ -221,6 +221,7 @@ void addSpike(int channel, int frame, int amplitude) {
 
 	if(channel < Parameters::num_recording_channels && channel >= 0) {
 		int curr_neighbor_channel, curr_reading;
+		int32_t curr_written_reading;
 		Spike spike_to_be_added;
 		spike_to_be_added.channel = channel;
 		spike_to_be_added.frame = frame;
@@ -231,18 +232,17 @@ void addSpike(int channel, int frame, int amplitude) {
 			try {
 				int curr_reading_index = (frame - Parameters::cutout_start - frames_processed + Parameters::index_data + i)*Parameters::num_channels + channel;
 				if(curr_reading_index < 0 || curr_reading_index > Parameters::end_raw_data) {
-					Parameters::bad_index += 1;
-					curr_reading = 0;
+					curr_written_reading = (int32_t) 0;
 				}
 				else {
-					curr_reading = Parameters::raw_data[curr_reading_index];
+					curr_written_reading = (int32_t) Parameters::raw_data[curr_reading_index];
 				}
 			} catch (...) {
 				spikes_filtered_file.close();
 				cout << "Raw Data and it parameters entered incorrectly, could not access data. Terminating SpikeHandler." << endl;
 				exit(EXIT_FAILURE);
 			}
-			spike_to_be_added.written_cutout.push_back(curr_reading);
+			spike_to_be_added.written_cutout.push_back(curr_written_reading);
 }
 
 		for(int i = 0; i < Parameters::max_neighbors; i++) {
@@ -319,6 +319,5 @@ void terminateSpikeHandler() {
 			ProcessSpikes::filterSpikes(spikes_filtered_file); 
 		}	
 	}
-	cout << "Cutouts that had to be changed to 0 because not in data: " <<  Parameters::bad_index << endl;
 	spikes_filtered_file.close();
 }

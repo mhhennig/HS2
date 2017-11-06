@@ -17,6 +17,8 @@
 #include <vector>
 #include <stdlib.h> 
 #include <limits.h>
+#include <stdint.h>
+
 
 using namespace std;
 
@@ -26,7 +28,7 @@ struct Spike {
 	int channel;
 	int frame;
 	vector<int> amp_cutouts;
-	vector<int> written_cutout;
+	vector<int32_t> written_cutout;
 };
 
 namespace Parameters {
@@ -59,7 +61,6 @@ extern int frames; //Number of current iterations of raw data passed in. User st
 extern int iterations; //The number of frames passed into loadRawData EXCLUDING the buffer frames.
 extern int maxsl; //Number of frames after a detection that a spike is accepted
 extern int end_raw_data; //index of the end of the raw data
-extern int bad_index;
 };
 
 #endif

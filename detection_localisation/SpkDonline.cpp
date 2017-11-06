@@ -38,9 +38,9 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   fpost = tpostf;
 }
 
-void Detection::SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                                 float noise_amp_percent, int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl,
-                                 int minsl) {
+void Detection::SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, 
+                                 string file_name, int noise_duration, float noise_amp_percent, int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
+                                 int maa, int ahpthr, int maxsl, int minsl) {
   // set the detection parameters
   // set the detection parameters
   threshold = thres;
@@ -58,7 +58,7 @@ void Detection::SetInitialParams(string positions_file_path, string neighbors_fi
   currQmsPosition = -1;
   _spike_delay = spike_delay;
 
-  setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, noise_duration, \
+  setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, file_name, noise_duration, \
                        noise_amp_percent, channel_positions, neighbor_matrix, max_neighbors, to_localize, cutout_start, cutout_end, maxsl);
 }
 
