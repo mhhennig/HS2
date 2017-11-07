@@ -18,7 +18,7 @@
 #include <stdlib.h> 
 #include <limits.h>
 #include <stdint.h>
-
+#include <math.h>
 
 using namespace std;
 

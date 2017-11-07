@@ -33,6 +33,28 @@ class herdingspikes(object):
     def __init__(self, probe):
         self.probe = probe
 
+    def Save_HDF5_legacy(self, filename, compression=None):
+        """Saves data, cluster centres and ClusterIDs to a hdf5 file.
+        Offers compression of the shapes, 'lzf'
+        appears a good trade-off between speed and performance.'"""
+        g = h5py.File(filename, 'w')
+        g.create_dataset("data", data=np.vstack((self.spikes.x,self.spikes.y)).T)
+        # g.create_dataset("expinds", data=self.__expinds)
+        if self.__c != np.array([]):
+            g.create_dataset("centres", data=self.centerz)
+        if self.__ClusterID != np.array([]):
+            g.create_dataset("cluster_id", data=self.spikes.cl)
+        if self.__times != np.array([]):
+            g.create_dataset("times", data=self.spikes.t)
+        if self.__shapes != np.array([]):
+            g.create_dataset("shapes",
+                             data=self.spikes.s,
+                             compression=compression)
+        if self.__sampling:
+            g.create_dataset("Sampling", data=self.__sampling)
+        g.close()
+
+
     # def SaveH5(self, filename):
     #     store = pd.HDFStore(filename)
     #     store['spikes'] = self.spikes
@@ -56,16 +78,20 @@ class herdingspikes(object):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
         """
-        sp = np.fromfile(file_name + ".bin", np.int32)
-        sp = sp.reshape(-1, 5 + cutout_length)
+        sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")#, shape=(N,))
+        assert sp_flat.shape[0]//(cutout_length+6) is not 1.*sp_flat.shape[0]/(cutout_length+6), "spike data has wrong dimensions"
+        sp = sp_flat.reshape((sp_flat.shape[0]//(cutout_length+6),cutout_length+6))
+
         self.spikes = pd.DataFrame({'ch': sp[:, 0],
                                     't': sp[:, 1],
                                     'Amplitude': sp[:, 2],
                                     'x': sp[:, 3]/1000,
                                     'y': sp[:, 4]/1000,
                                     'Shape': list(sp[:, 5:])
-                                    })
+                                    }, copy=False)
         self.IsClustered = False
+        self.HasFeatures = False
+        print('Read '+str(self.spikes.shape[0])+' spikes.')
 
     def DetectFromRaw(self, to_localize, file_name, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
@@ -188,8 +214,20 @@ class herdingspikes(object):
                     # ax.text(ctr_x[cl], ctr_y[cl], str(cl), fontsize=16)
         return ax
 
+    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True):
+        pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
+        if self.spikes.shape[0]>1e6:
+            print("Fitting PCA using 1e6 out of "+str(self.spikes.shape[0])+" spikes")
+            inds = np.random.choice(self.spikes.shape[0], int(1e6), replace=False)
+            pca.fit(np.array(list(self.spikes.Shape[inds])))
+        else:
+            print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes")
+            pca.fit(np.array(list(self.spikes.Shape)))
+        self.HasFeatures = True
+        return pca.transform(np.array(list(self.spikes.Shape)))
+
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
-                           pca_ncomponents=2, pca_whiten=True,
+                           pca_ncomponents=2, pca_whiten=True, recompute_pca=False,
                            **kwargs):
         """
         Performs PCA on the available spike shapes, and clusters spikes based
@@ -207,10 +245,12 @@ class herdingspikes(object):
         **kwargs -- additional arguments are passed to the clustering class.
         This may include n_jobs > 1 for parallelisation.
         """
-        pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
-        cutouts_pca = pca.fit_transform(np.array(list(self.spikes.Shape)))
+
+        if not self.HasFeatures or recompute_pca is True:
+            self.cutouts_pca = self.ShapePCA(pca_ncomponents, pca_whiten)
+
         fourvec = np.vstack(([self.spikes.x], [self.spikes.y],
-                             alpha*cutouts_pca.T)).T
+                             alpha*self.cutouts_pca.T)).T
 
         clusterer = clustering_algorithm(**kwargs)
         clusterer.fit(fourvec)
