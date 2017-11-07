@@ -39,21 +39,16 @@ class herdingspikes(object):
         appears a good trade-off between speed and performance.'"""
         g = h5py.File(filename, 'w')
         g.create_dataset("data", data=np.vstack((self.spikes.x,self.spikes.y)).T)
+        g.create_dataset("Sampling", data=self.probe.fps)
+        g.create_dataset("times", data=self.spikes.t)
         # g.create_dataset("expinds", data=self.__expinds)
-        if self.__c != np.array([]):
+        if self.IsClustered:
             g.create_dataset("centres", data=self.centerz)
-        if self.__ClusterID != np.array([]):
             g.create_dataset("cluster_id", data=self.spikes.cl)
-        if self.__times != np.array([]):
-            g.create_dataset("times", data=self.spikes.t)
-        if self.__shapes != np.array([]):
-            g.create_dataset("shapes",
-                             data=self.spikes.s,
-                             compression=compression)
-        if self.__sampling:
-            g.create_dataset("Sampling", data=self.__sampling)
+        g.create_dataset("shapes",
+                         data=self.spikes.s,
+                         compression=compression)
         g.close()
-
 
     # def SaveH5(self, filename):
     #     store = pd.HDFStore(filename)
