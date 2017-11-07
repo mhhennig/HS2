@@ -39,16 +39,18 @@ class herdingspikes(object):
         Offers compression of the shapes, 'lzf'
         appears a good trade-off between speed and performance.'"""
         g = h5py.File(filename, 'w')
-        g.create_dataset("data", data=np.vstack((self.spikes.x,self.spikes.y)).T)
+        g.create_dataset("data", data=np.vstack((self.spikes.x,self.spikes.y)))
         g.create_dataset("Sampling", data=self.probe.fps)
         g.create_dataset("times", data=self.spikes.t)
         # g.create_dataset("expinds", data=self.__expinds)
         if self.IsClustered:
-            g.create_dataset("centres", data=self.centerz)
-            g.create_dataset("cluster_id", data=self.spikes.cl)
-        g.create_dataset("shapes",
-                         data=self.spikes.Shape,
-                         compression=compression)
+            g.create_dataset("centres", data=self.centerz.T)
+            g.create_dataset("cluster_id", data=self.spikes.cl+1)
+        # this is still a little slow (and perhaps memory intensive), but I have not found a better way:
+        sh_tmp = np.empty((self.cutout_length, self.spikes.Shape.size), dtype=int)
+        for i in range(self.spikes.Shape.size):
+            sh_tmp[:,i] = self.spikes.Shape[i]
+        g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
     # def SaveH5(self, filename):
@@ -74,9 +76,10 @@ class herdingspikes(object):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
         """
+        self.cutout_length = cutout_length
         sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")#, shape=(N,))
-        assert sp_flat.shape[0]//(cutout_length+6) is not 1.*sp_flat.shape[0]/(cutout_length+6), "spike data has wrong dimensions"
-        sp = sp_flat.reshape((sp_flat.shape[0]//(cutout_length+6),cutout_length+6))
+        assert sp_flat.shape[0]//(cutout_length+5) is not 1.*sp_flat.shape[0]/(cutout_length+5), "spike data has wrong dimensions"
+        sp = sp_flat.reshape((sp_flat.shape[0]//(cutout_length+5),cutout_length+5))
 
         self.spikes = pd.DataFrame({'ch': sp[:, 0],
                                     't': sp[:, 1],
@@ -113,7 +116,7 @@ class herdingspikes(object):
                    cutout_start, cutout_end,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
-        cutout_length = cutout_start + cutout_end #+ 1
+        cutout_length = cutout_start + cutout_end + 1
         self.LoadDetected(self.probe.data_file, cutout_length)
 
     def PlotTracesChannels(self, eventid, ax=None, window_size = 200, cutout_start = 6):
