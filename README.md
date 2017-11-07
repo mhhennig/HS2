@@ -11,7 +11,7 @@ populations using high density multielectrode arrays.
 Frontiers in neuroinformatics, 9.
 
 Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
-Ullo, S., ... & Murino, V. (2017). Unsupervised spike sorting for
+Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
 large-scale, high-density multielectrode arrays.
 Cell reports, 18(10), 2521-2532.
 
@@ -23,6 +23,9 @@ cd ..
 ```
 Yes, you need to `cd`.
 
+## Using HDBSCAN
+
+We have now included DBSCAN and [HDBSCAN](https://hdbscan.readthedocs.io/en/latest/comparing_clustering_algorithms.html) as clustering algorithms. These give better results compared to Mean Shift. HDBSCAN appears particularly suited, and scales well. To use this, install the ``hdbscan`` package with ``pip`` or conda. 
 
 ## Examples
 
