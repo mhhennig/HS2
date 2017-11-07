@@ -72,6 +72,7 @@ class NeuroPixel(NeuralProbe):
             noise_amp_percent=.95, fps=fps,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel')
+        self.data_file = data_file_path
         self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
         assert len(self.d)/self.num_channels == len(self.d)//self.num_channels,\
             'Data not multiple of channel number'
@@ -83,15 +84,15 @@ class NeuroPixel(NeuralProbe):
 
 class BioCam(NeuralProbe):
     def __init__(self, data_file_path, fps=0):
-        NeuralProbe.__init__(self, num_channels=None, spike_delay=5,
-                             spike_peak_duration=5, noise_duration=2,
-                             noise_amp_percent=.95, fps=fps,
-                             positions_file_path='probes/positions_biocam',
-                             neighbors_file_path='probes/neighbormatrix_biocam')
+        self.data_file = data_file_path
         self.d = openHDF5file(data_file_path)
         self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
             self.d)
-        self.num_channels = nRecCh
+        NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
+                             spike_peak_duration=5, noise_duration=2,
+                             noise_amp_percent=.95, fps=sfd,
+                             positions_file_path='probes/positions_biocam',
+                             neighbors_file_path='probes/neighbormatrix_biocam')
         assert self.num_recording_channels == self.num_channels
         if file_format == 100:
             self.read_function = readHDF5t_100

@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import h5py
 from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 from sklearn.cluster import MeanShift
@@ -18,7 +19,7 @@ class herdingspikes(object):
     Frontiers in neuroinformatics, 9.
 
     Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
-    Ullo, S., ... & Murino, V. (2017). Unsupervised spike sorting for
+    Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
     large-scale, high-density multielectrode arrays.
     Cell reports, 18(10), 2521-2532.
 
@@ -46,7 +47,7 @@ class herdingspikes(object):
             g.create_dataset("centres", data=self.centerz)
             g.create_dataset("cluster_id", data=self.spikes.cl)
         g.create_dataset("shapes",
-                         data=self.spikes.s,
+                         data=self.spikes.Shape,
                          compression=compression)
         g.close()
 
@@ -86,9 +87,9 @@ class herdingspikes(object):
                                     }, copy=False)
         self.IsClustered = False
         self.HasFeatures = False
-        print('Read '+str(self.spikes.shape[0])+' spikes.')
+        print('Detected and read '+str(self.spikes.shape[0])+' spikes.')
 
-    def DetectFromRaw(self, to_localize, file_name, cutout_start, cutout_end, threshold,
+    def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -97,7 +98,7 @@ class herdingspikes(object):
         `LoadDetected`.
 
         Arguments:
-        datapath -- the path to the raw data file.
+        file_name -- the path to the raw data file.
         to_localize
         cutout_start
         cutout_end
@@ -107,22 +108,21 @@ class herdingspikes(object):
         minsl
         ahpthr
         """
-        detectData(self.probe, str.encode(file_name),
+        detectData(self.probe, str.encode(self.probe.data_file),
                    to_localize, self.probe.fps, threshold,
                    cutout_start, cutout_end,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
-        cutout_length = cutout_start + cutout_end + 1
-        self.LoadDetected(file_name, cutout_length)
+        cutout_length = cutout_start + cutout_end #+ 1
+        self.LoadDetected(self.probe.data_file, cutout_length)
 
-    def PlotTracesChannels(self, datapath, eventid, ax=None, window_size = 200, cutout_start = 6):
+    def PlotTracesChannels(self, eventid, ax=None, window_size = 200, cutout_start = 6):
         """
         Draw a figure with an electrode and its neighbours, showing the raw
         traces and events. Note that this requires loading the raw data in
         memory again.
 
         Arguments:
-        datapath -- the path to the raw data file.
         eventid -- centers, spatially and temporally, the plot to a specific
         event id.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
