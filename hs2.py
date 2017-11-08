@@ -45,7 +45,7 @@ class herdingspikes(object):
         # g.create_dataset("expinds", data=self.__expinds)
         if self.IsClustered:
             g.create_dataset("centres", data=self.centerz.T)
-            g.create_dataset("cluster_id", data=self.spikes.cl+1)
+            g.create_dataset("cluster_id", data=self.spikes.cl)
         # this is still a little slow (and perhaps memory intensive), but I have not found a better way:
         sh_tmp = np.empty((self.cutout_length, self.spikes.Shape.size), dtype=int)
         for i in range(self.spikes.Shape.size):
