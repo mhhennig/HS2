@@ -84,8 +84,8 @@ class herdingspikes(object):
         self.spikes = pd.DataFrame({'ch': sp[:, 0],
                                     't': sp[:, 1],
                                     'Amplitude': sp[:, 2],
-                                    'x': sp[:, 3]/1000,
-                                    'y': sp[:, 4]/1000,
+                                    'x': sp[:, 3]/1000.,
+                                    'y': sp[:, 4]/1000.,
                                     'Shape': list(sp[:, 5:])
                                     }, copy=False)
         self.IsClustered = False
