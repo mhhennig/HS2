@@ -265,7 +265,7 @@ class herdingspikes(object):
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
-    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None):
+    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None, ylim=None):
         """
         Plot a sample of the spike shapes contained in a given set of clusters
         and their average.
@@ -280,6 +280,18 @@ class herdingspikes(object):
         if ax is None:
             plt.figure(figsize=(3*ncols, 3*nrows))
         cutouts = np.array(list(self.spikes.Shape))
+
+        # all this is to determine suitable ylims
+        if ylim is None:
+            meanshape = np.mean(cutouts, axis=0)
+            maxy, miny = meanshape.max(), meanshape.min()
+            varshape = np.var(cutouts, axis=0)
+            varmin = varshape[np.argmin(meanshape)]
+            varmax = varshape[np.argmax(meanshape)]
+            maxy += .1*varmax
+            miny -= .02*varmin
+            ylim = [miny, maxy]
+
         for i, cl in enumerate(units):
             inds = np.where(self.spikes.cl == cl)[0]
             if ax is None:
@@ -287,4 +299,5 @@ class herdingspikes(object):
             plt.plot(cutouts[inds[:100], :].T, 'gray')
             plt.plot(np.mean(cutouts[inds, :], axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
+            plt.ylim(ylim)
             plt.title("Cluster "+str(cl))
