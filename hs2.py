@@ -56,25 +56,6 @@ class herdingspikes(object):
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
-    # def SaveH5(self, filename):
-    #     store = pd.HDFStore(filename)
-    #     store['spikes'] = self.spikes
-    #     if self.IsClustered:
-    #         store['clusters'] = self.clusters
-    #     store.close()
-    #
-    # def LoadH5(self, filename):
-    #     store = pd.HDFStore(filename)
-    #     self.spikes = store['spikes']
-    #     if 'clusters' in store.keys():
-    #         self.clusters = store['clusters']
-    #         self.IsClustered = True
-    #         self.NClusters = len(self.clusters)
-    #         assert np.max(self.spikes.cl)+1 == self.NClusters
-    #     else:
-    #         self.IsClustered = False
-    #     store.close()
-
     def LoadDetected(self, file_name, cutout_length):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
@@ -293,6 +274,7 @@ class herdingspikes(object):
         units -- a list of the cluster IDs to be considered.
         nshapes -- the number of shapes to plot (default 100).
         ncols -- the number of columns under which to distribute the plots.
+        ax -- a matplotlib axis object (defaults to current axis).
         """
         nrows = np.ceil(len(units)/ncols)
         if ax is None:
@@ -305,5 +287,4 @@ class herdingspikes(object):
             plt.plot(cutouts[inds[:100], :].T, 'gray')
             plt.plot(np.mean(cutouts[inds, :], axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
-            plt.ylim((-200, 150))
             plt.title("Cluster "+str(cl))
