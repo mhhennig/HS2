@@ -32,8 +32,8 @@ def read_flat(d, t0, t1, nch):
 
 
 def detectData(probe, _file_name, _to_localize, sfd, thres,
-               _cutout_start=10, _cutout_end=20, _masked_channels=None,
-               maa=5, maxsl=None, minsl=None, ahpthr=0, tpre=1.0, tpost=2.2):
+               _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
+               ahpthr=0, tpre=1.0, tpost=2.2):
     """ Read data from a file and pipe it to the spike detector. """
 
     # if data_format is 'flat':
@@ -76,11 +76,12 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     to_localize = _to_localize
     nRecCh = num_channels
     nFrames = probe.nFrames
+    masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones( num_recording_channels, dtype=ctypes.c_int)
-    if _masked_channels == []:
-        _masked_channels = None
-    if _masked_channels != None:
-        for channel in _masked_channels:
+    if masked_channel_list == []:
+        masked_channel_list = None
+    if masked_channel_list != None:
+        for channel in masked_channel_list:
             masked_channels[channel] = 0
 
     # positions_file_path = str(_positions_file_path)
@@ -95,8 +96,8 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     else:
         print("# Localization Off")
 
-    if _masked_channels != None:
-        print("# Masking Channels: " +str(_masked_channels))
+    if masked_channel_list != None:
+        print("# Masking Channels: " +str(masked_channel_list))
     else:
         print("# Not Masking any Channels")
 

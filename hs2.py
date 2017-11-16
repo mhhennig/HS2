@@ -78,9 +78,8 @@ class herdingspikes(object):
         self.HasFeatures = False
         print('Detected and read '+str(self.spikes.shape[0])+' spikes.')
 
-    def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
-                      masked_channels=None, maa=0, maxsl=12, minsl=3, ahpthr=0,
-                      tpre=1.0, tpost=2.2):
+    def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold, maa=0,
+                      maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -100,8 +99,8 @@ class herdingspikes(object):
         """
         detectData(self.probe, str.encode(self.probe.data_file),
                    to_localize, self.probe.fps, threshold,
-                   cutout_start, cutout_end, masked_channels,
-                   maa, maxsl, minsl, ahpthr, tpre, tpost)
+                   cutout_start, cutout_end, maa, maxsl, minsl,
+                   ahpthr, tpre, tpost)
         # reload data into memory
         cutout_length = cutout_start + cutout_end + 1
         self.LoadDetected(self.probe.data_file, cutout_length)
