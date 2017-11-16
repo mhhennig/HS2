@@ -226,8 +226,7 @@ class herdingspikes(object):
         Cluster information is available in the self.clusters dataframe.
 
         Arguments:
-        alpha -- the weight given to PCA components (spatial components are
-        assigned weight 1).
+        alpha -- the weight given to PCA components, relative tospatial components
         clustering_algorithm -- a sklearn.cluster class, defaults to
         sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN was also tested.
         pca_ncomponents -- number of PCA components to be considered (def. 2).
