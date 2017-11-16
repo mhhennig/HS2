@@ -1,5 +1,5 @@
-#ifndef PARAMETERS_H  
-#define PARAMETERS_H 
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
 
 //Contains all parameters and libraries for running the SpikeHandler Methods
 
@@ -15,7 +15,7 @@
 #include <tuple>
 #include <iterator>
 #include <vector>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
@@ -40,11 +40,11 @@ extern int spike_peak_duration; //The number of frames it takes a spike amplitud
 extern int noise_duration; //The number of frames that the true spike can occur after the first detection.
 extern float noise_amp_percent; //Amplitude percentage allowed to differentiate between decreasing amplitude duplicate spike
 extern int max_neighbors;//Maximum number of neighbors a channel can have in the probe
-extern int** neighbor_matrix;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each 
+extern int** neighbor_matrix;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
 							  index contains pointer to another array which contains channel number of all its neighbors.
 							  User creates this before calling SpikeHandler. Each column has size equal to max neighbors where
 							  any channels that have less neighbors fills the rest with -1 (important). */
-extern int** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each 
+extern int** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
 							  index contains pointer to another array which contains X and Y position of the channel. User creates
 							  this before calling SpikeHandler. */
 extern int aGlobal; //Global noise
@@ -61,6 +61,8 @@ extern int frames; //Number of current iterations of raw data passed in. User st
 extern int iterations; //The number of frames passed into loadRawData EXCLUDING the buffer frames.
 extern int maxsl; //Number of frames after a detection that a spike is accepted
 extern int end_raw_data; //index of the end of the raw data
+extern int* masked_channels; //stores all masked channels as 0 and regular channels as 1
+
 };
 
 #endif
