@@ -77,12 +77,14 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     nRecCh = num_channels
     nFrames = probe.nFrames
     masked_channel_list = probe.masked_channels
-    cdef np.ndarray[int, mode="c"] masked_channels = np.ones( num_recording_channels, dtype=ctypes.c_int)
+    cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
         masked_channel_list = None
     if masked_channel_list != None:
         for channel in masked_channel_list:
             masked_channels[channel] = 0
+    for channel in range(num_recording_channels, num_channels):
+        masked_channels[channel] = 0
 
     # positions_file_path = str(_positions_file_path)
     # neighbors_file_path = str(_neighbors_file_path)
