@@ -1,3 +1,4 @@
+from __future__ import division
 import pandas as pd
 import numpy as np
 import h5py
@@ -39,47 +40,32 @@ class herdingspikes(object):
         Offers compression of the shapes, 'lzf'
         appears a good trade-off between speed and performance.'"""
         g = h5py.File(filename, 'w')
-        g.create_dataset("data", data=np.vstack((self.spikes.x,self.spikes.y)))
+        g.create_dataset("data", data=np.vstack((self.spikes.x, self.spikes.y)))
         g.create_dataset("Sampling", data=self.probe.fps)
         g.create_dataset("times", data=self.spikes.t)
         # g.create_dataset("expinds", data=self.__expinds)
         if self.IsClustered:
             g.create_dataset("centres", data=self.centerz.T)
-            g.create_dataset("cluster_id", data=self.spikes.cl+1)
-        # this is still a little slow (and perhaps memory intensive), but I have not found a better way:
-        sh_tmp = np.empty((self.cutout_length, self.spikes.Shape.size), dtype=int)
+            g.create_dataset("cluster_id", data=self.spikes.cl)
+        # this is still a little slow (and perhaps memory intensive)
+        # but I have not found a better way:
+        sh_tmp = np.empty((self.cutout_length, self.spikes.Shape.size),
+                          dtype=int)
         for i in range(self.spikes.Shape.size):
-            sh_tmp[:,i] = self.spikes.Shape[i]
+            sh_tmp[:, i] = self.spikes.Shape[i]
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
-
-    # def SaveH5(self, filename):
-    #     store = pd.HDFStore(filename)
-    #     store['spikes'] = self.spikes
-    #     if self.IsClustered:
-    #         store['clusters'] = self.clusters
-    #     store.close()
-    #
-    # def LoadH5(self, filename):
-    #     store = pd.HDFStore(filename)
-    #     self.spikes = store['spikes']
-    #     if 'clusters' in store.keys():
-    #         self.clusters = store['clusters']
-    #         self.IsClustered = True
-    #         self.NClusters = len(self.clusters)
-    #         assert np.max(self.spikes.cl)+1 == self.NClusters
-    #     else:
-    #         self.IsClustered = False
-    #     store.close()
 
     def LoadDetected(self, file_name, cutout_length):
         """
         Reads the `ProcessedSpikes` file present in the current directory.
         """
         self.cutout_length = cutout_length
-        sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")#, shape=(N,))
-        assert sp_flat.shape[0]//(cutout_length+5) is not 1.*sp_flat.shape[0]/(cutout_length+5), "spike data has wrong dimensions"
-        sp = sp_flat.reshape((sp_flat.shape[0]//(cutout_length+5),cutout_length+5))
+        sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")
+        assert sp_flat.shape[0]//(cutout_length+5) is not 1.*sp_flat.shape[0] /\
+            (cutout_length+5), "spike data has wrong dimensions"
+        sp = sp_flat.reshape((sp_flat.shape[0]//(cutout_length+5),
+                             cutout_length+5))
 
         self.spikes = pd.DataFrame({'ch': sp[:, 0],
                                     't': sp[:, 1],
@@ -120,7 +106,8 @@ class herdingspikes(object):
         cutout_length = cutout_start + cutout_end + 1
         self.LoadDetected(self.probe.data_file, cutout_length)
 
-    def PlotTracesChannels(self, eventid, ax=None, window_size = 200, cutout_start = 6):
+    def PlotTracesChannels(self, eventid, ax=None,
+                           window_size=200, cutout_start=6):
         """
         Draw a figure with an electrode and its neighbours, showing the raw
         traces and events. Note that this requires loading the raw data in
@@ -131,7 +118,7 @@ class herdingspikes(object):
         event id.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
         window_size -- number of samples shown around a spike
-        cutout_start -- numbe frames recorded before the spike peak in the coutout
+        cutout_start -- n. frames recorded before the spike peak in the cutout
         """
         pos, neighs = self.probe.positions, self.probe.neighbors
         # data = np.fromfile(datapath,
@@ -155,14 +142,17 @@ class herdingspikes(object):
         t2 = event.t + window_size//2
         scale = interdistance/220.
         trange = (np.arange(t2-t1)-window_size//2)*scale
-        trange_bluered = (np.arange(cutlen)+event.t-t1-window_size//2-cutout_start)*scale
+        trange_bluered = (np.arange(cutlen)+event.t-t1-window_size//2
+                          - cutout_start)*scale
         data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
 
         for n in neighs[event.ch]:
             plt.plot(pos[n][0] + trange,
                      pos[n][1] + data[:, n]*scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
-                     pos[n][1] + data[window_size//2-cutout_start:window_size//2-cutout_start+cutlen, n]*scale, 'b')
+                     pos[n][1] + data[window_size//2-cutout_start:
+                                      window_size//2-cutout_start+cutlen,
+                                      n]*scale, 'b')
 
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + event.Shape*scale, 'r')
@@ -208,16 +198,18 @@ class herdingspikes(object):
             if invert:
                 ctr_x, ctr_y = ctr_y, ctr_x
             for cl in range(self.NClusters):
-                if ~np.isnan(ctr_y[cl]): # hack, why are positions NaN in DBScan?
-                    ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16) # seems this is a problem when zooming with x/ylim
-                    # ax.text(ctr_x[cl], ctr_y[cl], str(cl), fontsize=16)
+                if ~np.isnan(ctr_y[cl]):  # hack, why NaN positions in DBScan?
+                    ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16)
+                    # seems this is a problem when zooming with x/ylim
         return ax
 
     def ShapePCA(self, pca_ncomponents=2, pca_whiten=True):
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
-        if self.spikes.shape[0]>1e6:
-            print("Fitting PCA using 1e6 out of "+str(self.spikes.shape[0])+" spikes")
-            inds = np.random.choice(self.spikes.shape[0], int(1e6), replace=False)
+        if self.spikes.shape[0] > 1e6:
+            print("Fitting PCA using 1e6 out of",
+                  self.spikes.shape[0], "spikes")
+            inds = np.random.choice(self.spikes.shape[0], int(1e6),
+                                    replace=False)
             pca.fit(np.array(list(self.spikes.Shape[inds])))
         else:
             print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes")
@@ -227,8 +219,8 @@ class herdingspikes(object):
         return pca.transform(np.array(list(self.spikes.Shape)))
 
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
-                           pca_ncomponents=2, pca_whiten=True, recompute_pca=False,
-                           **kwargs):
+                           pca_ncomponents=2, pca_whiten=True,
+                           recompute_pca=False, **kwargs):
         """
         Performs PCA on the available spike shapes, and clusters spikes based
         on their (x, y) location and on the principal components of the shape.
@@ -276,7 +268,7 @@ class herdingspikes(object):
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
-    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None):
+    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None, ylim=None):
         """
         Plot a sample of the spike shapes contained in a given set of clusters
         and their average.
@@ -285,11 +277,24 @@ class herdingspikes(object):
         units -- a list of the cluster IDs to be considered.
         nshapes -- the number of shapes to plot (default 100).
         ncols -- the number of columns under which to distribute the plots.
+        ax -- a matplotlib axis object (defaults to current axis).
         """
         nrows = np.ceil(len(units)/ncols)
         if ax is None:
             plt.figure(figsize=(3*ncols, 3*nrows))
         cutouts = np.array(list(self.spikes.Shape))
+
+        # all this is to determine suitable ylims
+        if ylim is None:
+            meanshape = np.mean(cutouts, axis=0)
+            maxy, miny = meanshape.max(), meanshape.min()
+            varshape = np.var(cutouts, axis=0)
+            varmin = varshape[np.argmin(meanshape)]
+            varmax = varshape[np.argmax(meanshape)]
+            maxy += .1*varmax
+            miny -= .02*varmin
+            ylim = [miny, maxy]
+
         for i, cl in enumerate(units):
             inds = np.where(self.spikes.cl == cl)[0]
             if ax is None:
@@ -297,5 +302,5 @@ class herdingspikes(object):
             plt.plot(cutouts[inds[:100], :].T, 'gray')
             plt.plot(np.mean(cutouts[inds, :], axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
-            plt.ylim((-200, 150))
+            plt.ylim(ylim)
             plt.title("Cluster "+str(cl))
