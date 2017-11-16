@@ -93,7 +93,8 @@ class herdingspikes(object):
         print('Detected and read '+str(self.spikes.shape[0])+' spikes.')
 
     def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
-                      maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
+                      masked_channels=None, maa=0, maxsl=12, minsl=3, ahpthr=0,
+                      tpre=1.0, tpost=2.2):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -113,7 +114,7 @@ class herdingspikes(object):
         """
         detectData(self.probe, str.encode(self.probe.data_file),
                    to_localize, self.probe.fps, threshold,
-                   cutout_start, cutout_end,
+                   cutout_start, cutout_end, masked_channels,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
         # reload data into memory
         cutout_length = cutout_start + cutout_end + 1
@@ -221,6 +222,7 @@ class herdingspikes(object):
         else:
             print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes")
             pca.fit(np.array(list(self.spikes.Shape)))
+        self.pca = pca
         self.HasFeatures = True
         return pca.transform(np.array(list(self.spikes.Shape)))
 
@@ -263,6 +265,7 @@ class herdingspikes(object):
         self.fourvec = fourvec
         centers = np.asarray([np.mean(fourvec[cl], axis=0) for cl in in_cl])
         self.centerz = centers
+        self.in_cl = in_cl
         dic_cls = {'ctr_x': centers[:, 0],
                    'ctr_y': centers[:, 1],
                    'Color': 1.*np.random.permutation(

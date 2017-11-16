@@ -6,9 +6,9 @@ from probes.readUtils import readHDF5t_100, readHDF5t_101
 
 
 class NeuralProbe(object):
-    def __init__(self, num_channels, spike_delay,
-                 spike_peak_duration, noise_duration, noise_amp_percent,
-                 fps, positions_file_path, neighbors_file_path):
+    def __init__(self, num_channels, spike_delay, spike_peak_duration,
+                 noise_duration, noise_amp_percent, fps, positions_file_path,
+                 neighbors_file_path):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration

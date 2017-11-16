@@ -18,7 +18,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
         void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay,
-                              int spike_peak_duration, string file_name, int noise_duration, float noise_amp_percent, \
+                              int spike_peak_duration, string file_name, int noise_duration, float noise_amp_percent, int* _masked_channels, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl)
         void MedianVoltage(short * vm)
@@ -32,8 +32,8 @@ def read_flat(d, t0, t1, nch):
 
 
 def detectData(probe, _file_name, _to_localize, sfd, thres,
-               _cutout_start=10, _cutout_end=20, maa=5, maxsl=None,
-               minsl=None, ahpthr=0, tpre=1.0, tpost=2.2):
+               _cutout_start=10, _cutout_end=20, _masked_channels=None,
+               maa=5, maxsl=None, minsl=None, ahpthr=0, tpre=1.0, tpost=2.2):
     """ Read data from a file and pipe it to the spike detector. """
 
     # if data_format is 'flat':
@@ -76,13 +76,30 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     to_localize = _to_localize
     nRecCh = num_channels
     nFrames = probe.nFrames
+    cdef np.ndarray[int, mode="c"] masked_channels = np.ones( num_recording_channels, dtype=ctypes.c_int)
+    if _masked_channels == []:
+        _masked_channels = None
+    if _masked_channels != None:
+        for channel in _masked_channels:
+            masked_channels[channel] = 0
+
     # positions_file_path = str(_positions_file_path)
     # neighbors_file_path = str(_neighbors_file_path)
     positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
     neighbors_file_path = probe.neighbors_file_path.encode()
 
-
     print("# Sampling rate: " + str(sf))
+
+    if to_localize == True:
+        print("# Localization On")
+    else:
+        print("# Localization Off")
+
+    if _masked_channels != None:
+        print("# Masking Channels: " +str(_masked_channels))
+    else:
+        print("# Not Masking any Channels")
+
     print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
           str(nSec))
@@ -119,9 +136,9 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration, 
-                         _file_name, noise_duration, noise_amp_percent, max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, 
-                         ahpthr, maxsl, minsl)
+    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration,
+                         _file_name, noise_duration, noise_amp_percent, &masked_channels[0], max_neighbors, to_localize, thres,
+                         cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
     startTime = datetime.now()
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:

@@ -16,7 +16,7 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps)
 
 	Parameters
 	----------
-	centered_amps: deque<tuple<int, int>> 
+	centered_amps: deque<tuple<int, int>>
 		A deque containing all non-zero amplitudes and their neighbors. Used for center of mass.
 
 	Returns
@@ -80,19 +80,21 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 
 	for (int i = 0; i < neighbor_count; i++) {
 		curr_neighbor_channel = Parameters::neighbor_matrix[spike_channel][i];
-		for (int j = 0; j < neighbor_frame_span; j++) {
-			curr_amp = spike_to_be_localized.amp_cutouts.at(j + matrix_offset);
-			if(curr_amp > curr_largest_amp) {
-				curr_largest_amp = curr_amp;
-			}
-		}
-		amps.push_back(make_tuple(curr_neighbor_channel, curr_largest_amp));
-		curr_largest_amp = INT_MIN;
-		matrix_offset += neighbor_frame_span;
+        if(Parameters::masked_channels[curr_neighbor_channel] != 0) {
+    		for (int j = 0; j < neighbor_frame_span; j++) {
+    			curr_amp = spike_to_be_localized.amp_cutouts.at(j + matrix_offset);
+    			if(curr_amp > curr_largest_amp) {
+    				curr_largest_amp = curr_amp;
+    			}
+    		}
+    		amps.push_back(make_tuple(curr_neighbor_channel, curr_largest_amp));
+    		curr_largest_amp = INT_MIN;
+    		matrix_offset += neighbor_frame_span;
+        }
 	}
 
 	sort(begin(amps), end(amps), CustomLessThan()); //sort the array
-	
+
 	//Find median of array
 	int amps_size = amps.size();
 	int median;
@@ -100,20 +102,29 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 		median = (get<1>(amps.at(amps_size/2)) + get<1>(amps.at(amps_size/2 + 1)))/2;
 	}
 	else {
-		median = get<1>(amps.at(amps_size/2));	
+		median = get<1>(amps.at(amps_size/2));
 	}
 
 	//Center amplitudes
-	deque<tuple<int, int>> centered_amps;
-	for(int i = 0; i < amps_size; i++) {
-		int curr_neighbor = get<0>(amps.at(i));
-		int curr_amp = get<1>(amps.at(i));
-		int new_amp = curr_amp - median;
-		if(new_amp > 0) {
-			centered_amps.push_back(make_tuple(curr_neighbor, new_amp));
-		}
-	}
-	
+    deque<tuple<int, int>> centered_amps;
+    if(amps_size != 1) {
+    	for(int i = 0; i < amps_size; i++) {
+    		int curr_neighbor = get<0>(amps.at(i));
+    		int curr_amp = get<1>(amps.at(i));
+    		int new_amp = curr_amp - median;
+    		if(new_amp > 0) {
+    			centered_amps.push_back(make_tuple(curr_neighbor, new_amp));
+    		}
+    	}
+    } else {
+        centered_amps.push_back(amps.at(0));
+    }
+
+    int centered_amps_size = centered_amps.size();
+    //Subtracting median made all values equal to or smaller than 0
+    if(centered_amps_size == 0) {
+        centered_amps = amps;
+    }
 	tuple<float,float> position = centerOfMass(centered_amps);
 	amps.clear();
 	centered_amps.clear();
