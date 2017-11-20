@@ -2,8 +2,8 @@
 
 namespace ProcessSpikes {
 
-void filterSpikes(ofstream& spikes_filtered_file) 
-{	
+void filterSpikes(ofstream& spikes_filtered_file)
+{
 	/*Calls a method from FilterSpikes to filter all spikes. It removes duplicate events
 	and writes (or prints) out the channel number, frame, amplitude, and waveforms of the spike.
 
@@ -23,12 +23,16 @@ void filterSpikes(ofstream& spikes_filtered_file)
 		int32_t msc = (int32_t) max_spike.channel;
 		int32_t msf = (int32_t) max_spike.frame;
 		int32_t msa = (int32_t) max_spike.amplitude;
+		int32_t X = (int32_t) 0;
+		int32_t Y = (int32_t) 0;
 
 		spikes_filtered_file.write((char *)&msc, sizeof(msc));
 		spikes_filtered_file.write((char *)&msf, sizeof(msf));
 		spikes_filtered_file.write((char *)&msa, sizeof(msa));
+		spikes_filtered_file.write((char *)&X, sizeof(X));
+		spikes_filtered_file.write((char *)&Y, sizeof(Y));
 		spikes_filtered_file.write((char*)&max_spike.written_cutout[0], max_spike.written_cutout.size() * sizeof(int32_t));
-		
+
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isProcessed = true;
 		}
@@ -44,11 +48,11 @@ void filterSpikes(ofstream& spikes_filtered_file)
 	}
 }
 
-void filterLocalizeSpikes(ofstream& spikes_filtered_file) 
-{	
+void filterLocalizeSpikes(ofstream& spikes_filtered_file)
+{
 	/*Calls methods from FilterSpikes and LocalizeSpikes to filter and localize
-	 all spikes. removing duplicate events and estimating the X and Y coordinates 
-	of where they occur. Writes (or prints) out the channel number, frame, amplitude, positions, 
+	 all spikes. removing duplicate events and estimating the X and Y coordinates
+	of where they occur. Writes (or prints) out the channel number, frame, amplitude, positions,
 	and waveforms of the spike.
 
 	Parameters
@@ -65,6 +69,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 
 	while(!isProcessed) {
 		max_spike = FilterSpikes::filterSpikes(max_spike);
+
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
 
 		int32_t msc = (int32_t) max_spike.channel;

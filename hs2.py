@@ -216,6 +216,7 @@ class herdingspikes(object):
         else:
             print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes")
             pca.fit(np.array(list(self.spikes.Shape)))
+        self.pca = pca
         self.HasFeatures = True
         return pca.transform(np.array(list(self.spikes.Shape)))
 
@@ -258,6 +259,7 @@ class herdingspikes(object):
         self.fourvec = fourvec
         centers = np.asarray([np.mean(fourvec[cl], axis=0) for cl in in_cl])
         self.centerz = centers
+        self.in_cl = in_cl
         dic_cls = {'ctr_x': centers[:, 0],
                    'ctr_y': centers[:, 1],
                    'Color': 1.*np.random.permutation(
