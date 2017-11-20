@@ -79,7 +79,8 @@ class herdingspikes(object):
         print('Detected and read '+str(self.spikes.shape[0])+' spikes.')
 
     def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
-                      maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2):
+                      maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
+                      file_path="ProcessedSpikes", load=True):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -97,13 +98,14 @@ class herdingspikes(object):
         minsl
         ahpthr
         """
-        detectData(self.probe, str.encode(self.probe.data_file),
+        detectData(self.probe, str.encode(file_path),
                    to_localize, self.probe.fps, threshold,
                    cutout_start, cutout_end,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
-        # reload data into memory
-        cutout_length = cutout_start + cutout_end + 1
-        self.LoadDetected(self.probe.data_file, cutout_length)
+        if load:
+            # reload data into memory
+            cutout_length = cutout_start + cutout_end + 1
+            self.LoadDetected(file_path, cutout_length)
 
     def PlotTracesChannels(self, eventid, ax=None,
                            window_size=200, cutout_start=6):
@@ -120,37 +122,38 @@ class herdingspikes(object):
         cutout_start -- n. frames recorded before the spike peak in the cutout
         """
         pos, neighs = self.probe.positions, self.probe.neighbors
-        # data = np.fromfile(datapath,
-        #                    dtype=np.int16).reshape((-1,
-        #                                             self.probe.num_channels))
 
         event = self.spikes.loc[eventid]
         print("Spike detected at channel: ", event.ch)
         print("Spike detected at frame: ", event.t)
         cutlen = len(event.Shape)
         assert window_size > cutlen, "window_size is too small"
-        dst = pos[event.ch][0] - pos[neighs[event.ch]][:, 0]
+        dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
+        print(dst)
         interdistance = np.min(dst[dst > 0])
         if ax is None:
             ax = plt.gca()
+        # scatter of the large grey balls for electrode location
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
 
-        t1 = np.max((0, event.t - window_size//2))
-        t2 = event.t + window_size//2
+        ws = window_size//2
+        t1 = np.max((0, event.t - ws))
+        t2 = event.t + ws
         scale = interdistance/220.
-        trange = (np.arange(t2-t1)-window_size//2)*scale
-        trange_bluered = (np.arange(cutlen)+event.t-t1-window_size//2
-                          - cutout_start)*scale
+        trange = (np.arange(t1, t2)-event.t)*scale
+        start_bluered = event.t-t1-cutout_start
+        trange_bluered = trange[start_bluered:start_bluered+cutlen]
+        trange_bluered = np.arange(-cutout_start, -cutout_start+cutlen)*scale
+
         data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
 
         for n in neighs[event.ch]:
             plt.plot(pos[n][0] + trange,
                      pos[n][1] + data[:, n]*scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
-                     pos[n][1] + data[window_size//2-cutout_start:
-                                      window_size//2-cutout_start+cutlen,
+                     pos[n][1] + data[start_bluered:start_bluered+cutlen,
                                       n]*scale, 'b')
 
         plt.plot(pos[event.ch][0] + trange_bluered,
