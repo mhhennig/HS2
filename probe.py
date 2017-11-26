@@ -7,9 +7,10 @@ from probes.readUtils import readHDF5t_100, readHDF5t_101
 
 
 class NeuralProbe(object):
+
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
                  noise_duration, noise_amp_percent, fps, positions_file_path,
-                 neighbors_file_path, masked_channels = None):
+                 neighbors_file_path, masked_channels=None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -18,7 +19,7 @@ class NeuralProbe(object):
         self.fps = fps
         self.positions_file_path = positions_file_path
         self.neighbors_file_path = neighbors_file_path
-        self.masked_channels = masked_channels;
+        self.masked_channels = masked_channels
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
@@ -47,8 +48,8 @@ class NeuralProbe(object):
     def show(self, show_neighbors=[10], figwidth=3):
         xmax, ymax = self.positions.max(0)
         xmin, ymin = self.positions.min(0)
-        ratio = ymax/xmax
-        plt.figure(figsize=(figwidth, figwidth*ratio))
+        ratio = ymax / xmax
+        plt.figure(figsize=(figwidth, figwidth * ratio))
         for ch in show_neighbors:
             for neighbor in self.neighbors[ch]:
                 plt.plot([self.positions[ch, 0], self.positions[neighbor, 0]],
@@ -57,8 +58,8 @@ class NeuralProbe(object):
         plt.scatter(*self.positions.T)
         for i, pos in enumerate(self.positions):
             plt.annotate(i, pos)
-        plt.ylim([0, ymax+ymin])
-        plt.xlim([0, xmax+xmin])
+        plt.ylim([0, ymax + ymin])
+        plt.xlim([0, xmax + xmin])
 
     def Read(self, t0, t1):
         raise NotImplementedError("The Read function is not implemented for \
@@ -66,8 +67,8 @@ class NeuralProbe(object):
 
 
 class NeuroPixel(NeuralProbe):
-    def __init__(self, data_file_path, fps=30000, masked_channels=None):
 
+    def __init__(self, data_file=None, fps=30000, masked_channels=None):
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=5, noise_duration=2,
@@ -75,22 +76,32 @@ class NeuroPixel(NeuralProbe):
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
             masked_channels=masked_channels)
-        self.data_file = data_file_path
-        self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
-        assert len(self.d)/self.num_channels == len(self.d)//self.num_channels,\
-            'Data not multiple of channel number'
-        self.nFrames = len(self.d)//self.num_channels
+        self.data_file = data_file
+        if data_file is not None:
+            self.d = np.memmap(data_file, dtype=np.int16, mode='r')
+            assert len(self.d) / self.num_channels == len(self.d) // self.num_channels,\
+                'Data not multiple of channel number'
+            self.nFrames = len(self.d) // self.num_channels
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
 
 
 class BioCam(NeuralProbe):
-    def __init__(self, data_file_path, fps=0, masked_channels = None):
-        self.data_file = data_file_path
-        self.d = openHDF5file(data_file_path)
-        self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
-            self.d)
+
+    def __init__(self, data_file=None, fps=0, masked_channels=None):
+        self.data_file = data_file
+        if data_file is not None:
+            self.d = openHDF5file(data_file)
+            self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
+                self.d)
+            if file_format == 100:
+                self.read_function = readHDF5t_100
+            else:
+                self.read_function = readHDF5t_101
+        else:
+            nRecCh = 4096
+            sfd = fps
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
                              spike_peak_duration=5, noise_duration=2,
                              noise_amp_percent=.95, fps=sfd,
@@ -98,10 +109,6 @@ class BioCam(NeuralProbe):
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)
         assert self.num_recording_channels == self.num_channels
-        if file_format == 100:
-            self.read_function = readHDF5t_100
-        else:
-            self.read_function = readHDF5t_101
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
