@@ -35,6 +35,7 @@ class herdingspikes(object):
 
     def __init__(self, probe):
         self.probe = probe
+        self.shapecache = None
         self.IsClustered = False
         self.HasFeatures = False
 
@@ -62,34 +63,63 @@ class herdingspikes(object):
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
-    def Load_HDF5_legacy(self, filename):
+    def Load_HDF5_legacy(self, filename, compute_amplitudes=False, chunk_size=500000, compute_cluster_sizes=False):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with HS1.
         """
         g = h5py.File(filename, 'r')
-        print('reading from '+filename)
-        self.spikes = pd.DataFrame({'ch': np.zeros(g['times'].shape[0], dtype=int),
-                                    't': g['times'],
-                                    'Amplitude': np.zeros(g['times'].shape[0], dtype=int),
-                                    'x': g['data'][0,:],
-                                    'y': g['data'][1,:],
-                                    'Shape': list(np.transpose(g['shapes'])),
-                                    'cl': g['cluster_id']
-                                    }, copy=False)
+        print('Reading from ' + filename)
+        print('Creating memmapped cache for shapes, reding in chunks, converting to integer...')
+        self.shapecache = np.memmap(
+            "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
+        for i in range(g['shapes'].shape[1] // chunk_size + 1):
+            tmp = (1000 * np.transpose(g['shapes'][:, i *
+                                                   chunk_size:(i + 1) * chunk_size])).astype(np.int32)
+            inds = np.where(tmp > 20000)[0]
+            tmp[inds] = 0
+            print('Found ' + str(len(inds)) +
+                  ' data points out of linear regime in chunk '+str(i+1))
+            self.shapecache[i * chunk_size:(i + 1) * chunk_size] = tmp[:]
+
         self.probe.fps = g['Sampling'].value
         self.centerz = g['centres'].value.T
         self.NClusters = len(self.centerz)
-        self.cutout_length = H.spikes.Shape[0].shape[0]
-        print('parsing '+str(len(self.spikes.t))+' spikes in '+str(self.NClusters)+' units...')
-        self.spikes.Amplitude = [np.min(s) for s in self.spikes.Shape]
+        self.cutout_length = self.shapecache.shape[1]
+
+        self.spikes = pd.DataFrame({'ch': np.zeros(g['times'].shape[0], dtype=int),
+                                    't': g['times'],
+                                    'Amplitude': np.zeros(g['times'].shape[0], dtype=int),
+                                    'x': g['data'][0, :],
+                                    'y': g['data'][1, :],
+                                    'Shape': list(self.shapecache),
+                                    'cl': g['cluster_id']
+                                    }, copy=False)
+
+        print('Found ' + str(len(self.spikes.t)) +
+              ' spikes in ' + str(self.NClusters) + ' units...')
+
+        if compute_amplitudes:
+            print('Computing amplitudes...')
+            self.spikes.Amplitude = [np.min(s) for s in self.shapecache]
+            _avgAmpl = [np.mean(self.spikes.Amplitude[cl])
+                        for cl in range(self.NClusters)]
+        else:
+            _avgAmpl = np.zeros(self.NClusters, dtype=int)
+
+        if compute_cluster_sizes:
+            _cls = [np.sum(self.spikes.cl == cl)
+                    for cl in range(self.NClusters)]
+        else:
+            _cls = np.zeros(self.NClusters, dtype=int)
+
         dic_cls = {'ctr_x': self.centerz[:, 0],
                    'ctr_y': self.centerz[:, 1],
                    'Color': 1. * np.random.permutation(
             self.NClusters) / self.NClusters,
-            'Size': [np.sum(self.spikes.cl==cl) for cl in range(self.NClusters)],
-            'AvgAmpl': [np.mean(self.spikes.Amplitude[cl])
-                        for cl in range(self.NClusters)]}
+            'Size': _cls,
+            'AvgAmpl': _avgAmpl}
         self.clusters = pd.DataFrame(dic_cls)
+
         self.IsClustered = True
         self.HasFeatures = False
         g.close()
@@ -103,14 +133,14 @@ class herdingspikes(object):
         sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")
         assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * sp_flat.shape[0] /\
             (cutout_length + 5), "spike data has wrong dimensions"
-        sp = sp_flat.reshape((sp_flat.shape[0] // (cutout_length + 5),
+        self.shapecache = sp_flat.reshape((sp_flat.shape[0] // (cutout_length + 5),
                               cutout_length + 5))
-        self.spikes = pd.DataFrame({'ch': sp[:, 0],
-                                    't': sp[:, 1],
-                                    'Amplitude': sp[:, 2],
-                                    'x': sp[:, 3] / 1000,
-                                    'y': sp[:, 4] / 1000,
-                                    'Shape': list(sp[:, 5:])
+        self.spikes = pd.DataFrame({'ch': self.shapecache[:, 0],
+                                    't': self.shapecache[:, 1],
+                                    'Amplitude': self.shapecache[:, 2],
+                                    'x': self.shapecache[:, 3] / 1000,
+                                    'y': self.shapecache[:, 4] / 1000,
+                                    'Shape': list(self.shapecache[:, 5:])
                                     }, copy=False)
         self.IsClustered = False
         self.HasFeatures = False
@@ -136,7 +166,7 @@ class herdingspikes(object):
         minsl
         ahpthr
         out_file_name
-        load
+        load -- load the detected spikes when finished
         """
         detectData(self.probe, str.encode(file_path),
                    to_localize, self.probe.fps, threshold,
@@ -147,20 +177,24 @@ class herdingspikes(object):
             cutout_length = cutout_start + cutout_end + 1
             self.LoadDetected(file_path, cutout_length)
 
-    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True):
+    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000):
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         if self.spikes.shape[0] > 1e6:
             print("Fitting PCA using 1e6 out of",
-                  self.spikes.shape[0], "spikes")
+                  self.spikes.shape[0], "spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
             pca.fit(np.array(list(self.spikes.Shape[inds])))
         else:
-            print("Fitting PCA using " + str(self.spikes.shape[0]) + " spikes")
+            print("Fitting PCA using " + str(self.spikes.shape[0]) + " spikes...")
             pca.fit(np.array(list(self.spikes.Shape)))
         self.pca = pca
         self.HasFeatures = True
-        return pca.transform(np.array(list(self.spikes.Shape)))
+        _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
+        for i in range(self.spikes.shape[0] // chunk_size + 1):
+            _pcs[i * chunk_size:(i + 1) * chunk_size,:] = pca.transform(np.array(list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
+
+        return _pcs
 
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
                            pca_ncomponents=2, pca_whiten=True,
@@ -181,12 +215,13 @@ class herdingspikes(object):
         This may include n_jobs > 1 for parallelisation.
         """
 
-        if not self.HasFeatures or recompute_pca is True:
+        if (not self.HasFeatures) or recompute_pca:
             self.cutouts_pca = self.ShapePCA(pca_ncomponents, pca_whiten)
 
         fourvec = np.vstack(([self.spikes.x], [self.spikes.y],
                              alpha * self.cutouts_pca.T)).T
 
+        print('Clustering...')
         clusterer = clustering_algorithm(**kwargs)
         clusterer.fit(fourvec)
         self.spikes.cl = clusterer.labels_
@@ -279,7 +314,7 @@ class herdingspikes(object):
                   interpolation='none', origin='lower')
         return h, xb, yb
 
-    def PlotAll(self, invert=False, show_labels=False, ax=None, **kwargs):
+    def PlotAll(self, invert=False, show_labels=False, ax=None, max_show=200000, **kwargs):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
         If clustering has been performed, each spike is coloured according to
@@ -290,6 +325,7 @@ class herdingspikes(object):
         show_labels -- (boolean, optional) if True, annotates each cluster
         centre with its cluster ID.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        max_show -- maximum number of spikes to show
         **kwargs -- additional arguments are passed to pyplot.scatter
         """
         if ax is None:
@@ -297,9 +333,16 @@ class herdingspikes(object):
         x, y = self.spikes.x, self.spikes.y
         if invert:
             x, y = y, x
+        if self.spikes.shape[0] > max_show:
+            inds = np.random.choice(
+                self.spikes.shape[0], max_show, replace=False)
+            print(
+                'We have ' + str(self.spikes.shape[0]) + ' spikes, only showing ' + str(max_show))
+        else:
+            inds = np.arange(self.spikes.shape[0])
         c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
             if self.IsClustered else 'r'
-        ax.scatter(x, y, c=c, **kwargs)
+        ax.scatter(x[inds], y[inds], c=c[inds], **kwargs)
         if show_labels and self.IsClustered:
             ctr_x, ctr_y = self.clusters.ctr_x, self.clusters.ctr_y
             if invert:
@@ -333,8 +376,8 @@ class herdingspikes(object):
             varshape = np.var(cutouts, axis=0)
             varmin = varshape[np.argmin(meanshape)]
             varmax = varshape[np.argmax(meanshape)]
-            maxy += .1 * varmax
-            miny -= .02 * varmin
+            maxy += 4. * np.sqrt(varmax)
+            miny -= 2. * np.sqrt(varmin)
             ylim = [miny, maxy]
 
         for i, cl in enumerate(units):
