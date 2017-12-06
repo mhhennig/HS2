@@ -22,13 +22,15 @@ int Parameters::maxsl;
 int Parameters::end_raw_data;
 short* Parameters::raw_data;
 int* Parameters::masked_channels;
+int Parameters::inner_radius;
 deque<Spike> Parameters::spikes_to_be_processed;
+std::ofstream filteredsp;
 std::ofstream spikes_filtered_file;
 
 
 void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
-						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0)
+						  int _max_neighbors, int _inner_radius, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0)
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
 
@@ -40,8 +42,8 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		Number of channels to be used for spike data.
 	_spike_delay: int
 		The number of frames back a spike occurred after it was detected (where the beginning of the spike was).
-	_spike_peak_duration: int
-		The number of frames it takes a spike amplitude to fully decay.
+	file_name: string
+        The name of the file that the processed spikes will be written to in binary.
 	_noise_duration: int
 		The frames in which the true spike can occur after the first detection of the spike.
 		Ideally, the _noise_duration would be zero if there is no noise (then the first spike
@@ -52,6 +54,8 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		even if the spike detected after has a smaller amplitude (with zero _noise_amp_percent,
 		two concurrent spikes where the second spike has a slightly smaller amplitude
 		will be considered duplicates).
+    _masked_channels: 1D int array
+    	The channels that are masked for the detection (AKA we get input from them)
 	_channel_positions: 2D int array
 		Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
 		index contains pointer to another array which contains X and Y position of the channel. User creates
@@ -63,6 +67,10 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	_max_neighbors: int
 		The maximum number of neighbors a channel can have (a neighbor is any channel that can receive the
 		same spike waveform as the original channel if the spike occurred at the original channel).
+    _inner_radius: int
+    	The radius for a channel that includes all of its closest channels.
+        This excludes any neighbors that have one more more channels inbetween
+        the channel and themselves.
 	_to_localize: bool
 		True: Localize the spike using our localization method
 		False: Do not localize.
@@ -91,6 +99,10 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	}
 	if(_spike_peak_duration < 0) {
 		cout << "Spike Peak Duration less than 0. Terminating Spike Handler" << endl;
+		exit(EXIT_FAILURE);
+	}
+    if(_inner_radius < 0) {
+		cout << "Inner Radius less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
 	if(_noise_amp_percent < 0 || _noise_amp_percent > 1) {
@@ -128,10 +140,10 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
     Parameters::masked_channels = _masked_channels;
+    Parameters::inner_radius = _inner_radius;
 
 	spikes_filtered_file.open(file_name + ".bin", ios::binary);
-	//spikes_filtered_file.open(file_name, ios::binary);
-
+    filteredsp.open("Filtered Spikes");
 
 }
 void loadRawData(short* _raw_data, int _index_data, int _iterations, int _frames, int _additional_data) {
@@ -206,8 +218,8 @@ void addSpike(int channel, int frame, int amplitude) {
 	/*Adds a spike to the spikes_to_be_processed deque. Once the frame of the spike to be added is
 	greater than the spike_peak_duration larger than the first spike in the deque, it will process
 	all the current spikes in the deque and then attempt to add the spike again. It will keep repeating
-	this process until the spike to be added frame is smaller than the spike_peak_duration larger than the
-	first spike or the deque is empty.
+	this process until the spike to be added frame is smaller than the spike_peak_duration plus the frames
+    of the first spike or the deque is empty.
 
 	Parameters
 	----------
@@ -246,7 +258,7 @@ void addSpike(int channel, int frame, int amplitude) {
 				exit(EXIT_FAILURE);
 			}
 			spike_to_be_added.written_cutout.push_back(curr_written_reading);
-}
+        }
 
 		for(int i = 0; i < Parameters::max_neighbors; i++) {
 			try {
@@ -272,6 +284,12 @@ void addSpike(int channel, int frame, int amplitude) {
     					int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE - Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]);
     					spike_to_be_added.amp_cutouts.push_back(curr_amp);
     				}
+                    if(channel != curr_neighbor_channel && channelsDist(channel, curr_neighbor_channel) <= Parameters::inner_radius) {
+                        spike_to_be_added.inner_neighbors.push_back(make_tuple(curr_neighbor_channel,0));
+                    }
+                    else if(channel != curr_neighbor_channel) {
+                        spike_to_be_added.outer_neighbors.push_back(make_tuple(curr_neighbor_channel, 0));
+                    }
                 }
 			}
 			//Out of neighbors to add cutout for
@@ -281,6 +299,17 @@ void addSpike(int channel, int frame, int amplitude) {
 		}
 		//Add Spike to the current frame window
 		//cout << "Spike to be added: " << spike_to_be_added.channel << " " << spike_to_be_added.frame << " " << spike_to_be_added.amplitude << endl;
+        //cout << "Channel: " << spike_to_be_added.channel << " Inner neighbors" << endl;
+        //for(auto const& value: spike_to_be_added.inner_neighbors) {
+        //    cout << value << " " << channelsDist(channel, value) << " ";
+        //}
+        //cout << endl;
+        //cout << "Channel: " << spike_to_be_added.channel << " Outer neighbors" << endl;
+        //for(auto const& value: spike_to_be_added.outer_neighbors) {
+        //    cout << value << " " << channelsDist(channel, value) << " ";
+        //}
+        //cout << endl;
+
 		bool isAdded = false;
 		while(!isAdded) {
 			if(Parameters::spikes_to_be_processed.empty()) {
@@ -294,7 +323,16 @@ void addSpike(int channel, int frame, int amplitude) {
 				if(current_frame > first_frame + (Parameters::spike_peak_duration + Parameters::noise_duration)) {
 					if(Parameters::to_localize) {
 						try {
-							ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file);
+                            if(spike_to_be_added.frame == -1) {
+                                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);
+                                spikes_filtered_file.close();
+                                filteredsp.close();
+    							cout << "Baseline matrix or its parameters entered incorrectly. Terminating SpikeHandler." << endl;
+    							exit(EXIT_FAILURE);
+                            }
+                            else {
+                                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);
+                            }
 						} catch (...) {
 							spikes_filtered_file.close();
 							cout << "Baseline matrix or its parameters entered incorrectly. Terminating SpikeHandler." << endl;
@@ -302,7 +340,7 @@ void addSpike(int channel, int frame, int amplitude) {
 						}
 					}
 					else {
-						ProcessSpikes::filterSpikes(spikes_filtered_file);
+						ProcessSpikes::filterSpikes(spikes_filtered_file,filteredsp);
 					}
 				}
 				else {
@@ -317,11 +355,46 @@ void terminateSpikeHandler() {
 	//Filter any remaining spikes leftover at the end and close the spike file.
 	while(Parameters::spikes_to_be_processed.size() != 0){
 		if(Parameters::to_localize) {
-			ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file);
+			ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);
 		}
 		else {
-			ProcessSpikes::filterSpikes(spikes_filtered_file);
+			ProcessSpikes::filterSpikes(spikes_filtered_file, filteredsp);
 		}
 	}
 	spikes_filtered_file.close();
+    filteredsp.close();
+}
+
+float channelsDist(int start_channel, int end_channel) {
+    /*Finds the distance between two channels
+
+	Parameters
+	----------
+	start_channel: int
+		The start channel where distance measurement begins
+	end_channel: int
+        The end channel where distance measurement ends
+
+    Returns
+    -------
+	dist: float
+    	The distance between the two channels
+	*/
+    float start_position_x;
+    float start_position_y;
+    float end_position_x;
+    float end_position_y;
+    float x_displacement;
+    float y_displacement;
+    float dist;
+
+    start_position_x = Parameters::channel_positions[start_channel][0];
+    start_position_y = Parameters::channel_positions[start_channel][1];
+    end_position_x = Parameters::channel_positions[end_channel][0];
+    end_position_y = Parameters::channel_positions[end_channel][1];
+    x_displacement = start_position_x - end_position_x;
+    y_displacement = start_position_y - end_position_y;
+    dist = sqrt(pow(x_displacement, 2) + pow(y_displacement, 2));
+
+    return dist;
 }

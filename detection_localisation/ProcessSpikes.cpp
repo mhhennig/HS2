@@ -2,7 +2,7 @@
 
 namespace ProcessSpikes {
 
-void filterSpikes(ofstream& spikes_filtered_file)
+void filterSpikes(ofstream& spikes_filtered_file,  ofstream& filteredsp)
 {
 	/*Calls a method from FilterSpikes to filter all spikes. It removes duplicate events
 	and writes (or prints) out the channel number, frame, amplitude, and waveforms of the spike.
@@ -12,14 +12,12 @@ void filterSpikes(ofstream& spikes_filtered_file)
 	spike_to_be_filtered_file: ofstream&
 		The address to the file to be written out to passed in by opened and closed by ProcessSpikes.
 	*/
-	Spike first_spike = Parameters::spikes_to_be_processed.front();
-	Parameters::spikes_to_be_processed.pop_front();
-	Spike max_spike;
-	max_spike = first_spike;
+    Spike first_spike = Parameters::spikes_to_be_processed.front();
+    Spike max_spike;
 	bool isProcessed = false;
 
 	while(!isProcessed) {
-		max_spike = FilterSpikes::filterSpikes(max_spike);
+        max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
 		int32_t msc = (int32_t) max_spike.channel;
 		int32_t msf = (int32_t) max_spike.frame;
 		int32_t msa = (int32_t) max_spike.amplitude;
@@ -41,14 +39,14 @@ void filterSpikes(ofstream& spikes_filtered_file)
 			if(max_spike.frame > first_spike.frame + Parameters::noise_duration) {
 				isProcessed = true;
 			}
-			else {
-				Parameters::spikes_to_be_processed.pop_front();
+            else {
+				first_spike = Parameters::spikes_to_be_processed.front();
 			}
 		}
 	}
 }
 
-void filterLocalizeSpikes(ofstream& spikes_filtered_file)
+void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 {
 	/*Calls methods from FilterSpikes and LocalizeSpikes to filter and localize
 	 all spikes. removing duplicate events and estimating the X and Y coordinates
@@ -61,14 +59,14 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 		The address to the file to be written out to passed in by opened and closed by ProcessSpikes.
 	*/
 
-	Spike first_spike = Parameters::spikes_to_be_processed.front();
-	Parameters::spikes_to_be_processed.pop_front();
-	Spike max_spike;
-	max_spike = first_spike;
+    Spike first_spike = Parameters::spikes_to_be_processed.front();
+    Spike max_spike;
 	bool isProcessed = false;
 
 	while(!isProcessed) {
-		max_spike = FilterSpikes::filterSpikes(max_spike);
+        max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
+        filteredsp << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " " << "Not Filtered" << endl;
+        filteredsp << " " << endl;
 
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
 
@@ -94,7 +92,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file)
 				isProcessed = true;
 			}
 			else {
-				Parameters::spikes_to_be_processed.pop_front();
+				first_spike = Parameters::spikes_to_be_processed.front();
 			}
 		}
 	}

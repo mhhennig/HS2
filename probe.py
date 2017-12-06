@@ -7,12 +7,13 @@ from probes.readUtils import readHDF5t_100, readHDF5t_101
 
 
 class NeuralProbe(object):
-    def __init__(self, num_channels, spike_delay, spike_peak_duration,
+    def __init__(self, num_channels, spike_delay, spike_peak_duration, inner_radius,
                  noise_duration, noise_amp_percent, fps, positions_file_path,
                  neighbors_file_path, masked_channels = None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
+        self.inner_radius = inner_radius
         self.noise_duration = noise_duration
         self.noise_amp_percent = noise_amp_percent
         self.fps = fps
@@ -64,14 +65,24 @@ class NeuralProbe(object):
         raise NotImplementedError("The Read function is not implemented for \
             this probe")
 
+    def getChannelsPositions(self, channels):
+        channel_positions = []
+        for channel in channels:
+            if channel >= self.num_recording_channels:
+                raise ValueError('Channel Index too big')
+            else:
+                channel_positions.append(self.positions[channel])
+        return channel_positions
+
+
 
 class NeuroPixel(NeuralProbe):
     def __init__(self, data_file_path, fps=30000, masked_channels=None):
 
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
-            spike_peak_duration=5, noise_duration=2,
-            noise_amp_percent=.95, fps=fps,
+            spike_peak_duration=4, inner_radius = 40, noise_duration=2,
+            noise_amp_percent=.90, fps=fps,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
             masked_channels=masked_channels)
@@ -86,14 +97,14 @@ class NeuroPixel(NeuralProbe):
 
 
 class BioCam(NeuralProbe):
-    def __init__(self, data_file_path, fps=0, masked_channels = None):
+    def __init__(self, data_file_path, fps=0, masked_channels=None):
         self.data_file = data_file_path
         self.d = openHDF5file(data_file_path)
         self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
             self.d)
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
-                             spike_peak_duration=5, noise_duration=2,
-                             noise_amp_percent=.95, fps=sfd,
+                             spike_peak_duration=4, inner_radius = 1,
+                             noise_duration=2, noise_amp_percent=.90, fps=sfd,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)

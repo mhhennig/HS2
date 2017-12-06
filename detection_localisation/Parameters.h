@@ -19,6 +19,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
+#include<bits/stdc++.h>
 
 using namespace std;
 
@@ -29,6 +30,8 @@ struct Spike {
 	int frame;
 	vector<int> amp_cutouts;
 	vector<int32_t> written_cutout;
+    vector<tuple<int, int>> inner_neighbors;
+    vector<tuple<int, int>> outer_neighbors;
 };
 
 namespace Parameters {
@@ -62,6 +65,7 @@ extern int iterations; //The number of frames passed into loadRawData EXCLUDING 
 extern int maxsl; //Number of frames after a detection that a spike is accepted
 extern int end_raw_data; //index of the end of the raw data
 extern int* masked_channels; //stores all masked channels as 0 and regular channels as 1
+extern int inner_radius;
 
 };
 

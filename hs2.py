@@ -129,7 +129,7 @@ class herdingspikes(object):
         cutlen = len(event.Shape)
         assert window_size > cutlen, "window_size is too small"
         dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
-        print(dst)
+        #print(dst)
         interdistance = np.min(dst[dst > 0])
         if ax is None:
             ax = plt.gca()
@@ -137,6 +137,11 @@ class herdingspikes(object):
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
+        x = pos[[neighs[event.ch], 0]]
+        y = pos[[neighs[event.ch], 1]]
+        for i, txt in enumerate(neighs[event.ch]):
+            ax.annotate(txt, (x[i] + 2,y[i] + 3))
+
 
         ws = window_size//2
         t1 = np.max((0, event.t - ws))
