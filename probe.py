@@ -7,13 +7,12 @@ from probes.readUtils import readHDF5t_100, readHDF5t_101
 
 
 class NeuralProbe(object):
-    def __init__(self, num_channels, spike_delay, spike_peak_duration, inner_radius,
+    def __init__(self, num_channels, spike_delay, spike_peak_duration,
                  noise_duration, noise_amp_percent, fps, positions_file_path,
                  neighbors_file_path, masked_channels = None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
-        self.inner_radius = inner_radius
         self.noise_duration = noise_duration
         self.noise_amp_percent = noise_amp_percent
         self.fps = fps
@@ -81,7 +80,7 @@ class NeuroPixel(NeuralProbe):
 
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
-            spike_peak_duration=4, inner_radius = 40, noise_duration=2,
+            spike_peak_duration=4, noise_duration=2,
             noise_amp_percent=.90, fps=fps,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
@@ -103,8 +102,8 @@ class BioCam(NeuralProbe):
         self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
             self.d)
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
-                             spike_peak_duration=4, inner_radius = 1,
-                             noise_duration=2, noise_amp_percent=.90, fps=sfd,
+                             spike_peak_duration=4, noise_duration=2,
+                             noise_amp_percent=.90, fps=sfd,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)

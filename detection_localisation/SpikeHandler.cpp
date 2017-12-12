@@ -9,6 +9,8 @@ float Parameters::noise_amp_percent;
 int Parameters::max_neighbors;
 int** Parameters::neighbor_matrix;
 int** Parameters::channel_positions;
+int** Parameters::inner_neighbor_matrix;
+int** Parameters::outer_neighbor_matrix;
 int Parameters::aGlobal;
 bool Parameters::to_localize;
 int** Parameters::baselines;
@@ -22,7 +24,8 @@ int Parameters::maxsl;
 int Parameters::end_raw_data;
 short* Parameters::raw_data;
 int* Parameters::masked_channels;
-int Parameters::inner_radius;
+int Parameters::event_number;
+
 deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream filteredsp;
 std::ofstream spikes_filtered_file;
@@ -30,7 +33,7 @@ std::ofstream spikes_filtered_file;
 
 void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
-						  int _max_neighbors, int _inner_radius, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0)
+						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0)
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
 
@@ -67,10 +70,6 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	_max_neighbors: int
 		The maximum number of neighbors a channel can have (a neighbor is any channel that can receive the
 		same spike waveform as the original channel if the spike occurred at the original channel).
-    _inner_radius: int
-    	The radius for a channel that includes all of its closest channels.
-        This excludes any neighbors that have one more more channels inbetween
-        the channel and themselves.
 	_to_localize: bool
 		True: Localize the spike using our localization method
 		False: Do not localize.
@@ -99,10 +98,6 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	}
 	if(_spike_peak_duration < 0) {
 		cout << "Spike Peak Duration less than 0. Terminating Spike Handler" << endl;
-		exit(EXIT_FAILURE);
-	}
-    if(_inner_radius < 0) {
-		cout << "Inner Radius less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
 	if(_noise_amp_percent < 0 || _noise_amp_percent > 1) {
@@ -140,8 +135,31 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
     Parameters::masked_channels = _masked_channels;
-    Parameters::inner_radius = _inner_radius;
+    Parameters::event_number = 0;
 
+
+    Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
+    Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
+    fillNeighborLayerMatrices();
+    int test = 0;
+    if(test == 0) {
+        for(int i=0; i<Parameters::num_recording_channels; i++)    //This loops on the rows.
+    	{
+            cout << "Channel: " << i << endl;
+            cout << "Inner Neighbors: ";
+    		for(int j=0; j < Parameters::max_neighbors - 1; j++) //This loops on the columns
+    		{
+     			cout << Parameters::inner_neighbor_matrix[i][j]  << "  ";
+    		}
+            cout << endl;
+            cout << "Outer Neighbors: ";
+            for(int k=0; k < Parameters::max_neighbors - 1; k++) //This loops on the columns
+    		{
+    			cout <<  Parameters::outer_neighbor_matrix[i][k]  << "  ";
+    		}
+    		cout << endl;
+    	}
+    }
 	spikes_filtered_file.open(file_name + ".bin", ios::binary);
     filteredsp.open("Filtered Spikes");
 
@@ -260,15 +278,15 @@ void addSpike(int channel, int frame, int amplitude) {
 			spike_to_be_added.written_cutout.push_back(curr_written_reading);
         }
 
-		for(int i = 0; i < Parameters::max_neighbors; i++) {
+		for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
 			try {
-				curr_neighbor_channel = Parameters::neighbor_matrix[channel][i];
+				curr_neighbor_channel = Parameters::inner_neighbor_matrix[channel][i];
 			} catch (...) {
 				spikes_filtered_file.close();
 				cout << "Neighbor matrix improperly created. Terminating SpikeHandler" << endl;
 				exit(EXIT_FAILURE);
 			}
-            //Out of neighbors
+            //Out of inner neighbors
 			if(curr_neighbor_channel != -1) {
                 //Masked neighbor
                 if(Parameters::masked_channels[curr_neighbor_channel] != 0) {
@@ -284,12 +302,6 @@ void addSpike(int channel, int frame, int amplitude) {
     					int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE - Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]);
     					spike_to_be_added.amp_cutouts.push_back(curr_amp);
     				}
-                    if(channel != curr_neighbor_channel && channelsDist(channel, curr_neighbor_channel) <= Parameters::inner_radius) {
-                        spike_to_be_added.inner_neighbors.push_back(make_tuple(curr_neighbor_channel,0));
-                    }
-                    else if(channel != curr_neighbor_channel) {
-                        spike_to_be_added.outer_neighbors.push_back(make_tuple(curr_neighbor_channel, 0));
-                    }
                 }
 			}
 			//Out of neighbors to add cutout for
@@ -297,19 +309,6 @@ void addSpike(int channel, int frame, int amplitude) {
 				break;
 			}
 		}
-		//Add Spike to the current frame window
-		//cout << "Spike to be added: " << spike_to_be_added.channel << " " << spike_to_be_added.frame << " " << spike_to_be_added.amplitude << endl;
-        //cout << "Channel: " << spike_to_be_added.channel << " Inner neighbors" << endl;
-        //for(auto const& value: spike_to_be_added.inner_neighbors) {
-        //    cout << value << " " << channelsDist(channel, value) << " ";
-        //}
-        //cout << endl;
-        //cout << "Channel: " << spike_to_be_added.channel << " Outer neighbors" << endl;
-        //for(auto const& value: spike_to_be_added.outer_neighbors) {
-        //    cout << value << " " << channelsDist(channel, value) << " ";
-        //}
-        //cout << endl;
-
 		bool isAdded = false;
 		while(!isAdded) {
 			if(Parameters::spikes_to_be_processed.empty()) {
@@ -331,7 +330,7 @@ void addSpike(int channel, int frame, int amplitude) {
     							exit(EXIT_FAILURE);
                             }
                             else {
-                                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);
+                                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);;
                             }
 						} catch (...) {
 							spikes_filtered_file.close();
@@ -397,4 +396,231 @@ float channelsDist(int start_channel, int end_channel) {
     dist = sqrt(pow(x_displacement, 2) + pow(y_displacement, 2));
 
     return dist;
+}
+
+void fillNeighborLayerMatrices() {
+    int curr_channel;
+    int curr_neighbor;
+    float curr_dist;
+    vector<tuple<int, float>> distances_neighbors;
+    vector<int> inner_neighbors;
+    for(int i = 0; i < Parameters::num_recording_channels; i++) {
+        curr_channel = i;
+        for(int j = 0; j < Parameters::max_neighbors; j++) {
+            curr_neighbor = Parameters::neighbor_matrix[curr_channel][j];
+            if(curr_channel != curr_neighbor && curr_neighbor != -1) {
+                curr_dist = channelsDist(curr_neighbor, curr_channel);
+                distances_neighbors.push_back(make_tuple(curr_neighbor, curr_dist));
+            }
+        }
+        sort(begin(distances_neighbors), end(distances_neighbors), CustomLessThan());
+
+        inner_neighbors = getInnerNeighbors(distances_neighbors, i);
+        vector<int>::iterator it;
+        it = inner_neighbors.begin();
+        int curr_inner_neighbor;
+        int k = 0;
+        //Fill Inner neighbors matrix
+        while(it != inner_neighbors.end())
+        {
+            curr_inner_neighbor = *it;
+            Parameters::inner_neighbor_matrix[i][k] = curr_inner_neighbor;
+            ++k;
+            ++it;
+        }
+        while(k < Parameters::max_neighbors - 1) {
+            Parameters::inner_neighbor_matrix[i][k] = -1;
+            ++k;
+        }
+        //Fill outer neighbor matrix
+        k = 0;
+        for(int l = 0; l < Parameters::max_neighbors; l++) {
+            curr_neighbor = Parameters::neighbor_matrix[i][l];
+            if(curr_neighbor != -1 && curr_neighbor != i) {
+                bool is_outer_neighbor = true;
+                for(size_t m = 0; m < inner_neighbors.size(); m++) {
+                    if(Parameters::inner_neighbor_matrix[i][m] == curr_neighbor) {
+                        is_outer_neighbor = false;
+                        break;
+                    }
+                }
+                if(is_outer_neighbor) {
+                    Parameters::outer_neighbor_matrix[i][k] = curr_neighbor;
+                    ++k;
+                }
+            }
+        }
+        while(k < Parameters::max_neighbors - 1) {
+            Parameters::outer_neighbor_matrix[i][k] = -1;
+            ++k;
+        }
+        inner_neighbors.clear();
+        distances_neighbors.clear();
+    }
+}
+vector<int> getInnerNeighbors(vector<tuple<int, float>> distances_neighbors, int central_channel) {
+    vector<int> inner_neighbors;
+    vector<Point> boundary_points;
+    vector<Line> boundary_lines;
+    vector<tuple<int, float>>::iterator it;
+    it = distances_neighbors.begin();
+    int curr_neighbor;
+    int central_x = Parameters::channel_positions[central_channel][0];
+    int central_y = Parameters::channel_positions[central_channel][1];
+    Point central_point = {central_x, central_y, central_channel};
+    Point curr_point;
+    Point prev_point;
+    int curr_x;
+    int curr_y;
+    while(it != distances_neighbors.end())
+    {
+        curr_neighbor = get<0>(*it);
+        curr_x = Parameters::channel_positions[curr_neighbor][0];
+        curr_y = Parameters::channel_positions[curr_neighbor][1];
+        curr_point = {curr_x, curr_y, curr_neighbor};
+
+
+        if(boundary_points.size() == 0) {
+            boundary_points.push_back(curr_point);
+            ++it;
+        }
+        else if(boundary_points.size() == 1) {
+            prev_point = boundary_points.front();
+            Line newLine = createLine(curr_point, prev_point);
+            boundary_lines.push_back(newLine);
+            boundary_points.push_back(curr_point);
+            ++it;
+        }
+        else {
+            if(acceptAsBoundaryPoint(curr_point, central_point, boundary_lines)) {
+                boundary_points.push_back(curr_point);
+                createBoundaryLines(curr_point, boundary_points, boundary_lines);
+                ++it;
+            } else {
+                ++it;
+            }
+        }
+    }
+    vector<int> inner_channels;
+    vector<Point>::iterator it2;
+    it2 = boundary_points.begin();
+    Point curr_bp;
+    int curr_channel;
+    while(it2 != boundary_points.end())
+    {
+        curr_bp = *it2;
+        curr_channel = curr_bp.channel;
+        inner_channels.push_back(curr_channel);
+        ++it2;
+    }
+    return inner_channels;
+}
+
+void createBoundaryLines(Point curr_point, vector<Point> &boundary_points, vector<Line> &boundary_lines) {
+    Point prev_bp;
+    for(size_t i = 0; i < boundary_points.size(); i++) {
+        prev_bp = boundary_points.at(i);
+        Line newLine = createLine(curr_point, prev_bp);
+        boundary_lines.push_back(newLine);
+    }
+}
+
+bool acceptAsBoundaryPoint(Point curr_point, Point central_point, vector<Line> &boundary_lines) {
+    bool accept_bp = true;
+    Line curr_bl;
+    float line_dist_from_curr_point;
+    float line_dist_from_central_point;
+    vector<Line>::iterator it;
+    it = boundary_lines.begin();
+    while(it != boundary_lines.end())
+    {
+        curr_bl = *it;
+        line_dist_from_curr_point = curr_bl.a*curr_point.x + curr_bl.b*curr_point.y + curr_bl.c;
+        line_dist_from_central_point = curr_bl.a*central_point.x + curr_bl.b*central_point.y + curr_bl.c;
+        //On same side of boundary line
+        if(line_dist_from_curr_point < 0 && line_dist_from_central_point < 0) {
+            accept_bp = true;
+        }
+        //On same side of boundary line
+        else if(line_dist_from_curr_point > 0 && line_dist_from_central_point > 0) {
+            accept_bp = true;
+        }
+        else if(line_dist_from_central_point == 0) {
+            accept_bp = true;
+        }
+        //On opposite sides of boundary line
+        else {
+            accept_bp = false;
+            break;
+        }
+        ++it;
+    }
+    return accept_bp;
+}
+
+float distBetweenPoints(Point p1, Point p2) {
+    float x_displacement;
+    float y_displacement;
+    float dist;
+    x_displacement = p1.x - p2.x;
+    y_displacement = p1.y - p2.y;
+    dist = sqrt(pow(x_displacement, 2) + pow(y_displacement, 2));
+
+    return dist;
+}
+
+Line createLine(Point p1, Point p2) {
+    Line newLine;
+    float dx, dy;
+    float slope;
+    float y_intercept;
+    dx = p1.x - p2.x;
+    dy = p1.y - p2.y;
+    if(dx == 0) {
+        newLine.p1 = p1;
+        newLine.p2 = p2;
+        newLine.a = 1;
+        newLine.b = 0;
+        newLine.c = -p1.x;
+    }
+    else if(dy == 0) {
+        newLine.p1 = p1;
+        newLine.p2 = p2;
+        newLine.a = 0;
+        newLine.b = 1;
+        newLine.c = -p1.y;
+    }
+    else {
+        slope = dy/dx;
+        y_intercept = p1.y - slope*p1.x;
+        newLine.p1 = p1;
+        newLine.p2 = p2;
+        newLine.a = -slope;
+        newLine.b = 1;
+        newLine.c = -y_intercept;
+    }
+    return newLine;
+}
+
+
+
+int** createInnerNeighborMatrix() {
+    int ** inner_neighbor_matrix;
+
+    inner_neighbor_matrix = new int*[Parameters::num_recording_channels];
+    for (int i = 0; i < Parameters::num_recording_channels; i++) {
+            inner_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
+    }
+
+    return inner_neighbor_matrix;
+}
+
+int** createOuterNeighborMatrix() {
+    int ** outer_neighbor_matrix;
+
+    outer_neighbor_matrix = new int*[Parameters::num_recording_channels];
+    for (int i = 0; i < Parameters::num_recording_channels; i++) {
+            outer_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
+    }
+    return outer_neighbor_matrix;
 }

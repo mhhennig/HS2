@@ -23,6 +23,13 @@
 
 using namespace std;
 
+//Event is a sparse representation of a spike. Used for speed when spike is not necessary.
+struct Event {
+	int amplitude;
+	int channel;
+	int frame;
+};
+
 //Internal representation of a spike. User has no need to use it.
 struct Spike {
 	int amplitude;
@@ -30,8 +37,9 @@ struct Spike {
 	int frame;
 	vector<int> amp_cutouts;
 	vector<int32_t> written_cutout;
-    vector<tuple<int, int>> inner_neighbors;
-    vector<tuple<int, int>> outer_neighbors;
+    //These contain all information of what occurred at neighbors
+    vector<Event> inner_neighbors;
+    vector<Event> outer_neighbors;
 };
 
 namespace Parameters {
@@ -47,6 +55,13 @@ extern int** neighbor_matrix;/*Indexed by the channel number starting at 0 and g
 							  index contains pointer to another array which contains channel number of all its neighbors.
 							  User creates this before calling SpikeHandler. Each column has size equal to max neighbors where
 							  any channels that have less neighbors fills the rest with -1 (important). */
+extern int** inner_neighbor_matrix; /*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
+							  index contains pointer to another array which contains channel number of all its inner neighbors.
+							  Created by SpikeHandler; */
+extern int** outer_neighbor_matrix; /*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
+                                    index contains pointer to another array which contains channel number of all its outer neighbors.
+                              		Created by SpikeHandler; */
+
 extern int** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
 							  index contains pointer to another array which contains X and Y position of the channel. User creates
 							  this before calling SpikeHandler. */
@@ -65,7 +80,7 @@ extern int iterations; //The number of frames passed into loadRawData EXCLUDING 
 extern int maxsl; //Number of frames after a detection that a spike is accepted
 extern int end_raw_data; //index of the end of the raw data
 extern int* masked_channels; //stores all masked channels as 0 and regular channels as 1
-extern int inner_radius;
+extern int event_number;
 
 };
 

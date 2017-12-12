@@ -18,22 +18,13 @@ Spike filterSpikes(Spike first_spike, ofstream& filteredsp) {
         The largest amplitude spike belonging to the event of the first spike.
 
     */
-    cout << "Filtering: " << first_spike.channel << " " << first_spike.frame <<  " " << first_spike.amplitude << endl;
     Spike max_spike;
-    cout << "Finding Max Spike..." << endl;
     max_spike = findMaxSpikeNeighbor(first_spike);
-    cout << "Max Spike: " << max_spike.channel << " " << max_spike.frame <<  " " << max_spike.amplitude << endl;
     if(Parameters::spikes_to_be_processed.size() != 0) {
-        cout << "Updating neighbors max spike..." << endl;
         max_spike = updateNeighborsMaxSpike(max_spike);
-        cout << "Updated!" << endl;
-        cout << "Filtering outer neighbors..." << endl;
         //Find the max amplitude neighbor of the first spike
         filterOuterNeighbors(max_spike, filteredsp);
-        cout << "Filtered outer neighors!" << endl;
-        cout << "Filtering inner neighbors..." << endl;
         filterInnerNeighbors(max_spike, filteredsp);
-        cout << "Filtered inner neighors!" << endl;
     }
     return max_spike;
 }
@@ -82,9 +73,6 @@ Spike findMaxSpikeNeighbor(Spike first_spike) {
 	    }
         ++it;
 	}
-    cout << index << endl;
-    cout << Parameters::spikes_to_be_processed.size() << endl;
-    cout << max_spike.channel << endl;
     deque<Spike>::iterator max_it = Parameters::spikes_to_be_processed.begin() + index;
     Parameters::spikes_to_be_processed.erase(max_it);
     return max_spike;
@@ -97,16 +85,20 @@ Spike updateNeighborsMaxSpike(Spike max_spike) {
 	Parameters
 	----------
 	max_spike: Spike
-		The max spike detected in the event.
+        The largest amplitude spike belonging to the event of the first spike.
 
+    Returns
+    -------
+    max_spike: Spike
+        The largest amplitude spike belonging to the event of the first spike.
+        Now its inner and outer neighbors are updated with spike information.
 	*/
 
-    int curr_channel, curr_amp;
+    int curr_channel, curr_amp, curr_frame;
     Spike curr_spike;
-    vector<tuple<int, int>> inner_spiking_neighbors;
-    vector<tuple<int, int>> outer_spiking_neighbors;
+    vector<int> spiking_neighbors;
 
-    //Find the max amplitude neighbor of the first spike
+    //Fill all neighbors that spiked with amplitude of their spike
     deque<Spike>::iterator it;
 	it = Parameters::spikes_to_be_processed.begin();
 	while(it != Parameters::spikes_to_be_processed.end())
@@ -114,104 +106,55 @@ Spike updateNeighborsMaxSpike(Spike max_spike) {
 		curr_spike = *it;
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
+        curr_frame = it->frame;
         if(areNeighbors(max_spike.channel, curr_channel)) {
-            if(channelsDist(max_spike.channel, curr_channel) <= Parameters::inner_radius) {
-                inner_spiking_neighbors.push_back(make_tuple(curr_channel, curr_amp));
+            if(isInnerNeighbor(max_spike.channel, curr_channel)) {
+                Event event;
+        		event.channel = curr_channel;
+        		event.frame = curr_frame;
+        		event.amplitude = curr_amp;
+                max_spike.inner_neighbors.push_back(event);
+                spiking_neighbors.push_back(curr_channel);
             }
             else {
-                outer_spiking_neighbors.push_back(make_tuple(curr_channel, curr_amp));
+                Event event;
+        		event.channel = curr_channel;
+        		event.frame = curr_frame;
+        		event.amplitude = curr_amp;
+                max_spike.outer_neighbors.push_back(event);
+                spiking_neighbors.push_back(curr_channel);
             }
 	    }
         ++it;
 	}
 
-    max_spike = updateOuterNeighbors(max_spike, outer_spiking_neighbors);
-    max_spike = updateInnerNeighbors(max_spike, inner_spiking_neighbors);
-
-    return max_spike;
-}
-
-Spike updateOuterNeighbors(Spike max_spike, vector<tuple<int, int>> outer_spiking_neighbors) {
-    /*Updates all the outer neighbors that spiked
-
-	Parameters
-	----------
-	max_spike: Spike
-        The largest amplitude spike belonging to the event of the first spike.
-    */
-    vector<tuple<int, int>>::iterator it;
-    it = max_spike.outer_neighbors.begin();
-    tuple<int, int> curr_neighbor;
-    int curr_channel;
-    int index = it - max_spike.outer_neighbors.begin();
-    while(it != max_spike.outer_neighbors.end())
-    {
-        curr_neighbor = *it;
-        curr_channel = get<0>(curr_neighbor);
-        index = it - max_spike.outer_neighbors.begin();
-
-        vector<tuple<int, int>>::iterator it2;
-        it2 = outer_spiking_neighbors.begin();
-        tuple<int, int> curr_spike_neighbor;
-        int curr_spike_channel, curr_spike_amp;
-        while(it2 != outer_spiking_neighbors.end())
-        {
-            curr_spike_neighbor = *it2;
-            curr_spike_channel = get<0>(curr_spike_neighbor);
-            curr_spike_amp = get<1>(curr_spike_neighbor);
-            if(curr_spike_channel == curr_channel) {
-                max_spike.outer_neighbors.at(index) = make_tuple(curr_spike_channel, curr_spike_amp);
-                break;
-            }
-            else {
-                ++it2;
+    //Fill all neighbors that didn't spike with zero amplitude
+    int curr_neighbor;
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
+        curr_neighbor = Parameters::neighbor_matrix[max_spike.channel][i];
+        if(std::find(spiking_neighbors.begin(), spiking_neighbors.end(), curr_neighbor) != spiking_neighbors.end()) {
+            //Already updated
+        }
+        else {
+            if(max_spike.channel != curr_neighbor) {
+                if(isInnerNeighbor(max_spike.channel, curr_neighbor)) {
+                    Event event;
+            		event.channel = curr_neighbor;
+            		event.frame = -1;
+            		event.amplitude = 0;
+                    max_spike.inner_neighbors.push_back(event);
+                }
+                else {
+                    Event event;
+            		event.channel = curr_neighbor;
+            		event.frame = -1;
+            		event.amplitude = 0;
+                    max_spike.outer_neighbors.push_back(event);
+                }
             }
         }
-        ++it;
     }
-    return max_spike;
 
-}
-
-Spike updateInnerNeighbors(Spike max_spike, vector<tuple<int, int>> inner_spiking_neighbors) {
-    /*Updates all the inner neighbors that spiked
-
-	Parameters
-	----------
-	max_spike: Spike
-        The largest amplitude spike belonging to the event of the first spike.
-    */
-
-    vector<tuple<int, int>>::iterator it;
-	it = max_spike.inner_neighbors.begin();
-    tuple<int, int> curr_neighbor;
-    int curr_channel;
-    int index = 0;
-	while(it != max_spike.inner_neighbors.end())
-	{
-		curr_neighbor = *it;
-        curr_channel = get<0>(curr_neighbor);
-        index = it - max_spike.inner_neighbors.begin();
-
-        vector<tuple<int, int>>::iterator it2;
-    	it2 = inner_spiking_neighbors.begin();
-        tuple<int, int> curr_spike_neighbor;
-        int curr_spike_channel, curr_spike_amp;
-    	while(it2 != inner_spiking_neighbors.end())
-    	{
-    		curr_spike_neighbor = *it2;
-            curr_spike_channel = get<0>(curr_spike_neighbor);
-            curr_spike_amp = get<1>(curr_spike_neighbor);
-            if(curr_spike_channel == curr_channel) {
-                max_spike.inner_neighbors.at(index) = make_tuple(curr_spike_channel, curr_spike_amp);
-                break;
-            }
-            else {
-                ++it2;
-            }
-    	}
-        ++it;
-	}
     return max_spike;
 }
 
@@ -227,19 +170,21 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
 	*/
 
     Spike curr_spike;
-	int curr_channel;
+	int curr_channel, curr_frame;
+    vector<Spike> outer_spikes_to_be_filtered;
     deque<Spike>::iterator it;
 	it = Parameters::spikes_to_be_processed.begin();
 
 	while(it != Parameters::spikes_to_be_processed.end())
 	{
 		curr_spike = *it;
-		curr_channel = it->channel;
+		curr_channel = curr_spike.channel;
 		if(areNeighbors(max_spike.channel, curr_channel)) {
-            if(channelsDist(max_spike.channel, curr_channel) > Parameters::inner_radius) {
+            if(!isInnerNeighbor(max_spike.channel, curr_channel)) {
                 if(filteredOuterSpike(curr_spike, max_spike)) {
-                    filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " " << "Filtered by " << max_spike.channel << endl;
-                    it = Parameters::spikes_to_be_processed.erase(it);
+                    filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                    outer_spikes_to_be_filtered.push_back(curr_spike);
+                    ++it;
                 }
                 else {
                     //Not a decaying outer spike (probably a new spike), filter later
@@ -247,7 +192,7 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
                 }
             }
             else {
-                //Inner neighbor - all inner neighbors that needed filtering should have been filtered earlier, filter later
+                //Inner neighbor - all inner neighbors that need filtering will be filtered later
                 ++it;
             }
 		}
@@ -256,127 +201,174 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
 			++it;
 		}
 	}
+
+    //Filter all spikes that need to be filtered all together at once
+    Spike curr_spike_to_be_filtered;
+    int curr_channel_to_be_filtered;
+    int curr_frame_to_be_filtered;
+    vector<Spike>::iterator it2;
+    it2 = outer_spikes_to_be_filtered.begin();
+    while(it2 != outer_spikes_to_be_filtered.end())
+	{
+        curr_spike_to_be_filtered = *it2;
+        curr_channel_to_be_filtered = curr_spike_to_be_filtered.channel;
+        curr_frame_to_be_filtered = curr_spike_to_be_filtered.frame;
+
+    	it = Parameters::spikes_to_be_processed.begin();
+        while(it != Parameters::spikes_to_be_processed.end())
+    	{
+            curr_spike = *it;
+    		curr_channel = curr_spike.channel;
+            curr_frame = curr_spike.frame;
+            if(curr_channel == curr_channel_to_be_filtered && curr_frame == curr_frame_to_be_filtered) {
+                it = Parameters::spikes_to_be_processed.erase(it);
+                break;
+            }
+            else {
+                ++it;
+            }
+        }
+        ++it2;
+	}
 }
 
 bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
     //True if should be filtered, false by default
     bool filtered_spike = false;
+    bool IS_INNER_EVENT = true;
+    bool shares_inner = false;
+    int NOT_A_CHANNEL = -10;
 
-    vector<tuple<int, int>>::iterator it;
-    it = outer_spike.inner_neighbors.begin();
-    //Searching for shared inner neighbor (Base Case search)
-    tuple<int, int> curr_inner_neighbor;
-    int curr_inner_channel, curr_inner_amp;
-    while(it != outer_spike.inner_neighbors.end())
-    {
-        curr_inner_neighbor = *it;
-        curr_inner_channel = get<0>(curr_inner_neighbor);
-        curr_inner_amp = get<1>(curr_inner_neighbor);
-
-        vector<tuple<int, int>>::iterator it2;
-        it2 = max_spike.inner_neighbors.begin();
-        tuple<int, int> curr_max_inner_neighbor;
-        int curr_max_inner_channel, curr_max_inner_amp;
-        while(it2 != max_spike.inner_neighbors.end())
-        {
-            curr_max_inner_neighbor = *it2;
-            curr_max_inner_channel = get<0>(curr_max_inner_neighbor);
-            curr_max_inner_amp = get<1>(curr_max_inner_neighbor);
-            //Shares an inner channel with the max spike (Base Case)
-            if(curr_inner_channel == curr_max_inner_channel) {
-                if(outer_spike.amplitude < curr_max_inner_amp*Parameters::noise_amp_percent) {
-                    cout <<"Outer spike filter: " << outer_spike.channel << endl;
-                    cout << curr_max_inner_channel << endl;
-                    cout << curr_max_inner_amp*Parameters::noise_amp_percent << endl;
-                    int inner_spike_frame = 0;
-                    int curr_channel, curr_frame;
-                    Spike curr_spike;
-                    deque<Spike>::iterator it3;
-                    it3 = Parameters::spikes_to_be_processed.begin();
-                    //Get frame of shared inner neighbor spike
-                    while(it3 != Parameters::spikes_to_be_processed.end())
-                    {
-                        curr_spike = *it3;
-                        curr_channel = it3->channel;
-                        curr_frame = it3->frame;
-                        if(curr_channel == curr_inner_channel) {
-                            inner_spike_frame = curr_frame;
-                            break;
-                        }
-                        else {
-                            ++it3;
-                        }
-                    }
-                    if(outer_spike.frame < inner_spike_frame - Parameters::noise_duration) {
+    //Checks to see if outer_spike shares an inner neighbor with max_spike (Base Case)
+    int curr_inner_neighbor;
+    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+        curr_inner_neighbor = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
+        if(curr_inner_neighbor == -1) {
+            break;
+        }
+        else {
+            Event curr_max_inner_event = getEventfromChannel(curr_inner_neighbor, max_spike, IS_INNER_EVENT);
+            if(curr_max_inner_event.channel != NOT_A_CHANNEL) {
+                if(outer_spike.amplitude < curr_max_inner_event.amplitude*Parameters::noise_amp_percent) {
+                    if(outer_spike.frame < curr_max_inner_event.frame - Parameters::noise_duration) {
                         //outer spike occurs too far before inner spike, probably new spike
-                        return filtered_spike;
+                        shares_inner = true;
                     }
                     else {
+                        //Shares an inner neighbor, spikes at a reasonable time, amplitude has decayed enough over this distance, filter
                         filtered_spike = true;
-                        return filtered_spike;
+                        shares_inner = true;
+                        break;
                     }
                 }
                 else {
                     //amplitude too big to be a duplicate spike
-                    return filtered_spike;
+                    shares_inner = true;
                 }
             }
             else {
-                ++it2;
+                //Keep looking for shared inner neighbor
             }
         }
-        ++it;
     }
-    //Doesn't share an inner_neighbor with max_spike (find closest inner neighbor)
-    //INT_MAX
-    int closest_dist = 10000;
-    int closest_channel = -1;
-    int closest_amplitude = 0;
-    int curr_dist;
-    it = outer_spike.inner_neighbors.begin();
-    while(it != outer_spike.inner_neighbors.end())
-    {
-        curr_inner_neighbor = *it;
-        curr_inner_channel = get<0>(curr_inner_neighbor);
-        curr_inner_amp = get<1>(curr_inner_neighbor);
-        curr_dist = channelsDist(curr_inner_channel, max_spike.channel);
-        if(curr_dist < closest_dist) {
-            closest_dist = curr_dist;
-            closest_channel = curr_inner_channel;
-            closest_amplitude = curr_inner_amp;
-        }
-    }
-
-    if(outer_spike.amplitude >= closest_amplitude*Parameters::noise_amp_percent) {
+    if(shares_inner == true) {
         return filtered_spike;
     }
     else {
-        //Find the closest neighbor in the spike vector and recurse with it (Recursive Step)
-        int curr_channel, curr_frame;
-        Spike curr_spike;
-        deque<Spike>::iterator it;
-    	it = Parameters::spikes_to_be_processed.begin();
-
-    	while(it != Parameters::spikes_to_be_processed.end())
-    	{
-    		curr_spike = *it;
-    		curr_channel = it->channel;
-            curr_frame = it->frame;
-    		if(curr_channel == closest_channel) {
-                if(outer_spike.frame >=  curr_frame - Parameters::noise_duration) {
-                    return filteredOuterSpike(curr_spike, max_spike);
-                }
-                else {
-                    //Occured too far before the inner spike to be related
-                    return filtered_spike;
-                }
-    		}
-    		else {
-    			++it;
-    		}
-    	}
+        //Doesn't share an inner_neighbor with max_spike (find closest inner neighbor to centeral channel and its amplitude)
+        int closest_inner_neighbor_channel = getClosestInnerNeighborChannel(outer_spike.channel, max_spike.channel);
+        Event closest_event = getEventfromChannel(closest_inner_neighbor_channel, max_spike, !IS_INNER_EVENT);
+        int closest_amp = closest_event.amplitude;
+        //Outer spike amplitude too big, probably new spike, filter later
+        if(outer_spike.amplitude >= closest_amp*Parameters::noise_amp_percent) {
+            return filtered_spike;
+        }
+        else {
+            //Find the closest neighbor in the spike vector and recurse with it (Recursive Step)
+            Spike closest_spike = getSpikefromChannel(closest_inner_neighbor_channel);
+            if(outer_spike.frame >=  closest_spike.frame - Parameters::noise_duration) {
+                return filteredOuterSpike(closest_spike, max_spike);
+            }
+            else {
+                //Occured too far before the inner spike to be related
+                return filtered_spike;
+            }
+        }
+        //Should never come to this
+        return filtered_spike;
     }
-    return filtered_spike;
+}
+
+int getClosestInnerNeighborChannel(int outer_channel, int central_channel) {
+    int closest_dist = 10000;
+    int closest_inner_neighbor_channel = -1;
+    int curr_dist;
+    int curr_inner_channel;
+    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+        curr_inner_channel = Parameters::inner_neighbor_matrix[outer_channel][i];
+        if(curr_inner_channel == -1) {
+            break;
+        } else {
+            curr_dist = channelsDist(curr_inner_channel, central_channel);
+            if(curr_dist < closest_dist) {
+                closest_dist = curr_dist;
+                closest_inner_neighbor_channel = curr_inner_channel;
+            }
+        }
+    }
+    return closest_inner_neighbor_channel;
+}
+
+Spike getSpikefromChannel(int spike_channel) {
+    int curr_channel;
+    Spike curr_spike;
+    Spike channel_spike;
+    deque<Spike>::iterator it;
+    it = Parameters::spikes_to_be_processed.begin();
+    while(it != Parameters::spikes_to_be_processed.end())
+    {
+        curr_spike = *it;
+        curr_channel = it->channel;
+        if(curr_channel == spike_channel) {
+            channel_spike = curr_spike;
+            break;
+        }
+        else {
+            ++it;
+        }
+    }
+    return channel_spike;
+}
+
+Event getEventfromChannel(int channel, Spike curr_spike, bool is_inner_event) {
+    Event event_channel;
+    //If returned channel has -10 as channel number, then no event was found.
+    event_channel.channel = -10;
+    vector<Event>::iterator it;
+    vector<Event>::iterator end;
+    Event curr_event;
+    int curr_channel_event;
+    if(is_inner_event) {
+        it = curr_spike.inner_neighbors.begin();
+        end = curr_spike.inner_neighbors.end();
+    }
+    else {
+        it = curr_spike.outer_neighbors.begin();
+        end = curr_spike.outer_neighbors.end();
+    }
+    while(it != end)
+    {
+        curr_event = *it;
+        curr_channel_event = curr_event.channel;
+        if(channel == curr_channel_event) {
+            event_channel = curr_event;
+            break;
+        }
+        else {
+            ++it;
+        }
+    }
+    return event_channel;
 }
 
 void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
@@ -402,7 +394,7 @@ void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
 		curr_amp = it->amplitude;
         curr_frame = it->frame;
 		if(areNeighbors(max_spike.channel, curr_channel)) {
-            if(channelsDist(max_spike.channel, curr_channel) <= Parameters::inner_radius) {
+            if(isInnerNeighbor(max_spike.channel, curr_channel)) {
                 if(curr_amp < max_spike.amplitude) {
                     if(curr_amp >=  max_spike.amplitude*Parameters::noise_amp_percent) {
                         if(curr_frame >  max_spike.frame + Parameters::noise_duration) {
@@ -410,12 +402,12 @@ void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
                             ++it;
                         }
                         else {
-                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " " << "Filtered by " << max_spike.channel << endl;
+                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike)  << " Area: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
                             it = Parameters::spikes_to_be_processed.erase(it);
                         }
                     }
                     else {
-                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " " << "Filtered by " << max_spike.channel << endl;
+                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) <<  " Filtered by " << max_spike.channel << endl;
                         it = Parameters::spikes_to_be_processed.erase(it);
                     }
                 }
@@ -470,6 +462,38 @@ float channelsDist(int start_channel, int end_channel) {
     return dist;
 }
 
+bool isInnerNeighbor(int center_channel, int curr_channel) {
+    /*Determines whether or not two channels are inner neighbors.
+
+    Parameters
+    ----------
+    center_channel: int
+        The channel number whose inner neighborhoold is checked.
+    curr_channel: int
+        The channel number of the potential neighbor.
+
+    Returns
+    -------
+    is_inner_neighbor: bool
+        True if the channels are inner neighbors.
+        False if the channels are not inner neighbors.
+    */
+    bool is_inner_neighbor = false;
+
+    int curr_inner_neighbor;
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
+        curr_inner_neighbor = Parameters::inner_neighbor_matrix[center_channel][i];
+        if(curr_inner_neighbor == curr_channel) {
+            is_inner_neighbor = true;
+            break;
+        }
+        else if(curr_inner_neighbor == -1) {
+            break;
+        }
+    }
+    return is_inner_neighbor;
+}
+
 bool areNeighbors(int channel_one, int channel_two) {
 	/*Determines whether or not two channels are neighbors.
 
@@ -482,18 +506,105 @@ bool areNeighbors(int channel_one, int channel_two) {
 
 	Returns
 	-------
-	isNeighbor: bool
+	are_neighbors: bool
 		True if the channels are neighbors.
 		False if the channels are not neighbors.
 	*/
-	bool areNeighbors = false;
+	bool are_neighbors = false;
+    int curr_neighbor;
 	for(int i = 0; i < Parameters::max_neighbors; i++) {
-		if(Parameters::neighbor_matrix[channel_one][i] == channel_two) {
-			areNeighbors = true;
+        curr_neighbor = Parameters::neighbor_matrix[channel_one][i];
+		if(curr_neighbor == channel_two) {
+			are_neighbors = true;
 			break;
 		}
+        else if(curr_neighbor == -1) {
+            break;
+        }
 	}
-	return areNeighbors;
+	return are_neighbors;
 }
+
+float posToNegRatio(Spike spike) {
+   int32_t most_neg_reading = 2147483647;
+   int32_t most_pos_reading = -2147483647;
+   int32_t curr_written_reading;
+   int index_neg_spike = 0;
+   int index_spike = 0;
+   for(int i = 0; i < Parameters::cutout_start + Parameters::noise_duration + 1; i++) {
+       curr_written_reading = spike.written_cutout.at(i);;
+       if(curr_written_reading < most_neg_reading) {
+           most_neg_reading = curr_written_reading;
+           index_neg_spike = index_spike;
+       }
+       ++index_spike;
+    }
+
+
+   for(int i = 0; i < index_neg_spike; i++) {
+       curr_written_reading = spike.written_cutout.at(i);
+       if(curr_written_reading > most_pos_reading) {
+           most_pos_reading = curr_written_reading;
+       }
+    }
+
+   float pos_to_neg_ratio = -float(most_pos_reading)/float(most_neg_reading);
+   return pos_to_neg_ratio;
+}
+
+float repolarizationTime(Spike spike) {
+   int32_t most_neg_reading = 2147483647;
+   int32_t most_pos_reading = -2147483647;
+   int32_t curr_written_reading;
+   int32_t prev_written_reading;
+   int index_neg_spike = 0;
+   int index_spike = 0;
+   for(int i = 0; i < Parameters::cutout_start + Parameters::noise_duration + 1; i++) {
+       curr_written_reading = spike.written_cutout.at(i);;
+       if(curr_written_reading < most_neg_reading) {
+           most_neg_reading = curr_written_reading;
+           index_neg_spike = index_spike;
+       }
+       ++index_spike;
+    }
+
+   int frames = 0;
+   for(size_t i = index_neg_spike; i < spike.written_cutout.size(); i++) {
+       curr_written_reading = spike.written_cutout.at(i);
+       if(i == index_neg_spike) {
+           prev_written_reading = curr_written_reading;
+           ++frames;
+       }
+       else {
+           if(curr_written_reading > 0 && curr_written_reading < prev_written_reading) {
+               break;
+           }
+           else {
+               prev_written_reading = curr_written_reading;
+               ++frames;
+           }
+       }
+    }
+
+   return frames - 1;
+}
+
+double areaUnderSpike(Spike spike) {
+    double sum = 0.0, trapz;
+    int h = 1;
+    int amp_cutout_size = Parameters::cutout_start*2 + 1;
+    for (int i = 0; i < amp_cutout_size; ++i){
+        if ( i == 0 || i == amp_cutout_size-1 ) {
+            sum += ((double) spike.written_cutout.at(i))/2.0;
+        }// for the first and last elements
+        else {
+            sum += ((double) spike.written_cutout.at(i)); // the rest of data
+        }
+    }
+    trapz = sum*h; // the result
+
+    return trapz;
+}
+
 
 }

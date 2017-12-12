@@ -19,7 +19,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
         void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration, float noise_amp_percent, int* _masked_channels, \
-                              int max_neighbors, int inner_radius, bool to_localize, int thres, int cutout_start, int cutout_end, \
+                              int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
@@ -71,7 +71,6 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     noise_duration = int(probe.noise_duration)
     noise_amp_percent = float(probe.noise_amp_percent)
     max_neighbors = int(probe.max_neighbors)
-    inner_radius = int(probe.inner_radius)
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
@@ -141,7 +140,7 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
     det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, num_recording_channels, spike_delay, spike_peak_duration,
-                         _file_name, noise_duration, noise_amp_percent, &masked_channels[0], max_neighbors, inner_radius, to_localize, thres,
+                         _file_name, noise_duration, noise_amp_percent, &masked_channels[0], max_neighbors, to_localize, thres,
                          cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
     startTime = datetime.now()
     t0 = 0

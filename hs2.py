@@ -133,6 +133,8 @@ class herdingspikes(object):
         interdistance = np.min(dst[dst > 0])
         if ax is None:
             ax = plt.gca()
+
+
         # scatter of the large grey balls for electrode location
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
@@ -153,7 +155,6 @@ class herdingspikes(object):
         trange_bluered = np.arange(-cutout_start, -cutout_start+cutlen)*scale
 
         data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
-
         for n in neighs[event.ch]:
             plt.plot(pos[n][0] + trange,
                      pos[n][1] + data[:, n]*scale, 'gray')

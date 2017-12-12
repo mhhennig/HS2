@@ -65,8 +65,10 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 
 	while(!isProcessed) {
         max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
-        filteredsp << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " " << "Not Filtered" << endl;
+        filteredsp << max_spike.channel << " " << max_spike.frame << " " << max_spike.amplitude << " PN ratio: " << FilterSpikes::posToNegRatio(max_spike) << " Area: " << FilterSpikes::areaUnderSpike(max_spike) << " RP time: " << FilterSpikes::repolarizationTime(max_spike) <<  " Not Filtered" << endl;
+        filteredsp << "Event: " << Parameters::event_number << endl;
         filteredsp << " " << endl;
+        ++Parameters::event_number;
 
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
 
