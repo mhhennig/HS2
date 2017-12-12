@@ -182,7 +182,8 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
 		if(areNeighbors(max_spike.channel, curr_channel)) {
             if(!isInnerNeighbor(max_spike.channel, curr_channel)) {
                 if(filteredOuterSpike(curr_spike, max_spike)) {
-                    filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                    //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                    filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
                     outer_spikes_to_be_filtered.push_back(curr_spike);
                     ++it;
                 }
@@ -402,12 +403,14 @@ void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
                             ++it;
                         }
                         else {
-                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike)  << " Area: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                            //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike)  << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
                             it = Parameters::spikes_to_be_processed.erase(it);
                         }
                     }
                     else {
-                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) <<  " Filtered by " << max_spike.channel << endl;
+                        //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) <<  " Filtered by " << max_spike.channel << endl;
+                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
                         it = Parameters::spikes_to_be_processed.erase(it);
                     }
                 }
@@ -590,6 +593,19 @@ float repolarizationTime(Spike spike) {
 }
 
 double areaUnderSpike(Spike spike) {
+    int32_t most_neg_reading = 2147483647;
+    int32_t curr_written_reading;
+    int index_neg_spike = 0;
+    int index_spike = 0;
+    for(int i = 0; i < Parameters::cutout_start + Parameters::noise_duration + 1; i++) {
+        curr_written_reading = spike.written_cutout.at(i);;
+        if(curr_written_reading < most_neg_reading) {
+            most_neg_reading = curr_written_reading;
+            index_neg_spike = index_spike;
+        }
+        ++index_spike;
+     }
+
     double sum = 0.0, trapz;
     int h = 1;
     int amp_cutout_size = Parameters::cutout_start*2 + 1;
@@ -603,7 +619,12 @@ double areaUnderSpike(Spike spike) {
     }
     trapz = sum*h; // the result
 
-    return trapz;
+    if(most_neg_reading == 0) {
+        return trapz;
+    }
+    else {
+        return trapz/most_neg_reading;
+    }
 }
 
 

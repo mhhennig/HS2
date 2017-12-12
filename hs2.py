@@ -107,8 +107,8 @@ class herdingspikes(object):
             cutout_length = cutout_start + cutout_end + 1
             self.LoadDetected(file_path, cutout_length)
 
-    def PlotTracesChannels(self, eventid, ax=None,
-                           window_size=200, cutout_start=6):
+    def PlotTracesChannels(self, eventid, window_size=200,
+                           ax=None, cutout_start=10):
         """
         Draw a figure with an electrode and its neighbours, showing the raw
         traces and events. Note that this requires loading the raw data in
@@ -136,6 +136,7 @@ class herdingspikes(object):
 
 
         # scatter of the large grey balls for electrode location
+        #plt.figure(figsize=(15,15))
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
@@ -148,7 +149,7 @@ class herdingspikes(object):
         ws = window_size//2
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
-        scale = interdistance/220.
+        scale = interdistance/110.#220.
         trange = (np.arange(t1, t2)-event.t)*scale
         start_bluered = event.t-t1-cutout_start
         trange_bluered = trange[start_bluered:start_bluered+cutlen]

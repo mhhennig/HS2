@@ -548,6 +548,9 @@ bool acceptAsBoundaryPoint(Point curr_point, Point central_point, vector<Line> &
         else if(line_dist_from_central_point == 0) {
             accept_bp = true;
         }
+        else if(line_dist_from_curr_point == 0) {
+            accept_bp = true;
+        }
         //On opposite sides of boundary line
         else {
             accept_bp = false;
