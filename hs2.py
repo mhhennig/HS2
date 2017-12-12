@@ -69,7 +69,7 @@ class herdingspikes(object):
         """
         g = h5py.File(filename, 'r')
         print('Reading from ' + filename)
-        print('Creating memmapped cache for shapes, reding in chunks, converting to integer...')
+        print('Creating memmapped cache for shapes, reading in chunks, converting to integer...')
         self.shapecache = np.memmap(
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
