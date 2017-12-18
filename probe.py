@@ -8,8 +8,8 @@ from probes.readUtils import readHDF5t_100, readHDF5t_101
 
 class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
-                 noise_duration, noise_amp_percent, fps, positions_file_path,
-                 neighbors_file_path, masked_channels = None):
+                 noise_duration, noise_amp_percent, inner_radius,
+                 fps, positions_file_path, neighbors_file_path, masked_channels = None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -19,6 +19,7 @@ class NeuralProbe(object):
         self.positions_file_path = positions_file_path
         self.neighbors_file_path = neighbors_file_path
         self.masked_channels = masked_channels;
+        self.inner_radius = inner_radius;
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
@@ -31,7 +32,6 @@ class NeuralProbe(object):
             neighbors.append(np.array(neighbor[:-2].split(',')).astype(int))
         neighbor_file.close()
         # assert len(neighbors) == len(pos)
-        self.num_recording_channels = len(neighbors)
         self.neighbors = neighbors
         self.max_neighbors = max([len(n) for n in neighbors])
 
@@ -67,7 +67,7 @@ class NeuralProbe(object):
     def getChannelsPositions(self, channels):
         channel_positions = []
         for channel in channels:
-            if channel >= self.num_recording_channels:
+            if channel >= self.num_channels:
                 raise ValueError('Channel Index too big')
             else:
                 channel_positions.append(self.positions[channel])
@@ -76,12 +76,13 @@ class NeuralProbe(object):
 
 
 class NeuroPixel(NeuralProbe):
-    def __init__(self, data_file_path, fps=30000, masked_channels=None):
+    def __init__(self, data_file_path, fps=30000, masked_channels=[385]):
 
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
-            spike_peak_duration=4, noise_duration=2,
+            spike_peak_duration=4, noise_duration=3,
             noise_amp_percent=.90, fps=fps,
+            inner_radius = 40,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
             masked_channels=masked_channels)
@@ -96,22 +97,27 @@ class NeuroPixel(NeuralProbe):
 
 
 class BioCam(NeuralProbe):
-    def __init__(self, data_file_path, fps=0, masked_channels=None):
+    def __init__(self, data_file_path, fps=0, masked_channels=[0]):
         self.data_file = data_file_path
-        self.d = openHDF5file(data_file_path)
-        self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
-            self.d)
+        if data_file_path is not None:
+            self.d = openHDF5file(data_file_path)
+            self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
+                self.d)
+            if file_format == 100:
+                self.read_function = readHDF5t_100
+            else:
+                self.read_function = readHDF5t_101
+        else:
+            nRecCh = 4096
+            sfd = fps
+        nRecCh = 4096
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
                              spike_peak_duration=4, noise_duration=2,
                              noise_amp_percent=.90, fps=sfd,
+                             inner_radius = 1.5,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)
-        assert self.num_recording_channels == self.num_channels
-        if file_format == 100:
-            self.read_function = readHDF5t_100
-        else:
-            self.read_function = readHDF5t_101
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)

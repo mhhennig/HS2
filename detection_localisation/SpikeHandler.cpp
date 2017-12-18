@@ -1,7 +1,6 @@
 #include "SpikeHandler.h"
 
 int Parameters::num_channels;
-int Parameters::num_recording_channels;
 int Parameters::spike_delay;
 int Parameters::spike_peak_duration;
 int Parameters::noise_duration;
@@ -25,14 +24,16 @@ int Parameters::end_raw_data;
 short* Parameters::raw_data;
 int* Parameters::masked_channels;
 int Parameters::event_number;
+bool Parameters::debug;
+float Parameters::inner_radius;
 
 deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream filteredsp;
 std::ofstream spikes_filtered_file;
 
 
-void setInitialParameters(int _num_channels, int _num_recording_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
-						  int _noise_duration, float _noise_amp_percent, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
+void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
+						  int _noise_duration, float _noise_amp_percent, float _inner_radius, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
 						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0)
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
@@ -40,9 +41,7 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters
 	----------
 	_num_channels: int
-		Number of channels on the probe.
-	_num_recording_channels: int
-		Number of channels to be used for spike data.
+		Number of channels on the probe
 	_spike_delay: int
 		The number of frames back a spike occurred after it was detected (where the beginning of the spike was).
 	file_name: string
@@ -60,11 +59,11 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
     _masked_channels: 1D int array
     	The channels that are masked for the detection (AKA we get input from them)
 	_channel_positions: 2D int array
-		Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
+		Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
 		index contains pointer to another array which contains X and Y position of the channel. User creates
 		this before calling SpikeHandler.
 	_neighbor_matrix: 2D int array
-		Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
+		Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
 		index contains pointer to another array which contains channel number of all its neighbors.
 		User creates this before calling SpikeHandler.
 	_max_neighbors: int
@@ -80,12 +79,8 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	_maxsl: int
 		The number of frames until a spike is accepted when the peak value is given.
 	*/
-	if(_num_channels < 0 || _num_channels < _num_recording_channels) {
+	if(_num_channels < 0) {
 		cout << "Number of channels given incorrectly. Terminating Spike Handler" << endl;
-		exit(EXIT_FAILURE);
-	}
-	if(_num_recording_channels < 0) {
-		cout << "Number of recording channels less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
 	if(_max_neighbors < 0) {
@@ -120,9 +115,12 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 		cout << "Maxsl less than 0. Terminating Spike Handler" << endl;
 		exit(EXIT_FAILURE);
 	}
+    if(_inner_radius < 0) {
+		cout << "Inner Radius less than 0. Terminating Spike Handler" << endl;
+		exit(EXIT_FAILURE);
+	}
 
 	Parameters::num_channels = _num_channels;
-	Parameters::num_recording_channels = _num_recording_channels;
 	Parameters::max_neighbors = _max_neighbors;
 	Parameters::spike_delay = _spike_delay;
 	Parameters::spike_peak_duration = _spike_peak_duration;
@@ -135,15 +133,20 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
 	Parameters::cutout_end = _cutout_end;
 	Parameters::maxsl = _maxsl;
     Parameters::masked_channels = _masked_channels;
+    Parameters::inner_radius = _inner_radius;
     Parameters::event_number = 0;
+    Parameters::debug = true;
 
-
+    if(Parameters::debug) {
+        cout << "Building neighbor matrices.." << endl;
+    }
     Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
     Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
     fillNeighborLayerMatrices();
+    cout << "DONE" << endl;
     int test = 0;
     if(test == 0) {
-        for(int i=0; i<Parameters::num_recording_channels; i++)    //This loops on the rows.
+        for(int i=0; i<Parameters::num_channels; i++)    //This loops on the rows.
     	{
             cout << "Channel: " << i << endl;
             cout << "Inner Neighbors: ";
@@ -160,6 +163,10 @@ void setInitialParameters(int _num_channels, int _num_recording_channels, int _s
     		cout << endl;
     	}
     }
+    if(Parameters::debug) {
+        cout << "Done building neighbor matrices" << endl;
+    }
+
 	spikes_filtered_file.open(file_name + ".bin", ios::binary);
     filteredsp.open("Filtered Spikes");
 
@@ -252,7 +259,7 @@ void addSpike(int channel, int frame, int amplitude) {
 	int amp_cutout_size = Parameters::spike_delay*2 + 1;
 	int frames_processed = Parameters::frames*Parameters::iterations;
 
-	if(channel < Parameters::num_recording_channels && channel >= 0) {
+	if(channel < Parameters::num_channels && channel >= 0) {
 		int curr_neighbor_channel, curr_reading;
 		int32_t curr_written_reading;
 		Spike spike_to_be_added;
@@ -289,7 +296,7 @@ void addSpike(int channel, int frame, int amplitude) {
             //Out of inner neighbors
 			if(curr_neighbor_channel != -1) {
                 //Masked neighbor
-                if(Parameters::masked_channels[curr_neighbor_channel] != 0) {
+                if(Parameters::masked_channels[curr_neighbor_channel] == 1) {
     				for(int j = 0; j < amp_cutout_size; j++) {
     					try {
       						curr_reading = Parameters::raw_data[(frame - Parameters::spike_delay - frames_processed + Parameters::index_data + j)*Parameters::num_channels + curr_neighbor_channel];
@@ -399,12 +406,15 @@ float channelsDist(int start_channel, int end_channel) {
 }
 
 void fillNeighborLayerMatrices() {
+    if(Parameters::debug) {
+        cout << "Fillting Neighbor Layer Matrix" << endl;
+    }
     int curr_channel;
     int curr_neighbor;
     float curr_dist;
     vector<tuple<int, float>> distances_neighbors;
     vector<int> inner_neighbors;
-    for(int i = 0; i < Parameters::num_recording_channels; i++) {
+    for(int i = 0; i < Parameters::num_channels - 1; i++) {
         curr_channel = i;
         for(int j = 0; j < Parameters::max_neighbors; j++) {
             curr_neighbor = Parameters::neighbor_matrix[curr_channel][j];
@@ -413,9 +423,20 @@ void fillNeighborLayerMatrices() {
                 distances_neighbors.push_back(make_tuple(curr_neighbor, curr_dist));
             }
         }
-        sort(begin(distances_neighbors), end(distances_neighbors), CustomLessThan());
+        if(distances_neighbors.size() != 0) {
+            sort(begin(distances_neighbors), end(distances_neighbors), CustomLessThan());
+            if(Parameters::debug) {
+                cout << "Found Distances" << endl;
+            }
+            //inner_neighbors = getInnerNeighborsBounding(distances_neighbors, i);
+            inner_neighbors = getInnerNeighborsRadius(distances_neighbors, i);
+        }
 
-        inner_neighbors = getInnerNeighbors(distances_neighbors, i);
+        if(Parameters::debug) {
+            cout << "Got inner neighbors" << endl;
+            cout << i << endl;
+        }
+
         vector<int>::iterator it;
         it = inner_neighbors.begin();
         int curr_inner_neighbor;
@@ -431,6 +452,10 @@ void fillNeighborLayerMatrices() {
         while(k < Parameters::max_neighbors - 1) {
             Parameters::inner_neighbor_matrix[i][k] = -1;
             ++k;
+        }
+        if(Parameters::debug) {
+            cout << "Filling Inner Neighbors" << endl;
+            cout << i << endl;
         }
         //Fill outer neighbor matrix
         k = 0;
@@ -458,7 +483,30 @@ void fillNeighborLayerMatrices() {
         distances_neighbors.clear();
     }
 }
-vector<int> getInnerNeighbors(vector<tuple<int, float>> distances_neighbors, int central_channel) {
+
+vector<int> getInnerNeighborsRadius(vector<tuple<int, float>> distances_neighbors, int central_channel) {
+    int curr_neighbor;
+    float curr_dist;
+    vector<int> inner_channels;
+    vector<tuple<int, float>>::iterator it;
+    it = distances_neighbors.begin();
+    while(it != distances_neighbors.end())
+    {
+        curr_neighbor = get<0>(*it);
+        curr_dist = get<1>(*it);
+        if(curr_dist <= Parameters::inner_radius) {
+            inner_channels.push_back(curr_neighbor);
+            ++it;
+        }
+        else {
+            break;
+        }
+
+    }
+    return inner_channels;
+}
+
+vector<int> getInnerNeighborsBounding(vector<tuple<int, float>> distances_neighbors, int central_channel) {
     vector<int> inner_neighbors;
     vector<Point> boundary_points;
     vector<Line> boundary_lines;
@@ -610,8 +658,8 @@ Line createLine(Point p1, Point p2) {
 int** createInnerNeighborMatrix() {
     int ** inner_neighbor_matrix;
 
-    inner_neighbor_matrix = new int*[Parameters::num_recording_channels];
-    for (int i = 0; i < Parameters::num_recording_channels; i++) {
+    inner_neighbor_matrix = new int*[Parameters::num_channels];
+    for (int i = 0; i < Parameters::num_channels; i++) {
             inner_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
     }
 
@@ -621,8 +669,8 @@ int** createInnerNeighborMatrix() {
 int** createOuterNeighborMatrix() {
     int ** outer_neighbor_matrix;
 
-    outer_neighbor_matrix = new int*[Parameters::num_recording_channels];
-    for (int i = 0; i < Parameters::num_recording_channels; i++) {
+    outer_neighbor_matrix = new int*[Parameters::num_channels];
+    for (int i = 0; i < Parameters::num_channels; i++) {
             outer_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
     }
     return outer_neighbor_matrix;

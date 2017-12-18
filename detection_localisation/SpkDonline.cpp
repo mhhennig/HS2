@@ -39,8 +39,8 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh, long t
   fpost = tpostf;
 }
 
-void Detection::SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration,
-                                 string file_name, int noise_duration, float noise_amp_percent,  int* _masked_channels, int max_neighbors, bool to_localize, int thres,
+void Detection::SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay, int spike_peak_duration,
+                                 string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors, bool to_localize, int thres,
                                  int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl) {
   // set the detection parameters
   // set the detection parameters
@@ -52,17 +52,24 @@ void Detection::SetInitialParams(string positions_file_path, string neighbors_fi
   int** channel_positions;
   int** neighbor_matrix;
   masked_channels = _masked_channels;
-  channel_positions = createPositionMatrix(num_recording_channels);
-  neighbor_matrix = createNeighborMatrix(num_recording_channels, max_neighbors);
-  buildPositionsMatrix(channel_positions, positions_file_path, num_recording_channels, 2);
-  buildNeighborMatrix(neighbor_matrix, neighbors_file_path, num_recording_channels, max_neighbors);
+  channel_positions = createPositionMatrix(num_channels);
+  neighbor_matrix = createNeighborMatrix(num_channels, max_neighbors);
+  buildPositionsMatrix(channel_positions, positions_file_path, num_channels, 2);
+  buildNeighborMatrix(neighbor_matrix, neighbors_file_path, num_channels, max_neighbors);
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
+  cout << "Built Matrices" << endl;
   currQmsPosition = -1;
   _spike_delay = spike_delay;
 
-  setInitialParameters(num_channels, num_recording_channels, spike_delay, spike_peak_duration, file_name, noise_duration,
-                       noise_amp_percent, masked_channels, channel_positions, neighbor_matrix, max_neighbors, to_localize,
+  if(debugging) {
+      cout << "Setting initial Parameters.." << endl;
+  }
+  setInitialParameters(num_channels, spike_delay, spike_peak_duration, file_name, noise_duration, noise_amp_percent,
+                       inner_radius, masked_channels, channel_positions, neighbor_matrix, max_neighbors, to_localize,
                        cutout_start, cutout_end, maxsl);
+  if(debugging) {
+      cout << "Done setting initial Parameters" << endl;
+  }
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though
@@ -104,6 +111,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
   // MeanVoltage(vm, tInc, tCut);
   int a = 0; // to buffer the difference between ADC counts and Qm, and basline
   loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
+
   ++iterations;
   for (int t = tCut; t < tInc + tCut2; t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION

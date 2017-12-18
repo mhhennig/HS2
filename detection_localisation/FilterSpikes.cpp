@@ -16,7 +16,6 @@ Spike filterSpikes(Spike first_spike, ofstream& filteredsp) {
     -------
     max_spike: Spike
         The largest amplitude spike belonging to the event of the first spike.
-
     */
     Spike max_spike;
     max_spike = findMaxSpikeNeighbor(first_spike);
@@ -128,7 +127,7 @@ Spike updateNeighborsMaxSpike(Spike max_spike) {
         ++it;
 	}
 
-    //Fill all neighbors that didn't spike with zero amplitude
+    //Fill all neighbors that didn't spike which we will assign zero amplitude
     int curr_neighbor;
     for(int i = 0; i < Parameters::max_neighbors; i++) {
         curr_neighbor = Parameters::neighbor_matrix[max_spike.channel][i];
@@ -240,7 +239,7 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
     bool shares_inner = false;
     int NOT_A_CHANNEL = -10;
 
-    //Checks to see if outer_spike shares an inner neighbor with max_spike (Base Case)
+    //Checks to see if outer_spike shares an inner neighbor with max_spike (picks closest to outer spike that is shared) (Base Case)
     int curr_inner_neighbor;
     for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
         curr_inner_neighbor = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
@@ -254,6 +253,7 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
                     if(outer_spike.frame < curr_max_inner_event.frame - Parameters::noise_duration) {
                         //outer spike occurs too far before inner spike, probably new spike
                         shares_inner = true;
+                        break;
                     }
                     else {
                         //Shares an inner neighbor, spikes at a reasonable time, amplitude has decayed enough over this distance, filter
@@ -265,6 +265,7 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
                 else {
                     //amplitude too big to be a duplicate spike
                     shares_inner = true;
+                    break;
                 }
             }
             else {
@@ -276,8 +277,17 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
         return filtered_spike;
     }
     else {
-        //Doesn't share an inner_neighbor with max_spike (find closest inner neighbor to centeral channel and its amplitude)
+        //Doesn't share an inner_neighbor with max_spike (find closest inner neighbor to itself and closer central channel and its amplitude)
         int closest_inner_neighbor_channel = getClosestInnerNeighborChannel(outer_spike.channel, max_spike.channel);
+        if(Parameters::masked_channels[closest_inner_neighbor_channel] == 0) {
+            if(outer_spike.amplitude >= max_spike.amplitude*Parameters::noise_amp_percent) {
+                return filtered_spike;
+            }
+            else {
+                filtered_spike = true;
+                return filtered_spike;
+            }
+        }
         Event closest_event = getEventfromChannel(closest_inner_neighbor_channel, max_spike, !IS_INNER_EVENT);
         int closest_amp = closest_event.amplitude;
         //Outer spike amplitude too big, probably new spike, filter later
@@ -301,19 +311,20 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
 }
 
 int getClosestInnerNeighborChannel(int outer_channel, int central_channel) {
-    int closest_dist = 10000;
     int closest_inner_neighbor_channel = -1;
-    int curr_dist;
+    float curr_dist;
+    float outer_dist_from_center = channelsDist(outer_channel, central_channel);
     int curr_inner_channel;
     for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
         curr_inner_channel = Parameters::inner_neighbor_matrix[outer_channel][i];
         if(curr_inner_channel == -1) {
             break;
-        } else {
+        }
+        else {
             curr_dist = channelsDist(curr_inner_channel, central_channel);
-            if(curr_dist < closest_dist) {
-                closest_dist = curr_dist;
+            if(curr_dist < outer_dist_from_center) {
                 closest_inner_neighbor_channel = curr_inner_channel;
+                break;
             }
         }
     }
@@ -626,6 +637,5 @@ double areaUnderSpike(Spike spike) {
         return trapz/most_neg_reading;
     }
 }
-
 
 }

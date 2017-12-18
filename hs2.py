@@ -143,7 +143,7 @@ class herdingspikes(object):
         x = pos[[neighs[event.ch], 0]]
         y = pos[[neighs[event.ch], 1]]
         for i, txt in enumerate(neighs[event.ch]):
-            ax.annotate(txt, (x[i] + 2,y[i] + 3))
+            ax.annotate(txt, (x[i] + 1,y[i] + 3))
 
 
         ws = window_size//2
@@ -157,11 +157,18 @@ class herdingspikes(object):
 
         data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
         for n in neighs[event.ch]:
-            plt.plot(pos[n][0] + trange,
-                     pos[n][1] + data[:, n]*scale, 'gray')
-            plt.plot(pos[n][0] + trange_bluered,
-                     pos[n][1] + data[start_bluered:start_bluered+cutlen,
-                                      n]*scale, 'b')
+            if n not in self.probe.masked_channels:
+                plt.plot(pos[n][0] + trange,
+                         pos[n][1] + data[:, n]*scale, 'gray')
+                plt.plot(pos[n][0] + trange_bluered,
+                         pos[n][1] + data[start_bluered:start_bluered+cutlen,
+                         n]*scale, 'b')
+            else:
+                plt.plot(pos[n][0] + trange,
+                         pos[n][1] + data[:, n]*scale, 'gray')
+                plt.plot(pos[n][0] + trange_bluered,
+                         pos[n][1] + data[start_bluered:start_bluered+cutlen,
+                         n]*scale, 'g')
 
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + event.Shape*scale, 'r')
