@@ -238,16 +238,37 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
     bool IS_INNER_EVENT = true;
     bool shares_inner = false;
     int NOT_A_CHANNEL = -10;
+    bool problem_spike = false;
+
+    if(Parameters::debug) {
+        if(outer_spike.channel == 345 && outer_spike.frame == 93) {
+            cout << "Found Problem Spike" << endl;
+            problem_spike = true;
+            cout << outer_spike.channel << " " << outer_spike.frame << " " << outer_spike.amplitude  << endl;
+        }
+    }
 
     //Checks to see if outer_spike shares an inner neighbor with max_spike (picks closest to outer spike that is shared) (Base Case)
     int curr_inner_neighbor;
     for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
         curr_inner_neighbor = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
+        if(Parameters::debug) {
+            if(problem_spike) {
+                cout << "Curr Inner Neighbor" << endl;
+                cout << curr_inner_neighbor << endl;
+            }
+        }
         if(curr_inner_neighbor == -1) {
             break;
         }
         else {
             Event curr_max_inner_event = getEventfromChannel(curr_inner_neighbor, max_spike, IS_INNER_EVENT);
+            if(Parameters::debug) {
+                if(problem_spike) {
+                    cout << "Curr Event" << endl;
+                    cout << curr_max_inner_event.channel << " " << curr_max_inner_event.amplitude << endl;
+                }
+            }
             if(curr_max_inner_event.channel != NOT_A_CHANNEL) {
                 if(outer_spike.amplitude < curr_max_inner_event.amplitude*Parameters::noise_amp_percent) {
                     if(outer_spike.frame < curr_max_inner_event.frame - Parameters::noise_duration) {

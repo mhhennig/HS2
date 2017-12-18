@@ -81,7 +81,7 @@ class NeuroPixel(NeuralProbe):
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=4, noise_duration=3,
-            noise_amp_percent=.90, fps=fps,
+            noise_amp_percent=1, fps=fps,
             inner_radius = 40,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
@@ -113,7 +113,7 @@ class BioCam(NeuralProbe):
         nRecCh = 4096
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
                              spike_peak_duration=4, noise_duration=2,
-                             noise_amp_percent=.90, fps=sfd,
+                             noise_amp_percent=1, fps=sfd,
                              inner_radius = 1.5,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',

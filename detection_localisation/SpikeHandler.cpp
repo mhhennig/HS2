@@ -135,7 +135,7 @@ void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_d
     Parameters::masked_channels = _masked_channels;
     Parameters::inner_radius = _inner_radius;
     Parameters::event_number = 0;
-    Parameters::debug = true;
+    Parameters::debug = false;
 
     if(Parameters::debug) {
         cout << "Building neighbor matrices.." << endl;
@@ -329,7 +329,7 @@ void addSpike(int channel, int frame, int amplitude) {
 				if(current_frame > first_frame + (Parameters::spike_peak_duration + Parameters::noise_duration)) {
 					if(Parameters::to_localize) {
 						try {
-                            if(spike_to_be_added.frame == -1) {
+                            if(Parameters::debug && spike_to_be_added.frame > 120) {
                                 ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);
                                 spikes_filtered_file.close();
                                 filteredsp.close();
