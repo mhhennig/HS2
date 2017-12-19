@@ -9,8 +9,8 @@ from probes.readUtils import readHDF5t_100, readHDF5t_101
 class NeuralProbe(object):
 
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
-                 noise_duration, noise_amp_percent, fps, positions_file_path,
-                 neighbors_file_path, masked_channels=None):
+                 noise_duration, noise_amp_percent, inner_radius,
+                 fps, positions_file_path, neighbors_file_path, masked_channels = None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -19,7 +19,8 @@ class NeuralProbe(object):
         self.fps = fps
         self.positions_file_path = positions_file_path
         self.neighbors_file_path = neighbors_file_path
-        self.masked_channels = masked_channels
+        self.masked_channels = masked_channels;
+        self.inner_radius = inner_radius;
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
@@ -32,7 +33,6 @@ class NeuralProbe(object):
             neighbors.append(np.array(neighbor[:-2].split(',')).astype(int))
         neighbor_file.close()
         # assert len(neighbors) == len(pos)
-        self.num_recording_channels = len(neighbors)
         self.neighbors = neighbors
         self.max_neighbors = max([len(n) for n in neighbors])
 
@@ -65,18 +65,29 @@ class NeuralProbe(object):
         raise NotImplementedError("The Read function is not implemented for \
             this probe")
 
+    def getChannelsPositions(self, channels):
+        channel_positions = []
+        for channel in channels:
+            if channel >= self.num_channels:
+                raise ValueError('Channel Index too big')
+            else:
+                channel_positions.append(self.positions[channel])
+        return channel_positions
+
+
 
 class NeuroPixel(NeuralProbe):
+    def __init__(self, data_file_path, fps=30000, masked_channels=[385]):
 
-    def __init__(self, data_file=None, fps=30000, masked_channels=None):
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
-            spike_peak_duration=5, noise_duration=2,
-            noise_amp_percent=.95, fps=fps,
+            spike_peak_duration=4, noise_duration=3,
+            noise_amp_percent=1, fps=fps,
+            inner_radius = 40,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
             masked_channels=masked_channels)
-        self.data_file = data_file
+        self.data_file = data_file_path
         if data_file is not None:
             self.d = np.memmap(data_file, dtype=np.int16, mode='r')
             assert len(self.d) / self.num_channels == len(self.d) // self.num_channels,\
@@ -88,11 +99,10 @@ class NeuroPixel(NeuralProbe):
 
 
 class BioCam(NeuralProbe):
-
-    def __init__(self, data_file=None, fps=0, masked_channels=None):
-        self.data_file = data_file
-        if data_file is not None:
-            self.d = openHDF5file(data_file)
+    def __init__(self, data_file_path, fps=0, masked_channels=[0]):
+        self.data_file = data_file_path
+        if data_file_path is not None:
+            self.d = openHDF5file(data_file_path)
             self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
                 self.d)
             if file_format == 100:
@@ -103,8 +113,9 @@ class BioCam(NeuralProbe):
             nRecCh = 4096
             sfd = fps
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
-                             spike_peak_duration=5, noise_duration=2,
-                             noise_amp_percent=.95, fps=sfd,
+                             spike_peak_duration=4, noise_duration=2,
+                             noise_amp_percent=1, fps=sfd,
+                             inner_radius = 1.5,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)

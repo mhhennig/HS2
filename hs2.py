@@ -267,34 +267,46 @@ class herdingspikes(object):
         cutlen = len(event.Shape)
         assert window_size > cutlen, "window_size is too small"
         dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
-        print(dst)
+        #print(dst)
         interdistance = np.min(dst[dst > 0])
         if ax is None:
             ax = plt.gca()
+
+
         # scatter of the large grey balls for electrode location
+        #plt.figure(figsize=(15,15))
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
+        x = pos[[neighs[event.ch], 0]]
+        y = pos[[neighs[event.ch], 1]]
+        for i, txt in enumerate(neighs[event.ch]):
+            ax.annotate(txt, (x[i] + 1,y[i] + 3))
+
 
         ws = window_size // 2
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
-        scale = interdistance / 220.
-        trange = (np.arange(t1, t2) - event.t) * scale
-        start_bluered = event.t - t1 - cutout_start
-        trange_bluered = trange[start_bluered:start_bluered + cutlen]
-        trange_bluered = np.arange(-cutout_start, -
-                                   cutout_start + cutlen) * scale
+        scale = interdistance/110.#220.
+        trange = (np.arange(t1, t2)-event.t)*scale
+        start_bluered = event.t-t1-cutout_start
+        trange_bluered = trange[start_bluered:start_bluered+cutlen]
+        trange_bluered = np.arange(-cutout_start, -cutout_start+cutlen)*scale
 
-        data = self.probe.Read(t1, t2).reshape(
-            (t2 - t1, self.probe.num_channels))
-
+        data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
         for n in neighs[event.ch]:
-            plt.plot(pos[n][0] + trange,
-                     pos[n][1] + data[:, n] * scale, 'gray')
-            plt.plot(pos[n][0] + trange_bluered,
-                     pos[n][1] + data[start_bluered:start_bluered + cutlen,
-                                      n] * scale, 'b')
+            if n not in self.probe.masked_channels:
+                plt.plot(pos[n][0] + trange,
+                         pos[n][1] + data[:, n]*scale, 'gray')
+                plt.plot(pos[n][0] + trange_bluered,
+                         pos[n][1] + data[start_bluered:start_bluered+cutlen,
+                         n]*scale, 'b')
+            else:
+                plt.plot(pos[n][0] + trange,
+                         pos[n][1] + data[:, n]*scale, 'gray')
+                plt.plot(pos[n][0] + trange_bluered,
+                         pos[n][1] + data[start_bluered:start_bluered+cutlen,
+                         n]*scale, 'g')
 
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + event.Shape * scale, 'r')

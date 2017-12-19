@@ -19,8 +19,16 @@
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
+#include<bits/stdc++.h>
 
 using namespace std;
+
+//Event is a sparse representation of a spike. Used for speed when spike is not necessary.
+struct Event {
+	int amplitude;
+	int channel;
+	int frame;
+};
 
 //Internal representation of a spike. User has no need to use it.
 struct Spike {
@@ -29,22 +37,31 @@ struct Spike {
 	int frame;
 	vector<int> amp_cutouts;
 	vector<int32_t> written_cutout;
+    //These contain all information of what occurred at neighbors
+    vector<Event> inner_neighbors;
+    vector<Event> outer_neighbors;
 };
 
 namespace Parameters {
 
 extern int num_channels; //Number of channels on the probe
-extern int num_recording_channels; //Number of channels to be used for spike data
 extern int spike_delay; //The number of frames back a spike occurred after it was detected (where the beginning of the spike was).
 extern int spike_peak_duration; //The number of frames it takes a spike amplitude to fully decay.
 extern int noise_duration; //The number of frames that the true spike can occur after the first detection.
 extern float noise_amp_percent; //Amplitude percentage allowed to differentiate between decreasing amplitude duplicate spike
 extern int max_neighbors;//Maximum number of neighbors a channel can have in the probe
-extern int** neighbor_matrix;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
+extern int** neighbor_matrix;/*Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
 							  index contains pointer to another array which contains channel number of all its neighbors.
 							  User creates this before calling SpikeHandler. Each column has size equal to max neighbors where
 							  any channels that have less neighbors fills the rest with -1 (important). */
-extern int** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_recording_channels - 1. Each
+extern int** inner_neighbor_matrix; /*Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
+							  index contains pointer to another array which contains channel number of all its inner neighbors.
+							  Created by SpikeHandler; */
+extern int** outer_neighbor_matrix; /*Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
+                                    index contains pointer to another array which contains channel number of all its outer neighbors.
+                              		Created by SpikeHandler; */
+
+extern int** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
 							  index contains pointer to another array which contains X and Y position of the channel. User creates
 							  this before calling SpikeHandler. */
 extern int aGlobal; //Global noise
@@ -62,6 +79,9 @@ extern int iterations; //The number of frames passed into loadRawData EXCLUDING 
 extern int maxsl; //Number of frames after a detection that a spike is accepted
 extern int end_raw_data; //index of the end of the raw data
 extern int* masked_channels; //stores all masked channels as 0 and regular channels as 1
+extern int event_number;
+extern float inner_radius;
+extern bool debug;
 
 };
 
