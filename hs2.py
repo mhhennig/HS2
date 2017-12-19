@@ -64,18 +64,21 @@ class herdingspikes(object):
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
-    def Load_HDF5_legacy(self, filename, compute_amplitudes=False, chunk_size=500000, compute_cluster_sizes=False):
+    def Load_HDF5_legacy(self, filename, compute_amplitudes=False,
+                         chunk_size=500000, compute_cluster_sizes=False):
         """
-        Load data, cluster centres and ClusterIDs from a hdf5 file created with HS1.
+        Load data, cluster centres and ClusterIDs from a hdf5 file created with
+        HS1.
         """
         g = h5py.File(filename, 'r')
         print('Reading from ' + filename)
-        print('Creating memmapped cache for shapes, reading in chunks, converting to integer...')
+        print('Creating memmapped cache for shapes, reading in chunks, ' +
+              'converting to integer...')
         self.shapecache = np.memmap(
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
-            tmp = (1000 * np.transpose(g['shapes'][:, i *
-                                                   chunk_size:(i + 1) * chunk_size])).astype(np.int32)
+            tmp = (1000*np.transpose(g['shapes'][:, i*chunk_size:(
+                i+1)*chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Found ' + str(len(inds)) +
@@ -87,9 +90,11 @@ class herdingspikes(object):
         self.NClusters = len(self.centerz)
         self.cutout_length = self.shapecache.shape[1]
 
-        self.spikes = pd.DataFrame({'ch': np.zeros(g['times'].shape[0], dtype=int),
+        self.spikes = pd.DataFrame({'ch': np.zeros(g['times'].shape[0],
+                                                   dtype=int),
                                     't': g['times'],
-                                    'Amplitude': np.zeros(g['times'].shape[0], dtype=int),
+                                    'Amplitude': np.zeros(g['times'].shape[0],
+                                                          dtype=int),
                                     'x': g['data'][0, :],
                                     'y': g['data'][1, :],
                                     'Shape': list(self.shapecache),
@@ -128,14 +133,15 @@ class herdingspikes(object):
 
     def LoadDetected(self, file_name, cutout_length):
         """
-        Reads a binary file with spikes detected with the DetectFromRaw() method.
+        Reads a binary file with spikes detected with the DetectFromRaw() method
         """
         self.cutout_length = cutout_length
         sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")
-        assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * sp_flat.shape[0] /\
-            (cutout_length + 5), "spike data has wrong dimensions"
-        self.shapecache = sp_flat.reshape((sp_flat.shape[0] // (cutout_length + 5),
-                              cutout_length + 5))
+        assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * \
+            sp_flat.shape[0] / (cutout_length + 5), \
+            "spike data has wrong dimensions"
+        self.shapecache = sp_flat.reshape((sp_flat.shape[0] // (
+            cutout_length + 5), cutout_length + 5))
         self.spikes = pd.DataFrame({'ch': self.shapecache[:, 0],
                                     't': self.shapecache[:, 1],
                                     'Amplitude': self.shapecache[:, 2],
@@ -193,7 +199,8 @@ class herdingspikes(object):
         self.HasFeatures = True
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i * chunk_size:(i + 1) * chunk_size,:] = pca.transform(np.array(list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(
+                list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
 
         return _pcs
 
@@ -207,7 +214,8 @@ class herdingspikes(object):
         Cluster information is available in the self.clusters dataframe.
 
         Arguments:
-        alpha -- the weight given to PCA components, relative tospatial components
+        alpha -- the weight given to PCA components, relative to
+        spatial components
         clustering_algorithm -- a sklearn.cluster class, defaults to
         sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN was also tested.
         pca_ncomponents -- number of PCA components to be considered (def. 2).
@@ -268,27 +276,23 @@ class herdingspikes(object):
         cutlen = len(event.Shape)
         assert window_size > cutlen, "window_size is too small"
         dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
-        #print(dst)
         interdistance = np.min(dst[dst > 0])
         if ax is None:
             ax = plt.gca()
 
-
         # scatter of the large grey balls for electrode location
-        #plt.figure(figsize=(15,15))
         plt.scatter(np.array(pos)[neighs[event.ch], 0],
                     np.array(pos)[neighs[event.ch], 1],
                     s=1600, alpha=0.2)
         x = pos[[neighs[event.ch], 0]]
         y = pos[[neighs[event.ch], 1]]
         for i, txt in enumerate(neighs[event.ch]):
-            ax.annotate(txt, (x[i] + 1,y[i] + 3))
-
+            ax.annotate(txt, (x[i] + 1, y[i] + 3))
 
         ws = window_size // 2
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
-        scale = interdistance/110.#220.
+        scale = interdistance/110.
         trange = (np.arange(t1, t2)-event.t)*scale
         start_bluered = event.t-t1-cutout_start
         trange_bluered = trange[start_bluered:start_bluered+cutlen]
@@ -327,7 +331,8 @@ class herdingspikes(object):
                   interpolation='none', origin='lower')
         return h, xb, yb
 
-    def PlotAll(self, invert=False, show_labels=False, ax=None, max_show=200000, **kwargs):
+    def PlotAll(self, invert=False, show_labels=False, ax=None,
+                max_show=200000, **kwargs):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
         If clustering has been performed, each spike is coloured according to
@@ -350,7 +355,8 @@ class herdingspikes(object):
             inds = np.random.choice(
                 self.spikes.shape[0], max_show, replace=False)
             print(
-                'We have ' + str(self.spikes.shape[0]) + ' spikes, only showing ' + str(max_show))
+                'We have ' + str(self.spikes.shape[0]) +
+                ' spikes, only showing ' + str(max_show))
         else:
             inds = np.arange(self.spikes.shape[0])
         c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \

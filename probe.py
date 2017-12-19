@@ -10,7 +10,8 @@ class NeuralProbe(object):
 
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
                  noise_duration, noise_amp_percent, inner_radius,
-                 fps, positions_file_path, neighbors_file_path, masked_channels = None):
+                 fps, positions_file_path, neighbors_file_path,
+                 masked_channels=None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -19,8 +20,8 @@ class NeuralProbe(object):
         self.fps = fps
         self.positions_file_path = positions_file_path
         self.neighbors_file_path = neighbors_file_path
-        self.masked_channels = masked_channels;
-        self.inner_radius = inner_radius;
+        self.masked_channels = masked_channels
+        self.inner_radius = inner_radius
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
@@ -75,7 +76,6 @@ class NeuralProbe(object):
         return channel_positions
 
 
-
 class NeuroPixel(NeuralProbe):
     def __init__(self, data_file_path=None, fps=30000, masked_channels=[385]):
 
@@ -83,15 +83,15 @@ class NeuroPixel(NeuralProbe):
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=4, noise_duration=3,
             noise_amp_percent=1, fps=fps,
-            inner_radius = 40,
+            inner_radius=40,
             positions_file_path='probes/positions_neuropixel',
             neighbors_file_path='probes/neighbormatrix_neuropixel',
             masked_channels=masked_channels)
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
-            assert len(self.d) / self.num_channels == len(self.d) // self.num_channels,\
-                'Data not multiple of channel number'
+            assert len(self.d) / self.num_channels == len(self.d) // \
+                self.num_channels, 'Data not multiple of channel number'
             self.nFrames = len(self.d) // self.num_channels
         else:
             print('Note: data file not specified, things may break')
@@ -118,11 +118,10 @@ class BioCam(NeuralProbe):
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
                              spike_peak_duration=4, noise_duration=2,
                              noise_amp_percent=1, fps=sfd,
-                             inner_radius = 1.5,
+                             inner_radius=1.5,
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)
-        #assert self.num_recording_channels == self.num_channels
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
