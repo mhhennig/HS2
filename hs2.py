@@ -155,7 +155,7 @@ class herdingspikes(object):
 
     def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
-                      out_file_name="ProcessedSpikes.bin", load=True):
+                      out_file_name="ProcessedSpikes.bin", load=True, verbose=False):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -178,7 +178,7 @@ class herdingspikes(object):
         detectData(self.probe, str.encode(out_file_name),
                    to_localize, self.probe.fps, threshold,
                    cutout_start, cutout_end,
-                   maa, maxsl, minsl, ahpthr, tpre, tpost)
+                   maa, maxsl, minsl, ahpthr, tpre, tpost, verbose)
         if load:
             # reload data into memory
             cutout_length = cutout_start + cutout_end + 1

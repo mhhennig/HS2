@@ -21,7 +21,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
-                              int maa, int ahpthr, int maxsl, int minsl)
+                              int maa, int ahpthr, int maxsl, int minsl, bool verbose)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
@@ -34,7 +34,7 @@ def read_flat(d, t0, t1, nch):
 
 def detectData(probe, _file_name, _to_localize, sfd, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2):
+               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False):
     """ Read data from a file and pipe it to the spike detector. """
 
     # if data_format is 'flat':
@@ -72,6 +72,7 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     cutout_start = int(_cutout_start)
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
+    verbose = _verbose
     nRecCh = num_channels
     nFrames = probe.nFrames
     masked_channel_list = probe.masked_channels
@@ -137,7 +138,7 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
 
     det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration,
                          _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres,
-                         cutout_start, cutout_end, maa, ahpthr, maxsl, minsl)
+                         cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
     startTime = datetime.now()
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:

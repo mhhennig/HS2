@@ -58,6 +58,7 @@ class Detection {
   int currQmsPosition;
   int _spike_delay;
   bool debugging = true;
+  bool write_out = false;
   std::ofstream spikes_file;
 
 
@@ -67,7 +68,7 @@ public:
   void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl, int tpref, int tpostf);
   void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay, int spike_peak_duration,
                         string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors, bool to_localize, int thres,
-                        int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl);
+                        int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl, bool verbose);
   void MedianVoltage(short *vm);
   void MeanVoltage(short *vm, int tInc, int tCut);
   void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed);
