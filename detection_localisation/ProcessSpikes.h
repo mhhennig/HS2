@@ -1,4 +1,4 @@
-#ifndef PROCESSSPIKES_H  
+#ifndef PROCESSSPIKES_H
 #define PROCESSSPIKES_H
 
 #include "Parameters.h"
@@ -9,9 +9,8 @@ using namespace std;
 
 namespace ProcessSpikes {
 
-void filterSpikes(ofstream& spikes_filtered_file);
-void filterLocalizeSpikes(ofstream& spikes_filtered_file);
-
+void filterSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp);
+void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp);
 };
 
 #endif

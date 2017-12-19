@@ -18,6 +18,7 @@ class Detection {
   int *Qd; // noise amplitude
   int *Qm; // median
   int **Qms; //stores spike_delay + MaxSl baseline values;
+  int* masked_channels; //stores all masked channels as 0 and regular channels as 1
   int iterations = 0;
   // Variables for the spike detection
   int *Sl;      // counter for spike length
@@ -34,7 +35,7 @@ class Detection {
   int MaxSl;     // dead time in frames after peak, used for further testing
   int MinAvgAmp; // minimal avg. amplitude of peak (in units of Qd)
   int MinSl;     // length considered for determining avg. spike amplitude
-  // Parameters for 
+  // Parameters for
   long tInc; // 100, increment for reading data, has to be changed in main
              // program as well
   const int Ascale = -64; // factor to multiply to raw traces to increase
@@ -56,6 +57,7 @@ class Detection {
   int spikeCount;
   int currQmsPosition;
   int _spike_delay;
+  bool debugging = true;
   std::ofstream spikes_file;
 
 
@@ -63,9 +65,9 @@ public:
   Detection();
   ~Detection();
   void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl, int tpref, int tpostf);
-  void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int num_recording_channels, int spike_delay, int spike_peak_duration, int noise_duration, \
-                        float noise_amp_percent, int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl,
-                        int minsl);
+  void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay, int spike_peak_duration,
+                        string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors, bool to_localize, int thres,
+                        int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl);
   void MedianVoltage(short *vm);
   void MeanVoltage(short *vm, int tInc, int tCut);
   void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed);
