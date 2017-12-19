@@ -169,14 +169,14 @@ class herdingspikes(object):
         out_file_name
         load -- load the detected spikes when finished
         """
-        detectData(self.probe, str.encode(file_path),
+        detectData(self.probe, str.encode(out_file_name),
                    to_localize, self.probe.fps, threshold,
                    cutout_start, cutout_end,
                    maa, maxsl, minsl, ahpthr, tpre, tpost)
         if load:
             # reload data into memory
             cutout_length = cutout_start + cutout_end + 1
-            self.LoadDetected(file_path, cutout_length)
+            self.LoadDetected(out_file_name, cutout_length)
 
     def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000):
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)

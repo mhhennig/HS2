@@ -77,7 +77,7 @@ class NeuralProbe(object):
 
 
 class NeuroPixel(NeuralProbe):
-    def __init__(self, data_file_path, fps=30000, masked_channels=[385]):
+    def __init__(self, data_file_path=None, fps=30000, masked_channels=[385]):
 
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
@@ -88,18 +88,20 @@ class NeuroPixel(NeuralProbe):
             neighbors_file_path='probes/neighbormatrix_neuropixel',
             masked_channels=masked_channels)
         self.data_file = data_file_path
-        if data_file is not None:
-            self.d = np.memmap(data_file, dtype=np.int16, mode='r')
+        if data_file_path is not None:
+            self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
             assert len(self.d) / self.num_channels == len(self.d) // self.num_channels,\
                 'Data not multiple of channel number'
             self.nFrames = len(self.d) // self.num_channels
+        else:
+            print('Note: data file not specified, things may break')
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
 
 
 class BioCam(NeuralProbe):
-    def __init__(self, data_file_path, fps=0, masked_channels=[0]):
+    def __init__(self, data_file_path=None, fps=0, masked_channels=[0]):
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = openHDF5file(data_file_path)
@@ -110,6 +112,7 @@ class BioCam(NeuralProbe):
             else:
                 self.read_function = readHDF5t_101
         else:
+            print('Note: data file not specified, setting some defaults')
             nRecCh = 4096
             sfd = fps
         NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
@@ -119,7 +122,7 @@ class BioCam(NeuralProbe):
                              positions_file_path='probes/positions_biocam',
                              neighbors_file_path='probes/neighbormatrix_biocam',
                              masked_channels=masked_channels)
-        assert self.num_recording_channels == self.num_channels
+        #assert self.num_recording_channels == self.num_channels
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
