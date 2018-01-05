@@ -358,9 +358,9 @@ class herdingspikes(object):
                 ' spikes, only showing ' + str(max_show))
         else:
             inds = np.arange(self.spikes.shape[0])
-        c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
+        c = plt.cm.hsv(self.clusters.Color[self.spikes.cl][inds]) \
             if self.IsClustered else 'r'
-        ax.scatter(x[inds], y[inds], c=c[inds], **kwargs)
+        ax.scatter(x[inds], y[inds], c=c, **kwargs)
         if show_labels and self.IsClustered:
             ctr_x, ctr_y = self.clusters.ctr_x, self.clusters.ctr_y
             if invert:
