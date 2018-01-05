@@ -12,6 +12,7 @@ int** Parameters::inner_neighbor_matrix;
 int** Parameters::outer_neighbor_matrix;
 int Parameters::aGlobal;
 bool Parameters::to_localize;
+bool Parameters::verbose;
 int** Parameters::baselines;
 int Parameters::cutout_start;
 int Parameters::cutout_end;
@@ -34,7 +35,7 @@ std::ofstream spikes_filtered_file;
 
 void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, float _inner_radius, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
-						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0)
+						  int _max_neighbors, bool _to_localize = false, int _cutout_start= 10, int _cutout_end=20, int _maxsl = 0, bool _verbose = false)
 {
 	/*This sets all the initial parameters needed to run the filtering algorithm.
 
@@ -136,35 +137,25 @@ void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_d
     Parameters::inner_radius = _inner_radius;
     Parameters::event_number = 0;
     Parameters::debug = false;
+    Parameters::verbose = _verbose;
 
-    if(Parameters::debug) {
-        cout << "Building neighbor matrices.." << endl;
-    }
     Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
     Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
     fillNeighborLayerMatrices();
-    cout << "DONE" << endl;
-    int test = 0;
-    if(test == 0) {
-        for(int i=0; i<Parameters::num_channels; i++)    //This loops on the rows.
-    	{
+    if(Parameters::verbose) {
+        for(int i=0; i<Parameters::num_channels; i++) {
             cout << "Channel: " << i << endl;
             cout << "Inner Neighbors: ";
-    		for(int j=0; j < Parameters::max_neighbors - 1; j++) //This loops on the columns
-    		{
-     			cout << Parameters::inner_neighbor_matrix[i][j]  << "  ";
-    		}
+            for(int j=0; j < Parameters::max_neighbors - 1; j++) {
+         	      cout << Parameters::inner_neighbor_matrix[i][j]  << "  ";
+            }
             cout << endl;
             cout << "Outer Neighbors: ";
-            for(int k=0; k < Parameters::max_neighbors - 1; k++) //This loops on the columns
-    		{
-    			cout <<  Parameters::outer_neighbor_matrix[i][k]  << "  ";
-    		}
-    		cout << endl;
-    	}
-    }
-    if(Parameters::debug) {
-        cout << "Done building neighbor matrices" << endl;
+            for(int k=0; k < Parameters::max_neighbors - 1; k++) {
+        	       cout <<  Parameters::outer_neighbor_matrix[i][k]  << "  ";
+            }
+    	    cout << endl;
+        }
     }
 
 	spikes_filtered_file.open(file_name + ".bin", ios::binary);
@@ -368,6 +359,9 @@ void terminateSpikeHandler() {
 		}
 	}
 	spikes_filtered_file.close();
+    if(!Parameters::verbose) {
+        filteredsp << "Turn on verbose in DetectFromRaw method to get all filtered spikes" << endl;
+    }
     filteredsp.close();
 }
 

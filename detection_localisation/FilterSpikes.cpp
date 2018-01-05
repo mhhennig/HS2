@@ -182,7 +182,9 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
             if(!isInnerNeighbor(max_spike.channel, curr_channel)) {
                 if(filteredOuterSpike(curr_spike, max_spike)) {
                     //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
-                    filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
+                    if(Parameters::verbose) {
+                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
+                    }
                     outer_spikes_to_be_filtered.push_back(curr_spike);
                     ++it;
                 }
@@ -436,13 +438,17 @@ void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
                         }
                         else {
                             //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike)  << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
-                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
+                            if(Parameters::verbose) {
+                                filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
+                            }
                             it = Parameters::spikes_to_be_processed.erase(it);
                         }
                     }
                     else {
                         //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) <<  " Filtered by " << max_spike.channel << endl;
-                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
+                        if(Parameters::verbose) {
+                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << posToNegRatio(curr_spike)  << " " << areaUnderSpike(curr_spike) << " " << repolarizationTime(curr_spike) << endl;
+                        }
                         it = Parameters::spikes_to_be_processed.erase(it);
                     }
                 }

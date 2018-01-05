@@ -82,6 +82,7 @@ extern int* masked_channels; //stores all masked channels as 0 and regular chann
 extern int event_number;
 extern float inner_radius;
 extern bool debug;
+extern bool verbose;
 
 };
 
