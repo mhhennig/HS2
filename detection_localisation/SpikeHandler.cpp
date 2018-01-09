@@ -401,14 +401,14 @@ float channelsDist(int start_channel, int end_channel) {
 
 void fillNeighborLayerMatrices() {
     if(Parameters::debug) {
-        cout << "Fillting Neighbor Layer Matrix" << endl;
+        cout << "Filling Neighbor Layer Matrix" << endl;
     }
     int curr_channel;
     int curr_neighbor;
     float curr_dist;
     vector<tuple<int, float>> distances_neighbors;
     vector<int> inner_neighbors;
-    for(int i = 0; i < Parameters::num_channels - 1; i++) {
+    for(int i = 0; i < Parameters::num_channels; i++) {
         curr_channel = i;
         for(int j = 0; j < Parameters::max_neighbors; j++) {
             curr_neighbor = Parameters::neighbor_matrix[curr_channel][j];
