@@ -145,7 +145,7 @@ class Mea1k(NeuralProbe):
             d = h5py.File(data_file_path)
             self.d = d
             mapping = d.get('/mapping/')
-            channel_indices = mapping['channel'][:]
+            channel_indices = mapping['channel']#[:]
             electrodes = mapping['electrode'][:]
             routed = np.array(np.where(electrodes > -1))[0]
             self.channels_indices_routed = channel_indices[routed]

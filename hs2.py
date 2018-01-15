@@ -4,7 +4,7 @@ import numpy as np
 import h5py
 from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
-from clustering.mean_shift_ import MeanShift
+from sklearn.cluster import MeanShift
 from sklearn.decomposition import PCA
 
 
