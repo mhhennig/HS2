@@ -24,6 +24,8 @@ class NeuralProbe(object):
         self.neighbors_file_path = neighbors_file_path
         self.masked_channels = masked_channels
         self.inner_radius = inner_radius
+        if masked_channels is None:
+            self.masked_channels = []
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)

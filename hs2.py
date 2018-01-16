@@ -154,7 +154,8 @@ class herdingspikes(object):
 
     def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
-                      out_file_name="ProcessedSpikes.bin", load=True, verbose=False):
+                      out_file_name="ProcessedSpikes.bin", load=True,
+                      verbose=False):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -162,7 +163,6 @@ class herdingspikes(object):
         `LoadDetected`.
 
         Arguments:
-        file_name -- the path to the raw data file.
         to_localize
         cutout_start
         cutout_end
@@ -192,7 +192,8 @@ class herdingspikes(object):
                                     replace=False)
             pca.fit(np.array(list(self.spikes.Shape[inds])))
         else:
-            print("Fitting PCA using " + str(self.spikes.shape[0]) + " spikes...")
+            print("Fitting PCA using " + str(self.spikes.shape[0]) +
+                  " spikes...")
             pca.fit(np.array(list(self.spikes.Shape)))
         self.pca = pca
         self.HasFeatures = True
@@ -232,7 +233,7 @@ class herdingspikes(object):
         print('Clustering...')
         clusterer = clustering_algorithm(**kwargs)
         clusterer.fit(fourvec)
-        self.spikes.cl = clusterer.labels_
+        self.spikes['cl'] = clusterer.labels_
         self.NClusters = len(np.unique(clusterer.labels_))
         # assert np.max(self.spikes.cl)+1 == self.NClusters
         print("Number of estimated clusters:", self.NClusters)
@@ -353,12 +354,12 @@ class herdingspikes(object):
         if self.spikes.shape[0] > max_show:
             inds = np.random.choice(
                 self.spikes.shape[0], max_show, replace=False)
-            print(
-                'We have ' + str(self.spikes.shape[0]) +
-                ' spikes, only showing ' + str(max_show))
+            print('We have ' + str(self.spikes.shape[0]) +
+                  ' spikes, only showing ' + str(max_show))
         else:
             inds = np.arange(self.spikes.shape[0])
-        c = plt.cm.hsv(self.clusters.Color[self.spikes.cl][inds]) \
+        print(len(inds))
+        c = plt.cm.hsv(self.clusters.Color[self.spikes.cl[inds]]) \
             if self.IsClustered else 'r'
         ax.scatter(x[inds], y[inds], c=c, **kwargs)
         if show_labels and self.IsClustered:
