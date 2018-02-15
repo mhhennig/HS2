@@ -298,13 +298,6 @@ void addSpike(int channel, int frame, int amplitude) {
     					}
 
     					int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE - Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]);
-                        if(curr_amp > 100000) {
-                            cout << "CURR AMP TOO BIG: " << curr_amp << endl;
-                            cout << "CURR READING: " << curr_reading << endl;
-                            cout << "Baseline: " << Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines] << endl;
-                            cout << "Global: " << Parameters::aGlobal << endl;
-                            cout << "Scale: " << ASCALE << endl;
-                        }
                         if(curr_amp < 0) {
                             spike_to_be_added.amp_cutouts.push_back(0);
                         } else {
