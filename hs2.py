@@ -232,6 +232,7 @@ class Clustering(object):
                 self.spikes = arg1.spikes
             self.filelist = [arg1.out_file_name]
             self.expinds = [0]
+            self.IsClustered = False
 
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
                            **kwargs):
@@ -300,28 +301,53 @@ class Clustering(object):
 
         return _pcs
 
-    def SaveHDF5(self, filename, compression=None):
+    def _savesinglehdf5(self, filename, limits, compression, sampling):
+        if limits is not None:
+            spikes = self.spikes[limits[0]:limits[1]]
+        else:
+            spikes = self.spikes
+        g = h5py.File(filename, 'w')
+        g.create_dataset("data", data=np.vstack(
+            (spikes.x, spikes.y)))
+        if sampling is not None:
+            g.create_dataset("Sampling", data=sampling)
+        g.create_dataset("times", data=spikes.t)
+        if self.IsClustered:
+            g.create_dataset("centres", data=self.centerz.T)
+            g.create_dataset("cluster_id", data=spikes.cl)
+        g.create_dataset("exp_inds", data=self.expinds)
+        # this is still a little slow (and perhaps memory intensive)
+        # but I have not found a better way:
+        sh_tmp = np.empty((self.cutout_length, spikes.Shape.size),
+                          dtype=int)
+        for i in range(spikes.Shape.size):
+            sh_tmp[:, i] = spikes.Shape[i]  # TODO ???????
+        g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        g.close()
+
+    def SaveHDF5(self, filename, compression=None, sampling=None):
         """
         Saves data, cluster centres and ClusterIDs to a hdf5 file.
         Offers compression of the shapes, 'lzf'
         appears a good trade-off between speed and performance.
+
+        If filename is a single name, then all will be saved to a single file.
+        If filename is a list of names of the same length as the number of
+        experiments, one file per experiment will be saved.
         """
-        g = h5py.File(filename, 'w')
-        g.create_dataset("data", data=np.vstack(
-            (self.spikes.x, self.spikes.y)))
-        g.create_dataset("Sampling", data=self.probe.fps)
-        g.create_dataset("times", data=self.spikes.t)
-        if self.IsClustered:
-            g.create_dataset("centres", data=self.centerz.T)
-            g.create_dataset("cluster_id", data=self.spikes.cl)
-        # this is still a little slow (and perhaps memory intensive)
-        # but I have not found a better way:
-        sh_tmp = np.empty((self.cutout_length, self.spikes.Shape.size),
-                          dtype=int)
-        for i in range(self.spikes.Shape.size):
-            sh_tmp[:, i] = self.spikes.Shape[i]  # TODO ???????
-        g.create_dataset("shapes", data=sh_tmp, compression=compression)
-        g.close()
+        print("Not tested, hope it works")
+        if type(filename) == str:
+            self._savesinglehdf5(filename, None, compression, sampling)
+        elif type(filename) == list:
+            if len(filename) != len(self.expinds):
+                raise ValueError("Names list length does not correspond.")
+            expinds = self.expinds + [len(self.spikes)]
+            for i, f in enumerate(filename):
+                self._savesinglehdf5(f, [expinds[i], expinds[i+1]],
+                                     compression, sampling)
+        else:
+            raise ValueError("filename not understood")
+
 
     def LoadHDF5(self, filename, append=False, compute_amplitudes=False,
                  chunk_size=500000, compute_cluster_sizes=False):
