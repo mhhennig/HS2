@@ -154,7 +154,7 @@ class herdingspikes(object):
 
     def DetectFromRaw(self, to_localize, cutout_start, cutout_end, threshold,
                       maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
-                      out_file_name="ProcessedSpikes.bin", load=True,
+                      out_file_name="ProcessedSpikes", load=True,
                       verbose=False):
         """
         This function is a wrapper of the C function `detectData`. It takes
