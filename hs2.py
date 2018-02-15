@@ -135,7 +135,7 @@ class herdingspikes(object):
         Reads a binary file with spikes detected with the DetectFromRaw() method
         """
         self.cutout_length = cutout_length
-        sp_flat = np.memmap(file_name + ".bin", dtype=np.int32, mode="r")
+        sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
         assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * \
             sp_flat.shape[0] / (cutout_length + 5), \
             "spike data has wrong dimensions"
@@ -273,6 +273,7 @@ class herdingspikes(object):
         event = self.spikes.loc[eventid]
         print("Spike detected at channel: ", event.ch)
         print("Spike detected at frame: ", event.t)
+        print(event.x, event.y)
         cutlen = len(event.Shape)
         assert window_size > cutlen, "window_size is too small"
         dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])

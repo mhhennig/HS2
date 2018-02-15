@@ -41,7 +41,11 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps)
 		channel = get<0>(centered_amps.at(i));
 		X_coordinate = Parameters::channel_positions[channel][0];
 		Y_coordinate = Parameters::channel_positions[channel][1];
-		weight = curr_amp;
+		if(curr_amp < 0) {
+            weight = 0;
+        } else {
+            weight = curr_amp;
+        }
 		X_numerator += weight * X_coordinate;
 		Y_numerator += weight * Y_coordinate;
 		denominator += weight;
@@ -49,6 +53,21 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps)
 
 	X = (float)(X_numerator) / (float)(denominator);
 	Y = (float)(Y_numerator) / (float)(denominator);
+
+    if(X <= 0 || Y <= 0) {
+        for(int i = 0; i < centered_amps_size; i++) {
+    		curr_amp = get<1>(centered_amps.at(i));
+    		channel = get<0>(centered_amps.at(i));
+    		X_coordinate = Parameters::channel_positions[channel][0];
+    		Y_coordinate = Parameters::channel_positions[channel][1];
+            weight = curr_amp;
+            cout << "X coord: " << X_coordinate << endl;
+            cout << "Y coord: " << Y_coordinate << endl;
+            cout << "Weight: " << weight << endl;
+    	}
+        cout << "X: " << X << endl;
+        cout << "Y: " << Y << endl;
+     }
 
 	return make_tuple(X, Y);
 }
@@ -82,52 +101,61 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
         if(Parameters::masked_channels[curr_neighbor_channel] != 0) {
     		for (int j = 0; j < neighbor_frame_span; j++) {
     			curr_amp = spike_to_be_localized.amp_cutouts.at(j + matrix_offset);
+                if(curr_amp > 100000) {
+                    cout << "CURR AMP TOO BIG: " << curr_amp << endl;
+                }
     			if(curr_amp > curr_largest_amp) {
     				curr_largest_amp = curr_amp;
     			}
     		}
+            // if(curr_largest_amp < 0) {
+            //     for (int j = 0; j < neighbor_frame_span; j++) {
+        	// 		curr_amp = spike_to_be_localized.amp_cutouts.at(j + matrix_offset);
+        	// 		cout << curr_amp << endl;
+        	// 	}
+            // }
     		amps.push_back(make_tuple(curr_neighbor_channel, curr_largest_amp));
     		curr_largest_amp = INT_MIN;
     		matrix_offset += neighbor_frame_span;
         }
 	}
-    int do_median = 0;
-    int median = 0;
-    int amps_size = amps.size();
-    if(do_median == 1) {
-        sort(begin(amps), end(amps), CustomLessThan()); //sort the array
-        //Find median of array
-    	if(amps_size % 2 == 0) {
-    		median = (get<1>(amps.at(amps_size/2)) + get<1>(amps.at(amps_size/2 + 1)))/2;
-    	}
-    	else {
-    		median = get<1>(amps.at(amps_size/2));
-    	}
-    }
-	//Center amplitudes
-    deque<tuple<int, int>> centered_amps;
-    if(amps_size != 1) {
-    	for(int i = 0; i < amps_size; i++) {
-    		int curr_neighbor = get<0>(amps.at(i));
-    		int curr_amp = get<1>(amps.at(i));
-    		int new_amp = curr_amp - median;
-    		//if(new_amp > 0) {
-    			//centered_amps.push_back(make_tuple(curr_neighbor, new_amp));
-    		//}
-            centered_amps.push_back(make_tuple(curr_neighbor, new_amp));
-    	}
-    } else {
-        centered_amps.push_back(amps.at(0));
-    }
-
-    int centered_amps_size = centered_amps.size();
-    //Subtracting median made all values equal to or smaller than 0
-    if(centered_amps_size == 0) {
-        centered_amps = amps;
-    }
-	tuple<float,float> position = centerOfMass(centered_amps);
+    // int do_median = 0;
+    // int median = 0;
+    // int amps_size = amps.size();
+    // if(do_median == 1) {
+    //     sort(begin(amps), end(amps), CustomLessThan()); //sort the array
+    //     //Find median of array
+    // 	if(amps_size % 2 == 0) {
+    // 		median = (get<1>(amps.at(amps_size/2)) + get<1>(amps.at(amps_size/2 + 1)))/2;
+    // 	}
+    // 	else {
+    // 		median = get<1>(amps.at(amps_size/2));
+    // 	}
+    // }
+	// //Center amplitudes
+    // deque<tuple<int, int>> centered_amps;
+    // if(amps_size != 1) {
+    // 	for(int i = 0; i < amps_size; i++) {
+    // 		int curr_neighbor = get<0>(amps.at(i));
+    // 		int curr_amp = get<1>(amps.at(i));
+    // 		int new_amp = curr_amp - median;
+    // 		//if(new_amp > 0) {
+    // 			//centered_amps.push_back(make_tuple(curr_neighbor, new_amp));
+    // 		//}
+    //         centered_amps.push_back(make_tuple(curr_neighbor, new_amp));
+    // 	}
+    // } else {
+    //     centered_amps.push_back(amps.at(0));
+    // }
+    //
+    // int centered_amps_size = centered_amps.size();
+    // //Subtracting median made all values equal to or smaller than 0
+    // if(centered_amps_size == 0) {
+    //     centered_amps = amps;
+    // }
+	tuple<float,float> position = centerOfMass(amps);
 	amps.clear();
-	centered_amps.clear();
+	//centered_amps.clear();
 	return position;
 }
 
