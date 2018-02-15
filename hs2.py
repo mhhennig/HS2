@@ -135,7 +135,7 @@ class herdingspikes(object):
         Reads a binary file with spikes detected with the DetectFromRaw() method
         """
         self.cutout_length = cutout_length
-        sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
+        sp_flat = np.memmap("{}.bin".format(file_name), dtype=np.int32, mode="r")
         assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * \
             sp_flat.shape[0] / (cutout_length + 5), \
             "spike data has wrong dimensions"
