@@ -180,17 +180,12 @@ class Detection(object):
                   interpolation='none', origin='lower')
         return h, xb, yb
 
-    def PlotAll(self, invert=False, show_labels=False, ax=None,
-                max_show=200000, **kwargs):
+    def PlotAll(self, invert=False, ax=None, max_show=200000, **kwargs):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
-        If clustering has been performed, each spike is coloured according to
-        the cluster it belongs to.
 
         Arguments:
         invert -- (boolean, optional) if True, flips x and y
-        show_labels -- (boolean, optional) if True, annotates each cluster
-        centre with its cluster ID.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
         max_show -- maximum number of spikes to show
         **kwargs -- additional arguments are passed to pyplot.scatter
@@ -207,17 +202,7 @@ class Detection(object):
                   ' spikes, only showing ' + str(max_show))
         else:
             inds = np.arange(self.spikes.shape[0])
-        # c = plt.cm.hsv(self.clusters.Color[self.spikes.cl]) \
-        #     if self.IsClustered else 'r'
         ax.scatter(x[inds], y[inds], **kwargs)
-        if show_labels and self.IsClustered:
-            ctr_x, ctr_y = self.clusters.ctr_x, self.clusters.ctr_y
-            if invert:
-                ctr_x, ctr_y = ctr_y, ctr_x
-            for cl in range(self.NClusters):  # TODO why is this here
-                if ~np.isnan(ctr_y[cl]):  # hack, why NaN positions in DBScan?
-                    ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16)
-                    # seems this is a problem when zooming with x/ylim
         return ax
 
 
@@ -474,8 +459,47 @@ class Clustering(object):
             inds = np.where(self.spikes.cl == cl)[0]
             if ax is None:
                 plt.subplot(nrows, ncols, i + 1)
-            plt.plot(cutouts[inds[:100], :].T, 'gray')
+            plt.plot(cutouts[inds[:100], :].T, 'gray', alpha=0.3)
             plt.plot(np.mean(cutouts[inds, :], axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
             plt.ylim(ylim)
             plt.title("Cluster " + str(cl))
+
+    def PlotAll(self, invert=False, show_labels=False, ax=None,
+                max_show=200000, **kwargs):
+        """
+        Plots all the spikes currently stored in the class, in (x, y) space.
+        If clustering has been performed, each spike is coloured according to
+        the cluster it belongs to.
+
+        Arguments:
+        invert -- (boolean, optional) if True, flips x and y
+        show_labels -- (boolean, optional) if True, annotates each cluster
+        centre with its cluster ID.
+        ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        max_show -- maximum number of spikes to show
+        **kwargs -- additional arguments are passed to pyplot.scatter
+        """
+        if ax is None:
+            ax = plt.gca()
+        x, y = self.spikes.x, self.spikes.y
+        if invert:
+            x, y = y, x
+        if self.spikes.shape[0] > max_show:
+            inds = np.random.choice(
+                self.spikes.shape[0], max_show, replace=False)
+            print('We have ' + str(self.spikes.shape[0]) +
+                  ' spikes, only showing ' + str(max_show))
+        else:
+            inds = np.arange(self.spikes.shape[0])
+        c = plt.cm.hsv(self.clusters.Color[self.spikes.cl])
+        ax.scatter(x[inds], y[inds], c=c[inds], **kwargs)
+        if show_labels and self.IsClustered:
+            ctr_x, ctr_y = self.clusters.ctr_x, self.clusters.ctr_y
+            if invert:
+                ctr_x, ctr_y = ctr_y, ctr_x
+            for cl in range(self.NClusters):  # TODO why is this here
+                if ~np.isnan(ctr_y[cl]):  # hack, why NaN positions in DBScan?
+                    ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16)
+                    # seems this is a problem when zooming with x/ylim
+        return ax
