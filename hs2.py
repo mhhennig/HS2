@@ -303,6 +303,7 @@ class Clustering(object):
 
     def _savesinglehdf5(self, filename, limits, compression, sampling):
         if limits is not None:
+            print("DOESN'T WORK")
             spikes = self.spikes[limits[0]:limits[1]]
         else:
             spikes = self.spikes
@@ -318,7 +319,8 @@ class Clustering(object):
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not found a better way:
-        sh_tmp = np.empty((self.cutout_length, spikes.Shape.size),
+        cutout_length = spikes.Shape[0].size
+        sh_tmp = np.empty((cutout_length, spikes.Shape.size),
                           dtype=int)
         for i in range(spikes.Shape.size):
             sh_tmp[:, i] = spikes.Shape[i]  # TODO ???????
@@ -347,7 +349,6 @@ class Clustering(object):
                                      compression, sampling)
         else:
             raise ValueError("filename not understood")
-
 
     def LoadHDF5(self, filename, append=False, compute_amplitudes=False,
                  chunk_size=500000, compute_cluster_sizes=False):
