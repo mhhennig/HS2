@@ -1,7 +1,9 @@
 from __future__ import division
+import logging
 import pandas as pd
 import numpy as np
 import h5py
+import os
 from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 from sklearn.cluster import MeanShift
@@ -135,12 +137,16 @@ class herdingspikes(object):
         Reads a binary file with spikes detected with the DetectFromRaw() method
         """
         self.cutout_length = cutout_length
-        sp_flat = np.memmap("{}.bin".format(file_name), dtype=np.int32, mode="r")
-        assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * \
-            sp_flat.shape[0] / (cutout_length + 5), \
-            "spike data has wrong dimensions"
-        self.shapecache = sp_flat.reshape((sp_flat.shape[0] // (
-            cutout_length + 5), cutout_length + 5))
+        file_name = "{}.bin".format(file_name)
+
+        if os.stat(file_name).st_size == 0:
+            self.shapecache = np.asarray([]).reshape(0, 5)
+            logging.warn("Loading an empty file {} . This usually happens when no spikes were detected due to the detection parameters being set too strictly".format(file_name))
+        else:
+            sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
+            assert sp_flat.shape[0] // (cutout_length + 5) is not 1. * sp_flat.shape[0] / (cutout_length + 5), "spike data has wrong dimensions"
+            self.shapecache = sp_flat.reshape((sp_flat.shape[0] // (cutout_length + 5), cutout_length + 5))
+
         self.spikes = pd.DataFrame({'ch': self.shapecache[:, 0],
                                     't': self.shapecache[:, 1],
                                     'Amplitude': self.shapecache[:, 2],
