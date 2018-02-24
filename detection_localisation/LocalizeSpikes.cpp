@@ -10,7 +10,7 @@ struct CustomLessThan
     }
 };
 
-tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps)
+tuple<float, float> centerOfMass(deque<tuple<int, int>> amps)
 {
 	/*Calculates the center of mass of a spike to calculate where it occurred using a weighted average.
 
@@ -34,18 +34,14 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps)
 	int Y_coordinate;
 	int channel;
 	int weight; //contains the amplitudes for the center of mass calculation. Updated each localization
-	int centered_amps_size = centered_amps.size();
+	int amps_size = amps.size();
 
-	for(int i = 0; i < centered_amps_size; i++) {
-		curr_amp = get<1>(centered_amps.at(i));
-		channel = get<0>(centered_amps.at(i));
+	for(int i = 0; i < amps_size; i++) {
+		curr_amp = get<1>(amps.at(i));
+		channel = get<0>(amps.at(i));
 		X_coordinate = Parameters::channel_positions[channel][0];
 		Y_coordinate = Parameters::channel_positions[channel][1];
-		if(curr_amp < 0) {
-            weight = 0;
-        } else {
-            weight = curr_amp;
-        }
+        weight = curr_amp;
 		X_numerator += weight * X_coordinate;
 		Y_numerator += weight * Y_coordinate;
 		denominator += weight;
@@ -53,6 +49,25 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps)
 
 	X = (float)(X_numerator) / (float)(denominator);
 	Y = (float)(Y_numerator) / (float)(denominator);
+
+    if(X < 0 || Y < 0) {
+        cout << "BOOM" << endl;
+        for(int i = 0; i < amps_size; i++) {
+    		curr_amp = get<1>(amps.at(i));
+
+    		channel = get<0>(amps.at(i));
+    		X_coordinate = Parameters::channel_positions[channel][0];
+    		Y_coordinate = Parameters::channel_positions[channel][1];
+            weight = curr_amp;
+    		X_numerator += weight * X_coordinate;
+    		Y_numerator += weight * Y_coordinate;
+    		denominator += weight;
+            cout << "X NUM: " << X_numerator << endl;
+            cout << "Y NUM: " << Y_numerator << endl;
+            cout << "weight: " << weight << endl;
+
+    	}
+    }
 
 	return make_tuple(X, Y);
 }
@@ -80,6 +95,7 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 	int neighbor_frame_span = Parameters::spike_delay * 2 + 1;
 	int neighbor_count = amp_cutout_size / neighbor_frame_span;
 	int matrix_offset = 0;
+    amps.push_back(make_tuple(spike_to_be_localized.channel, spike_to_be_localized.amplitude));
 
 	for (int i = 0; i < neighbor_count; i++) {
 		curr_neighbor_channel = Parameters::inner_neighbor_matrix[spike_to_be_localized.channel][i];
@@ -132,6 +148,7 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized)
 	tuple<float,float> position = centerOfMass(amps);
 	amps.clear();
 	//centered_amps.clear();
+
 	return position;
 }
 

@@ -32,6 +32,8 @@ deque<Spike> Parameters::spikes_to_be_processed;
 std::ofstream filteredsp;
 std::ofstream spikes_filtered_file;
 
+namespace SpikeHandler {
+
 
 void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
 						  int _noise_duration, float _noise_amp_percent, float _inner_radius, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
@@ -275,7 +277,7 @@ void addSpike(int channel, int frame, int amplitude) {
 			}
 			spike_to_be_added.written_cutout.push_back(curr_written_reading);
         }
-
+        bool one_pos = false;
 		for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
 			try {
 				curr_neighbor_channel = Parameters::inner_neighbor_matrix[channel][i];
@@ -301,6 +303,7 @@ void addSpike(int channel, int frame, int amplitude) {
                         if(curr_amp < 0) {
                             spike_to_be_added.amp_cutouts.push_back(0);
                         } else {
+                            one_pos = true;
                             spike_to_be_added.amp_cutouts.push_back(curr_amp);
                         }
     				}
@@ -311,6 +314,45 @@ void addSpike(int channel, int frame, int amplitude) {
 				break;
 			}
 		}
+
+        // if(one_pos == false) {
+        //     for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    	// 		try {
+    	// 			curr_neighbor_channel = Parameters::inner_neighbor_matrix[channel][i];
+    	// 		} catch (...) {
+    	// 			spikes_filtered_file.close();
+    	// 			cout << "Neighbor matrix improperly created. Terminating SpikeHandler" << endl;
+    	// 			exit(EXIT_FAILURE);
+    	// 		}
+        //         //Out of inner neighbors
+    	// 		if(curr_neighbor_channel != -1) {
+        //             //Masked neighbor
+        //             if(Parameters::masked_channels[curr_neighbor_channel] == 1) {
+        // 				for(int j = 0; j < amp_cutout_size; j++) {
+        // 					try {
+        //   						curr_reading = Parameters::raw_data[(frame - Parameters::spike_delay - frames_processed + Parameters::index_data + j)*Parameters::num_channels + curr_neighbor_channel];
+        // 					} catch (...) {
+        // 						spikes_filtered_file.close();
+        // 						cout << "Raw Data and it parameters entered incorrectly, could not access data. Terminating SpikeHandler." << endl;
+        // 						exit(EXIT_FAILURE);
+        // 					}
+        //
+        // 					int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE - Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]);
+        //                     cout << "curr amp: " << curr_amp << endl;
+        //                     cout << "curr reading: " << curr_reading << endl;
+        //                     cout << "aGlobal: " << Parameters::aGlobal << endl;
+        //                     cout << "baselines: " << Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines] << endl;
+        //                     cout << "ASCALE: " << ASCALE << endl;
+        // 				}
+        //             }
+    	// 		}
+    	// 		//Out of neighbors to add cutout for
+    	// 		else {
+    	// 			break;
+    	// 		}
+    	// 	}
+        // }
+
 		bool isAdded = false;
 		while(!isAdded) {
 			if(Parameters::spikes_to_be_processed.empty()) {
@@ -324,7 +366,7 @@ void addSpike(int channel, int frame, int amplitude) {
 				if(current_frame > first_frame + (Parameters::spike_peak_duration + Parameters::noise_duration)) {
 					if(Parameters::to_localize) {
 						try {
-                            if(Parameters::debug && spike_to_be_added.frame > 120) {
+                            if(Parameters::debug && spike_to_be_added.frame > 20) {
                                 ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file, filteredsp);
                                 spikes_filtered_file.close();
                                 filteredsp.close();
@@ -672,4 +714,6 @@ int** createOuterNeighborMatrix() {
             outer_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
     }
     return outer_neighbor_matrix;
+}
+
 }

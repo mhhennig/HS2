@@ -62,7 +62,7 @@ void Detection::SetInitialParams(string positions_file_path, string neighbors_fi
   write_out = verbose;
 
 
-  setInitialParameters(num_channels, spike_delay, spike_peak_duration, file_name, noise_duration, noise_amp_percent,
+  SpikeHandler::setInitialParameters(num_channels, spike_delay, spike_peak_duration, file_name, noise_duration, noise_amp_percent,
                        inner_radius, masked_channels, channel_positions, neighbor_matrix, max_neighbors, to_localize,
                        cutout_start, cutout_end, maxsl, verbose);
 }
@@ -105,7 +105,8 @@ void Detection::MeanVoltage(short *vm, int tInc, int tCut) // if median takes to
 void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed) {
   // MeanVoltage(vm, tInc, tCut);
   int a = 0; // to buffer the difference between ADC counts and Qm, and basline
-  loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
+  SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
+  cout << "transitioning chunks" << endl;
 
   ++iterations;
   for (int t = tCut; t < tInc + tCut2; t++) { // loop over data, will be removed for an online algorithm
@@ -151,17 +152,20 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
                   spikeCount += 1;
 
                   if(t - tCut - MaxSl + 1 > 0) {
-                    setLocalizationParameters(Aglobal[t - tCut - MaxSl + 1], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
+                    SpikeHandler::setLocalizationParameters(Aglobal[t - tCut - MaxSl + 1], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
                   }
                   else {
-                    setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
+                    SpikeHandler::setLocalizationParameters(Aglobal[t - tCut], Qms, (currQmsPosition + 1) % (MaxSl + _spike_delay));
                   }
                   if(write_out) {
                       //spikes_file << ChInd[i] << " " << t0 - MaxSl + t - tCut + 1 << " " << Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) %  (MaxSl + _spike_delay)] << endl;
                       spikes_file << ChInd[i] << " " << t0 - MaxSl + t - tCut + 1 << " " << Amp[i] << endl;
                   }
                  //addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, Amp[i] * Ascale - Qms[ChInd[i]][(currQmsPosition + 1) %  (MaxSl + _spike_delay)]);
-                 addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, Amp[i]);
+                 if(Amp[i]  >399000) {
+                     cout << "TOO BIG: " << ChInd[i] << " " << t0 - MaxSl + t - tCut + 1 << " " << Amp[i] << endl;
+                 }
+                 SpikeHandler::addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1, Amp[i]);
 
                 }
                 Sl[i] = 0;
@@ -190,7 +194,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
 void Detection::FinishDetection() // write spikes in interval after last
                                   // recalibration; close file
 {
-	terminateSpikeHandler();
+	SpikeHandler::terminateSpikeHandler();
     if(!write_out) {
         spikes_file << "Turn on verbose in DetectFromRaw method to get all detected spikes" << endl;
     }

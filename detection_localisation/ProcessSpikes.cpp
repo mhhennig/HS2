@@ -65,13 +65,13 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 
 	while(!isProcessed) {
         max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
-        if(Parameters::verbose) {    
-            filteredsp << max_spike.channel << " " << max_spike.frame <<  " " << max_spike.amplitude << "  " << FilterSpikes::posToNegRatio(max_spike)  << " " << FilterSpikes::areaUnderSpike(max_spike) << " " << FilterSpikes::repolarizationTime(max_spike) << endl;
+
+		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
+        if(Parameters::verbose) {
+            filteredsp << max_spike.channel << " " << max_spike.frame <<  " " << max_spike.amplitude << "  " << get<0>(position)  << " " << get<1>(position) << endl;
             filteredsp << "E " << Parameters::event_number << endl;
             ++Parameters::event_number;
         }
-
-		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
 
 		int32_t msc = (int32_t) max_spike.channel;
 		int32_t msf = (int32_t) max_spike.frame;
@@ -85,6 +85,11 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 		spikes_filtered_file.write((char *)&X, sizeof(X));
 		spikes_filtered_file.write((char *)&Y, sizeof(Y));
 		spikes_filtered_file.write((char*)&max_spike.written_cutout[0], max_spike.written_cutout.size() * sizeof(int32_t));
+
+        if(X < 0 || Y < 0) {
+            cout << "X real: " << get<0>(position)  << endl;
+            cout << "Y real: " << get<1>(position)  << endl;
+        }
 
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isProcessed = true;
