@@ -32,34 +32,13 @@ def read_flat(d, t0, t1, nch):
   return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
 
-def detectData(probe, _file_name, _to_localize, sfd, thres,
+def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
                ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False):
     """ Read data from a file and pipe it to the spike detector. """
 
-    # if data_format is 'flat':
-    #   d = np.memmap(filename, dtype=np.int16, mode='r')
-    #   nRecCh = _num_channels
-    #   assert len(d)/nRecCh==len(d)//nRecCh, 'data not multiple of channel number'
-    #   nFrames = len(d)//nRecCh
-    #   sf = int(sfd)
-    #   read_function = read_flat
-    # elif data_format is 'biocam':
-    #   from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
-    #   d = openHDF5file(filename)
-    #   nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(d)
-    #   _num_channels = nRecCh
-    #
-    #   if file_format == 100:
-    #       read_function = readHDF5t_100
-    #   else:
-    #       read_function = readHDF5t_101
-    # else:
-    #   raise NotImplementedError('Unknown file format')
-
-    nSec = probe.nFrames / sfd  # the duration in seconds of the recording
-    nSec = probe.nFrames / sfd
-    sf = int(sfd)
+    nSec = probe.nFrames / sf  # the duration in seconds of the recording
+    sf = int(sf) # ensure sampling rate is integer
     tpref = int(tpre*sf/1000)
     tpostf = int(tpost*sf/1000)
     num_channels = int(probe.num_channels)
@@ -83,8 +62,6 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
         for channel in masked_channel_list:
             masked_channels[channel] = 0
 
-    # positions_file_path = str(_positions_file_path)
-    # neighbors_file_path = str(_neighbors_file_path)
     positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
     neighbors_file_path = probe.neighbors_file_path.encode()
 
@@ -123,7 +100,6 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
 
     tInc = min(nFrames-tCut-tCut2, 100000) # cap at specified number of frames
-    # tInc = 10000
     maxFramesProcessed = tInc;
     print('# tInc: '+str(tInc))
     # ! To be consistent, X and Y have to be swappped
@@ -144,14 +120,11 @@ def detectData(probe, _file_name, _to_localize, sfd, thres,
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
         print('# Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
-        # print('# t0 = ' + str(t0) + ', t1 = ' +str(t1)+', from '+str(t0-tCut))
         sys.stdout.flush()
-        # # slice data
+        # slice data
         if t0 == 0:
-            #vm = np.hstack((np.zeros(nRecCh * tCut), d[:(t1+tCut2) * nRecCh])).astype(ctypes.c_short)
             vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), probe.Read(0, t1+tCut2)))
         else:
-            #vm = d[(t0-tCut) * nRecCh:(t1+tCut2) * nRecCh].astype(ctypes.c_short)
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
         det.MeanVoltage( &vm[0], tInc, tCut)
