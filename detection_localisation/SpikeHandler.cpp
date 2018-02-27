@@ -158,7 +158,7 @@ void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_d
         }
     }
 
-	spikes_filtered_file.open(file_name + ".bin", ios::binary);
+	spikes_filtered_file.open(file_name, ios::binary);
     filteredsp.open("Filtered Spikes");
 
 }
