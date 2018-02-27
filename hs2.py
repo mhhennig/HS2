@@ -37,7 +37,7 @@ class Detection(object):
 
     def __init__(self, probe, to_localize, cutout_start, cutout_end, threshold,
                  maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
-                 out_file_name="ProcessedSpikes.bin",):
+                 out_file_name="ProcessedSpikes.bin", save_all=False):
         self.probe = probe
         # self.shapecache = None
         # self.HasFeatures = False
@@ -53,6 +53,7 @@ class Detection(object):
         self.tpre = tpre
         self.tpost = tpost
         self.out_file_name = out_file_name
+        self.save_all = save_all
 
     def LoadDetected(self):
         """
@@ -98,7 +99,7 @@ class Detection(object):
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
                    self.maa, self.maxsl, self.minsl, self.ahpthr,
-                   self.tpre, self.tpost)
+                   self.tpre, self.tpost, self.save_all)
         if load:
             # reload data into memory
             self.LoadDetected()
