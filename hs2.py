@@ -254,7 +254,7 @@ class herdingspikes(object):
                 logging.warn("Cluster {0} has no spikes associated. Setting ctr_x,ctr_y,Size,AvgAmp[{0}] all to 0".format(i))
                 continue
 
-            self.centers[i] = np.mean(self.fourvec[cl_spikes_idxs][:,:2], axis=0)
+            self.centers[i] = np.mean(self.fourvec[cl_spikes_idxs][:, :2], axis=0)
             sizes[i] = cl_spikes_idxs.shape[0]
             amps[i] = np.mean(self.spikes.Amplitude[cl_spikes_idxs])
 
