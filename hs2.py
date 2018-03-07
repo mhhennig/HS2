@@ -233,30 +233,38 @@ class herdingspikes(object):
         if (not self.HasFeatures) or recompute_pca:
             self.cutouts_pca = self.ShapePCA(pca_ncomponents, pca_whiten)
 
-        fourvec = np.vstack(([self.spikes.x], [self.spikes.y],
-                             alpha * self.cutouts_pca.T)).T
+        fourvec = np.vstack(([self.spikes.x], [self.spikes.y], alpha * self.cutouts_pca.T)).T
+        self.fourvec = fourvec
 
         print('Clustering...')
         clusterer = clustering_algorithm(**kwargs)
         clusterer.fit(fourvec)
+
         self.spikes['cl'] = clusterer.labels_
         self.NClusters = len(np.unique(clusterer.labels_))
-        # assert np.max(self.spikes.cl)+1 == self.NClusters
         print("Number of estimated clusters:", self.NClusters)
-        in_cl = []
-        for i in np.arange(self.NClusters):
-            in_cl.append(list(np.where(self.spikes.cl == i)[0]))
-        self.fourvec = fourvec
-        centers = np.asarray([np.mean(fourvec[cl], axis=0) for cl in in_cl])
-        self.centerz = centers
-        self.in_cl = in_cl
-        dic_cls = {'ctr_x': centers[:, 0],
-                   'ctr_y': centers[:, 1],
-                   'Color': 1. * np.random.permutation(
-            self.NClusters) / self.NClusters,
-            'Size': [len(cl) for cl in in_cl],
-            'AvgAmpl': [np.mean(self.spikes.Amplitude[cl])
-                        for cl in in_cl]}
+
+        self.centers = np.zeros((self.NClusters, 2))
+        sizes = np.zeros(self.NClusters)
+        amps = np.zeros(self.NClusters)
+
+        for i in range(self.NClusters):
+            cl_spikes_idxs = self.spikes.loc[self.spikes['cl'] == i].index.values
+            if cl_spikes_idxs.shape[0] == 0:
+                logging.warn("Cluster {0} has no spikes associated. Setting ctr_x,ctr_y,Size,AvgAmp[{0}] all to 0".format(i))
+                continue
+
+            self.centers[i] = np.mean(self.fourvec[cl_spikes_idxs][:, :2], axis=0)
+            sizes[i] = cl_spikes_idxs.shape[0]
+            amps[i] = np.mean(self.spikes.Amplitude[cl_spikes_idxs])
+
+        dic_cls = {'ctr_x': self.centers[:, 0],
+                   'ctr_y': self.centers[:, 1],
+                   'Color': 1. * np.random.permutation(self.NClusters) / self.NClusters,
+                   'Size': sizes,
+                   'AvgAmpl': amps
+                   }
+
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
