@@ -79,7 +79,7 @@ def estimate_bandwidth(X, quantile=0.3, n_samples=None, random_state=0,
 
 # separate function for each seed's iterative loop
 def _mean_shift_single_seed(my_mean, X, nbrs, max_iter):
-    # For each seed, climb gradient until convergence or max_iter
+    """Handle a single seed. For each seed, climb gradient until convergence or max_iter."""
     bandwidth = nbrs.get_params()['radius']
     stop_thresh = 1e-3 * bandwidth  # when mean has converged
     completed_iterations = 0
@@ -98,8 +98,8 @@ def _mean_shift_single_seed(my_mean, X, nbrs, max_iter):
             return tuple(my_mean), len(points_within)
         completed_iterations += 1
 
-# separate function for each batch of seeds
 def _mean_shift_multi_seeds(my_means, X, nbrs, max_iter):
+    """Process a batch of seeds."""
     res = []
     for my_mean in my_means:
         res.append(_mean_shift_single_seed(my_mean, X, nbrs, max_iter))
@@ -195,27 +195,17 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
     nbrs = NearestNeighbors(radius=bandwidth, n_jobs=n_jobs).fit(X)
 
     ncpus = effective_n_jobs(n_jobs)
-    nseeds = int(len(seeds)/ncpus+1)
-    print("total number of seeds: "+str(len(seeds)))
+    nseeds = int(len(seeds)//ncpus+1)
+    print("number of seeds: "+str(len(seeds)))
     print("seeds/job: "+str(nseeds))
     print("using "+str(ncpus)+" cpus")
 
-    # original version executes iterations on all seeds in parallel:
-    # this causes problems when the number of seeds is very large
-    # all_res = Parallel(n_jobs=n_jobs,max_nbytes=1e6, verbose=2)(
-    #     delayed(_mean_shift_single_seed, has_shareable_memory)
-    #     (seed, X, nbrs, max_iter) for seed in seeds)
-    # copy results in a dictionary (original)
-    # for i in range(len(seeds)):
-    #     if all_res[i] is not None:
-    #         center_intensity_dict[all_res[i][0]] = all_res[i][1]
-
-    # here each job gets a batch of seeds:
+    # here each job gets its batch of seeds:
     all_res = Parallel(n_jobs=ncpus,max_nbytes=1e6, verbose=2)(
         delayed(_mean_shift_multi_seeds, has_shareable_memory)
         (seeds[i*nseeds:(i+1)*nseeds], X, nbrs, max_iter) for i in range(ncpus))
 
-    # get results from batches:
+    # retrieve results from batches
     for i in range(ncpus):
         for ii in range(len(all_res[i])):
             if all_res[i][ii] is not None:
