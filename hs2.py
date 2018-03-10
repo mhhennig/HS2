@@ -151,27 +151,28 @@ class Detection(object):
         ws = window_size // 2
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
-        scale = interdistance/110.
-        trange = (np.arange(t1, t2)-event.t)*scale
-        start_bluered = event.t-t1 - self.cutout_start
-        trange_bluered = trange[start_bluered:start_bluered+cutlen]
+        scale = interdistance / 110.
+        trange = (np.arange(t1, t2) - event.t) * scale
+        start_bluered = event.t - t1 - self.cutout_start
+        trange_bluered = trange[start_bluered:start_bluered + cutlen]
         trange_bluered = np.arange(-self.cutout_start,
-                                   -self.cutout_start+cutlen)*scale
+                                   -self.cutout_start + cutlen) * scale
 
-        data = self.probe.Read(t1, t2).reshape((t2-t1, self.probe.num_channels))
+        data = self.probe.Read(t1, t2).reshape(
+            (t2 - t1, self.probe.num_channels))
         for n in neighs[event.ch]:
             if n not in self.probe.masked_channels:
                 plt.plot(pos[n][0] + trange,
-                         pos[n][1] + data[:, n]*scale, 'gray')
+                         pos[n][1] + data[:, n] * scale, 'gray')
                 plt.plot(pos[n][0] + trange_bluered,
-                         pos[n][1] + data[start_bluered:start_bluered+cutlen,
-                         n]*scale, 'b')
+                         pos[n][1] + data[start_bluered:start_bluered + cutlen,
+                                          n] * scale, 'b')
             else:
                 plt.plot(pos[n][0] + trange,
-                         pos[n][1] + data[:, n]*scale, 'gray')
+                         pos[n][1] + data[:, n] * scale, 'gray')
                 plt.plot(pos[n][0] + trange_bluered,
-                         pos[n][1] + data[start_bluered:start_bluered+cutlen,
-                         n]*scale, 'g')
+                         pos[n][1] + data[start_bluered:start_bluered + cutlen,
+                                          n] * scale, 'g')
 
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + event.Shape * scale, 'r')
@@ -234,7 +235,8 @@ class Clustering(object):
                             "You must pass cutout_length for .bin files.")
                     self.LoadBin(f, cutout_length, append=not_first_file)
                 else:
-                    raise IOError("File format unknown. Expected .hdf5 or .bin")
+                    raise IOError(
+                        "File format unknown. Expected .hdf5 or .bin")
         else:  # we suppose arg1 is an instance of Detection
             try:  # see if LoadDetected was run
                 self.spikes = arg1.spikes
@@ -297,11 +299,11 @@ class Clustering(object):
 
         dic_cls = {'ctr_x': self.centers[:, 0],
                    'ctr_y': self.centers[:, 1],
-                   'Color': 1.*np.random.permutation(
-                        self.NClusters)/self.NClusters,
-                   'Size': sizes,
-                   'AvgAmpl': amps
-                   }
+                   'Color': 1. * np.random.permutation(
+            self.NClusters) / self.NClusters,
+            'Size': sizes,
+            'AvgAmpl': amps
+        }
 
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
@@ -320,7 +322,7 @@ class Clustering(object):
         self.pca = pca
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i*chunk_size:(i+1)*chunk_size, :] = pca.transform(np.array(
+            _pcs[i * chunk_size:(i + 1) * chunk_size, :] = pca.transform(np.array(
                 list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
         self.features = _pcs
 
@@ -370,7 +372,7 @@ class Clustering(object):
                 raise ValueError("Names list length does not correspond.")
             expinds = self.expinds + [len(self.spikes)]
             for i, f in enumerate(filename):
-                self._savesinglehdf5(f, [expinds[i], expinds[i+1]],
+                self._savesinglehdf5(f, [expinds[i], expinds[i + 1]],
                                      compression, sampling)
         else:
             raise ValueError("filename not understood")
@@ -390,11 +392,11 @@ class Clustering(object):
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
             tmp = (1000 * np.transpose(g['shapes'][:, i *
-                   chunk_size:(i+1)*chunk_size])).astype(np.int32)
+                                                   chunk_size:(i + 1) * chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Found ' + str(len(inds)) +
-                  ' data points out of linear regime in chunk '+str(i+1))
+                  ' data points out of linear regime in chunk ' + str(i + 1))
             shapecache[i * chunk_size:(i + 1) * chunk_size] = tmp[:]
 
         self.cutout_length = shapecache.shape[1]
@@ -430,9 +432,9 @@ class Clustering(object):
             dic_cls = {'ctr_x': self.centerz[:, 0],
                        'ctr_y': self.centerz[:, 1],
                        'Color': 1. * np.random.permutation(
-                                    self.NClusters)/self.NClusters,
-                       'Size': _cls,
-                       'AvgAmpl': _avgAmpl}
+                self.NClusters) / self.NClusters,
+                'Size': _cls,
+                'AvgAmpl': _avgAmpl}
 
             self.clusters = pd.DataFrame(dic_cls)
             self.IsClustered = True
@@ -468,11 +470,11 @@ class Clustering(object):
             'x': shapecache[:, 3] / 1000,
             'y': shapecache[:, 4] / 1000,
             'Shape': list(shapecache[:, 5:])
-            }, copy=False)
+        }, copy=False)
         self.IsClustered = False
 
         if append:
-            self.expinds.append(len(self.spikes)+1)
+            self.expinds.append(len(self.spikes) + 1)
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
             self.filelist.append(filename)
         else:
@@ -518,7 +520,7 @@ class Clustering(object):
             plt.title("Cluster " + str(cl))
 
     def PlotAll(self, invert=False, show_labels=False, ax=None,
-                max_show=200000, **kwargs):
+                max_show=200000, fontsize=16, **kwargs):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
         If clustering has been performed, each spike is coloured according to
@@ -530,6 +532,7 @@ class Clustering(object):
         centre with its cluster ID.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
         max_show -- maximum number of spikes to show
+        fontsize -- font size for annotations
         **kwargs -- additional arguments are passed to pyplot.scatter
         """
         if ax is None:
@@ -552,6 +555,60 @@ class Clustering(object):
                 ctr_x, ctr_y = ctr_y, ctr_x
             for cl in range(self.NClusters):  # TODO why is this here
                 if ~np.isnan(ctr_y[cl]):  # hack, why NaN positions in DBScan?
-                    ax.annotate(str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=16)
+                    ax.annotate(
+                        str(cl), [ctr_x[cl], ctr_y[cl]], fontsize=fontsize)
                     # seems this is a problem when zooming with x/ylim
         return ax
+
+    def PlotNeighbourhood(self, cl, radius=1):
+        """
+        Plot all units and spikes in the neighbourhood of cluster cl.
+
+        Arguments:
+        cl -- number of te cluster to be shown
+        radius -- spikes are shown for units this far away from cluster centre
+        """
+
+        plt.figure(figsize=(8, 6))
+
+        cx, cy = self.clusters['ctr_x'][cl], self.clusters['ctr_y'][cl]
+        dists = np.sqrt(
+            (cx - self.clusters['ctr_x'])**2 + (cy - self.clusters['ctr_y'])**2)
+        clInds = np.where(dists < radius)[0]
+
+        ax = []
+        ax.append(plt.subplot2grid((len(clInds) + 1, 4), (0, 0),
+                                   rowspan=len(clInds) + 1, colspan=3, facecolor='k'))
+        for i in range(len(clInds) + 1):
+            ax.append(plt.subplot2grid(
+                (len(clInds) + 1, 4), (i, 3), colspan=1))
+            ax[i + 1].axis('off')
+            if i > 0:
+                ax[i].get_shared_y_axes().join(ax[i], ax[i + 1])
+
+        for i_cl, cl_t in enumerate(clInds):
+            cx, cy = self.clusters['ctr_x'][cl_t], self.clusters['ctr_y'][cl_t]
+            inds = np.where(self.spikes.cl == cl_t)[0]
+            x, y = self.spikes.x[inds], self.spikes.y[inds]
+            ax[0].scatter(x, y, c=plt.cm.hsv(
+                self.clusters['Color'][cl_t]), s=3, alpha=0.4)
+            ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
+            for i in inds[:20]:
+                ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8))
+            ax[i_cl + 2].plot(np.mean(self.spikes.Shape[inds].values,
+                                      axis=0), color=plt.cm.hsv(self.clusters['Color'][cl_t]))
+
+        ax[0].axis('equal')
+
+        # show unclustered spikes (if any)
+        cx, cy = self.clusters['ctr_x'][cl], self.clusters['ctr_y'][cl]
+        inds = np.where(self.spikes.cl == -1)[0]
+        x, y = self.spikes.x[inds].values, self.spikes.y[inds].values
+        dists = np.sqrt((cx - x)**2 + (cy - y)**2)
+        spInds = np.where(dists < radius)[0]
+        if len(spInds):
+            ax[0].scatter(x[spInds], y[spInds], c='w', s=3)
+            for i in spInds[:20]:
+                ax[1].plot(self.spikes.Shape[i], color=(0.4, 0.4, 0.4))
+            ax[1].plot(
+                np.mean(self.spikes.Shape[spInds].values, axis=0), color='k')
