@@ -341,16 +341,16 @@ class Clustering(object):
             g.create_dataset("Sampling", data=sampling)
         g.create_dataset("times", data=spikes.t)
         if self.IsClustered:
-            g.create_dataset("centres", data=self.centerz.T)
+            g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
-        # but I have not found a better way:
+        # but I have not yet found a better way:
         cutout_length = spikes.Shape[0].size
         sh_tmp = np.empty((cutout_length, spikes.Shape.size),
                           dtype=int)
         for i in range(spikes.Shape.size):
-            sh_tmp[:, i] = spikes.Shape[i]  # TODO ???????
+            sh_tmp[:, i] = spikes.Shape[i]
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
@@ -364,12 +364,12 @@ class Clustering(object):
         If filename is a list of names of the same length as the number of
         experiments, one file per experiment will be saved.
         """
-        print("Not tested, hope it works")
+
         if type(filename) == str:
             self._savesinglehdf5(filename, None, compression, sampling)
         elif type(filename) == list:
             if len(filename) != len(self.expinds):
-                raise ValueError("Names list length does not correspond.")
+                raise ValueError("Names list length does not correspond to number of experiments in memory.")
             expinds = self.expinds + [len(self.spikes)]
             for i, f in enumerate(filename):
                 self._savesinglehdf5(f, [expinds[i], expinds[i + 1]],
@@ -378,11 +378,19 @@ class Clustering(object):
             raise ValueError("filename not understood")
 
     def LoadHDF5(self, filename, append=False, compute_amplitudes=False,
-                 chunk_size=500000, compute_cluster_sizes=False):
+                 chunk_size=500000, compute_cluster_sizes=False, scale=1):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
         HS1.
+
+        Arguments:
+        append -- append to data alreday im memory
+        compute_amplitudes -- compute spike amplitudes (slow)
+        chunk_size -- read shapes in chunks of this size, to avoid memory problems
+        compute_cluster_sizes -- count number of spikes in each unit (slow)
+        scale -- re-scale shapes (may be required for HS1 data)
         """
+
         g = h5py.File(filename, 'r')
         print('Reading from ' + filename)
 
@@ -391,7 +399,7 @@ class Clustering(object):
         shapecache = np.memmap(
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
-            tmp = (1000 * np.transpose(g['shapes'][:, i *
+            tmp = (scale * np.transpose(g['shapes'][:, i *
                                                    chunk_size:(i + 1) * chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
