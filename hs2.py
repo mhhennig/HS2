@@ -140,11 +140,9 @@ class Detection(object):
             ax = plt.gca()
 
         # scatter of the large grey balls for electrode location
-        plt.scatter(np.array(pos)[neighs[event.ch], 0],
-                    np.array(pos)[neighs[event.ch], 1],
-                    s=1600, alpha=0.2)
         x = pos[[neighs[event.ch], 0]]
         y = pos[[neighs[event.ch], 1]]
+        plt.scatter(x, y, s=1600, alpha=0.2)
         for i, txt in enumerate(neighs[event.ch]):
             ax.annotate(txt, (x[i] + 1, y[i] + 3))
 
@@ -322,7 +320,7 @@ class Clustering(object):
         self.pca = pca
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i * chunk_size:(i + 1) * chunk_size, :] = pca.transform(np.array(
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(
                 list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
         self.features = _pcs
 
@@ -369,7 +367,8 @@ class Clustering(object):
             self._savesinglehdf5(filename, None, compression, sampling)
         elif type(filename) == list:
             if len(filename) != len(self.expinds):
-                raise ValueError("Names list length does not correspond to number of experiments in memory.")
+                raise ValueError("Names list length does not correspond to " +
+                                 "number of experiments in memory.")
             expinds = self.expinds + [len(self.spikes)]
             for i, f in enumerate(filename):
                 self._savesinglehdf5(f, [expinds[i], expinds[i + 1]],
@@ -386,7 +385,8 @@ class Clustering(object):
         Arguments:
         append -- append to data alreday im memory
         compute_amplitudes -- compute spike amplitudes (slow)
-        chunk_size -- read shapes in chunks of this size, to avoid memory problems
+        chunk_size -- read shapes in chunks of this size to avoid memory
+            problems
         compute_cluster_sizes -- count number of spikes in each unit (slow)
         scale -- re-scale shapes (may be required for HS1 data)
         """
@@ -399,8 +399,8 @@ class Clustering(object):
         shapecache = np.memmap(
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
-            tmp = (scale * np.transpose(g['shapes'][:, i *
-                                                   chunk_size:(i + 1) * chunk_size])).astype(np.int32)
+            tmp = (scale*np.transpose(
+                g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Found ' + str(len(inds)) +
@@ -586,7 +586,8 @@ class Clustering(object):
 
         ax = []
         ax.append(plt.subplot2grid((len(clInds) + 1, 4), (0, 0),
-                                   rowspan=len(clInds) + 1, colspan=3, facecolor='k'))
+                                   rowspan=len(clInds) + 1,
+                                   colspan=3, facecolor='k'))
         for i in range(len(clInds) + 1):
             ax.append(plt.subplot2grid(
                 (len(clInds) + 1, 4), (i, 3), colspan=1))
@@ -603,8 +604,9 @@ class Clustering(object):
             ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
             for i in inds[:20]:
                 ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8))
-            ax[i_cl + 2].plot(np.mean(self.spikes.Shape[inds].values,
-                                      axis=0), color=plt.cm.hsv(self.clusters['Color'][cl_t]))
+            ax[i_cl + 2].plot(
+                np.mean(self.spikes.Shape[inds].values, axis=0),
+                color=plt.cm.hsv(self.clusters['Color'][cl_t]))
 
         ax[0].axis('equal')
 
