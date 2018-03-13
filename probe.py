@@ -63,8 +63,8 @@ class NeuralProbe(object):
         plt.scatter(*self.positions.T)
         for i, pos in enumerate(self.positions):
             plt.annotate(i, pos)
-        plt.ylim([0, ymax + ymin])
-        plt.xlim([0, xmax + xmin])
+        plt.ylim([ymin, ymax])
+        plt.xlim([xmin, xmax])
 
     def Read(self, t0, t1):
         raise NotImplementedError("The Read function is not implemented for \
@@ -147,7 +147,7 @@ class Mea1k(NeuralProbe):
             d = h5py.File(data_file_path)
             self.d = d
             mapping = d.get('/mapping/')
-            channel_indices = mapping['channel']#[:]
+            channel_indices = mapping['channel']
             electrodes = mapping['electrode'][:]
             routed = np.array(np.where(electrodes > -1))[0]
             self.channels_indices_routed = channel_indices[routed]

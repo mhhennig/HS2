@@ -37,14 +37,15 @@ class Detection(object):
     previously saved instance of this class)
     """
 
-    def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30, threshold=20,
-                 maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
-                 out_file_name="ProcessedSpikes", save_all=False):
+    def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
+                 threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
+                 tpost=2.2, out_file_name="ProcessedSpikes", save_all=False):
         """
 
         Arguments:
         probe -- probe object with raw data
-        to_localize -- set False if spikes should only be detected, not localised (will break sorting)
+        to_localize -- set False if spikes should only be detected, not
+            localised (will break sorting)
         cutout_start -- number of frames to save backwards from spike peak
         cutout_end -- number of frames to save forward from spike peak
         threshold -- detection threshold
@@ -83,7 +84,8 @@ class Detection(object):
                 "when no spikes were detected due to the detection parameters" +
                 " being set too strictly".format(self.out_file_name))
         else:
-            sp_flat = np.memmap(self.out_file_name+'.bin', dtype=np.int32, mode="r")
+            sp_flat = np.memmap(self.out_file_name+'.bin', dtype=np.int32,
+                                mode="r")
             assert sp_flat.shape[0] // (self.cutout_length + 5) is not \
                 sp_flat.shape[0] / (self.cutout_length + 5), \
                 "spike data has wrong dimensions"  # ???
