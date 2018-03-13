@@ -131,8 +131,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
   int a;    // to buffer the difference between ADC counts and Qm, and basline
   int t, i; // counters
   SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
-  cout << "transitioning chunks"
-       << " " << t0 << " " << tCut << " " << tInc + tCut2 << endl;
+  //cout << "transitioning chunks"
+  //     << " " << t0 << " " << tCut << " " << tInc + tCut2 << endl;
 
   ++iterations;
   for (t = tCut; t < tInc;
