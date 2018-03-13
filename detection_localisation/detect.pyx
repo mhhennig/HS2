@@ -77,6 +77,9 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     else:
         print("# Not Masking any Channels")
 
+    if verbose is True:
+        print("# Writing out ectended detection info")
+
     print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
           str(nSec))
@@ -91,15 +94,11 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         minsl = int(sf*0.3/1000 + 0.5)
 
     # set tCut, tCut2 and tInc
-    # tCut = tpref + maxsl #int(0.001*int(sf)) + int(0.001*int(sf)) + 6 # what is logic behind this?
-    # FIX: make sure enough data points are available:
     tCut = max((tpref + maxsl, cutout_start+maxsl))
-    # tCut2 = tpostf + 1 - maxsl
-    # FIX: make sure enough data points are available:
     tCut2 = max(tpostf + 1 - maxsl, cutout_end+maxsl)
     print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
 
-    tInc = min(nFrames-tCut-tCut2, 100000) # cap at specified number of frames
+    tInc = min(nFrames-tCut-tCut2, 50000) # cap at specified number of frames
     maxFramesProcessed = tInc;
     print('# tInc: '+str(tInc))
     # ! To be consistent, X and Y have to be swappped
@@ -112,14 +111,13 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration,
-                         _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres,
-                         cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+
     startTime = datetime.now()
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
-        print('# Analysing ' + str(t1 - t0) + ' frames; ' + str(t0-tCut) + ' ' + str(t1+tCut2))
+        print('# Analysing ' + str(t1 - t0) + ' frames; from ' + str(t0-tCut) + ' to ' + str(t1+tCut2))
         sys.stdout.flush()
         # slice data
         if t0 == 0:
@@ -127,6 +125,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
+        print("# vm shape:"+str(len(vm/nRecCh)))
         det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
