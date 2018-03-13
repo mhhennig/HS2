@@ -153,8 +153,10 @@ class Detection(object):
         x = pos[[neighs[event.ch], 0]]
         y = pos[[neighs[event.ch], 1]]
         plt.scatter(x, y, s=1600, alpha=0.2)
+
+        # electrode numbers
         for i, txt in enumerate(neighs[event.ch]):
-            ax.annotate(txt, (x[i] + 1, y[i] + 3))
+            ax.annotate(txt, (x[i], y[i]))
 
         ws = window_size // 2
         t1 = np.max((0, event.t - ws))
@@ -168,22 +170,21 @@ class Detection(object):
 
         data = self.probe.Read(t1, t2).reshape(
             (t2 - t1, self.probe.num_channels))
-        for n in neighs[event.ch]:
-            if n not in self.probe.masked_channels:
-                plt.plot(pos[n][0] + trange,
-                         pos[n][1] + data[:, n] * scale, 'gray')
-                plt.plot(pos[n][0] + trange_bluered,
-                         pos[n][1] + data[start_bluered:start_bluered + cutlen,
-                                          n] * scale, 'b')
-            else:
-                plt.plot(pos[n][0] + trange,
-                         pos[n][1] + data[:, n] * scale, 'gray')
-                plt.plot(pos[n][0] + trange_bluered,
-                         pos[n][1] + data[start_bluered:start_bluered + cutlen,
-                                          n] * scale, 'g')
 
+        # grey and blue traces
+        for n in neighs[event.ch]:
+            col = 'g' if n in self.probe.masked_channels else 'b'
+            plt.plot(pos[n][0] + trange,
+                     pos[n][1] + data[:, n] * scale, 'gray')
+            plt.plot(pos[n][0] + trange_bluered,
+                     pos[n][1] + data[start_bluered:start_bluered + cutlen,
+                                      n] * scale, col)
+
+        # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + event.Shape * scale, 'r')
+
+        # red dot of event location
         plt.scatter(event.x, event.y, s=80, c='r')
 
     def PlotDensity(self, binsize=1., invert=False, ax=None):
@@ -338,7 +339,6 @@ class Clustering(object):
 
     def _savesinglehdf5(self, filename, limits, compression, sampling):
         if limits is not None:
-            print("DOESN'T WORK")
             spikes = self.spikes[limits[0]:limits[1]]
         else:
             spikes = self.spikes
@@ -354,11 +354,11 @@ class Clustering(object):
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
-        cutout_length = spikes.Shape[0].size
+        cutout_length = spikes.Shape.iloc[0].size
         sh_tmp = np.empty((cutout_length, spikes.Shape.size),
                           dtype=int)
-        for i in range(spikes.Shape.size):
-            sh_tmp[:, i] = spikes.Shape[i]
+        for i, s in enumerate(spikes.Shape):
+            sh_tmp[:, i] = s
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
@@ -408,6 +408,7 @@ class Clustering(object):
               "converting to integer...")
         shapecache = np.memmap(
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
+        raise NotImplementedError("There's a bug, the first shape is not loaded.")
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
             tmp = (scale*np.transpose(
                 g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
