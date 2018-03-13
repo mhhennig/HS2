@@ -70,21 +70,24 @@ class Detection(object):
         self.ahpthr = ahpthr
         self.tpre = tpre
         self.tpost = tpost
-        self.out_file_name = out_file_name
+        if out_file_name[-4:] == ".bin":
+            self.out_file_name = out_file_name
+        else:
+            self.out_file_name = out_file_name + ".bin"
         self.save_all = save_all
 
     def LoadDetected(self):
         """
         Reads a binary file with spikes detected with the DetectFromRaw() method
         """
-        if os.stat(self.out_file_name+'.bin').st_size == 0:
+        if os.stat(self.out_file_name).st_size == 0:
             shapecache = np.asarray([]).reshape(0, 5)
             logging.warn(
                 "Loading an empty file {} . This usually happens " +
                 "when no spikes were detected due to the detection parameters" +
                 " being set too strictly".format(self.out_file_name))
         else:
-            sp_flat = np.memmap(self.out_file_name+'.bin', dtype=np.int32,
+            sp_flat = np.memmap(self.out_file_name, dtype=np.int32,
                                 mode="r")
             assert sp_flat.shape[0] // (self.cutout_length + 5) is not \
                 sp_flat.shape[0] / (self.cutout_length + 5), \
@@ -111,7 +114,7 @@ class Detection(object):
         Arguments:
         load -- load the detected spikes when finished
         """
-        detectData(self.probe, str.encode(self.out_file_name),
+        detectData(self.probe, str.encode(self.out_file_name[:-4]),
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
                    self.maa, self.maxsl, self.minsl, self.ahpthr,
