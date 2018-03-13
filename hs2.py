@@ -37,9 +37,24 @@ class Detection(object):
     previously saved instance of this class)
     """
 
-    def __init__(self, probe, to_localize, cutout_start, cutout_end, threshold,
+    def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30, threshold=20,
                  maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0, tpost=2.2,
-                 out_file_name="ProcessedSpikes.bin", save_all=False):
+                 out_file_name="ProcessedSpikes", save_all=False):
+        """
+
+        Arguments:
+        probe -- probe object with raw data
+        to_localize -- set False if spikes should only be detected, not localised (will break sorting)
+        cutout_start -- number of frames to save backwards from spike peak
+        cutout_end -- number of frames to save forward from spike peak
+        threshold -- detection threshold
+        maa
+        maxsl
+        minsl
+        ahpthr
+        out_file_name -- base file name (without extension) for the output files
+        save_all --
+        """
         self.probe = probe
         # self.shapecache = None
         # self.HasFeatures = False
@@ -61,14 +76,14 @@ class Detection(object):
         """
         Reads a binary file with spikes detected with the DetectFromRaw() method
         """
-        if os.stat(self.out_file_name).st_size == 0:
+        if os.stat(self.out_file_name+'.bin').st_size == 0:
             shapecache = np.asarray([]).reshape(0, 5)
             logging.warn(
                 "Loading an empty file {} . This usually happens " +
                 "when no spikes were detected due to the detection parameters" +
                 " being set too strictly".format(self.out_file_name))
         else:
-            sp_flat = np.memmap(self.out_file_name, dtype=np.int32, mode="r")
+            sp_flat = np.memmap(self.out_file_name+'.bin', dtype=np.int32, mode="r")
             assert sp_flat.shape[0] // (self.cutout_length + 5) is not \
                 sp_flat.shape[0] / (self.cutout_length + 5), \
                 "spike data has wrong dimensions"  # ???
@@ -92,16 +107,6 @@ class Detection(object):
         `LoadDetected`.
 
         Arguments:
-        file_name -- the path to the raw data file.
-        to_localize
-        cutout_start
-        cutout_end
-        threshold
-        maa
-        maxsl
-        minsl
-        ahpthr
-        out_file_name
         load -- load the detected spikes when finished
         """
         detectData(self.probe, str.encode(self.out_file_name),
