@@ -408,7 +408,6 @@ class Clustering(object):
               "converting to integer...")
         shapecache = np.memmap(
             "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
-        raise NotImplementedError("There's a bug, the first shape is not loaded.")
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
             tmp = (scale*np.transpose(
                 g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
@@ -493,7 +492,7 @@ class Clustering(object):
         self.IsClustered = False
 
         if append:
-            self.expinds.append(len(self.spikes) + 1)
+            self.expinds.append(len(self.spikes))
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
             self.filelist.append(filename)
         else:
