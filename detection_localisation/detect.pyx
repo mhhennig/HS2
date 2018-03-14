@@ -125,7 +125,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
-        print("# vm shape:"+str(len(vm/nRecCh)))
+        #print("# vm shape:"+str(len(vm/nRecCh)))
         det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
