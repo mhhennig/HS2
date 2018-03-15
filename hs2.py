@@ -12,36 +12,32 @@ from sklearn.decomposition import PCA
 from os.path import splitext
 
 
-class Detection(object):
-    """
-    This class provides a simple interface to the detection, localisation and
-    clustering of spike data from dense multielectrode arrays according to the
-    methods described in the following papers:
+class HSDetection(object):
+    """ This class provides a simple interface to the detection, localisation of
+    spike data from dense multielectrode arrays according to the methods
+    described in the following papers:
 
     Muthmann, J. O., Amin, H., Sernagor, E., Maccione, A., Panas, D.,
     Berdondini, L., ... & Hennig, M. H. (2015). Spike detection for large neural
-    populations using high density multielectrode arrays.
-    Frontiers in neuroinformatics, 9.
+    populations using high density multielectrode arrays. Frontiers in
+    neuroinformatics, 9.
 
     Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
     Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
-    large-scale, high-density multielectrode arrays.
-    Cell reports, 18(10), 2521-2532.
+    large-scale, high-density multielectrode arrays. Cell reports, 18(10),
+    2521-2532.
 
     Usage:
-    1. call the constructor with a single argument -- a NeuralProbe object:
-        HS = herdingspikes(Probe)
-    2. You can now load your data in three ways: with LoadDetected()
-    (automatically loads ProcessedSpikes); with DetectFromRaw (takes a path
-    to the raw data and all detection parameters) or with LoadH5 (takes a
-    previously saved instance of this class)
+        1. Create a HSDetection object by calling its constructor with a
+    Probe object and all the detection parameters (see documentation there).
+        2.Call DetectFromRaw.
+        3. Save the result, or create a HSClustering object.
     """
 
     def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes", save_all=False):
         """
-
         Arguments:
         probe -- probe object with raw data
         to_localize -- set False if spikes should only be detected, not
@@ -78,7 +74,8 @@ class Detection(object):
 
     def LoadDetected(self):
         """
-        Reads a binary file with spikes detected with the DetectFromRaw() method
+        Reads a binary file with spikes detected with the DetectFromRaw()
+        method. The file name is contained in HSDetection.out_file_name.
         """
         if os.stat(self.out_file_name).st_size == 0:
             shapecache = np.asarray([]).reshape(0, 5)
@@ -108,11 +105,11 @@ class Detection(object):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
-        to `ProcessedSpikes` and loads the latter into memory by calling
-        `LoadDetected`.
+        to HSDetection.out_file_name and loads the latter into memory by calling
+        LoadDetected if load=True.
 
         Arguments:
-        load -- load the detected spikes when finished
+        load -- bool: load the detected spikes when finished?
         """
         detectData(self.probe, str.encode(self.out_file_name[:-4]),
                    self.to_localize, self.probe.fps, self.threshold,
@@ -134,7 +131,6 @@ class Detection(object):
         event id.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
         window_size -- number of samples shown around a spike
-        cutout_start -- n. frames recorded before the spike peak in the cutout
         """
         pos, neighs = self.probe.positions, self.probe.neighbors
 
@@ -226,9 +222,27 @@ class Detection(object):
         ax.scatter(x[inds], y[inds], **kwargs)
         return ax
 
+    def Cluster(self):
+        return HSClustering(self)
 
-class Clustering(object):
+
+class HSClustering(object):
+    """ This class provides an easy interface to the clustering of spikes based
+    on spike location on the chip and spike waveform, as described in:
+
+    Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
+    Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
+    large-scale, high-density multielectrode arrays. Cell reports, 18(10),
+    2521-2532. """
     def __init__(self, arg1, cutout_length=None):
+        """ The constructor can be called in two ways:
+
+        - with a filename or list of filenames as an argument. These should be
+        either .hdf5 files saved by this class or a previous version of this
+        class, or .bin files saved by the HSDetection class. In the latter case,
+        the cutout_length must also be passed as a second argument.
+
+        - with an instance of HSDetection as a single argument. """
         if type(arg1) == str:  # case arg1 is a single filename
             arg1 = [arg1]
 
@@ -259,17 +273,17 @@ class Clustering(object):
     def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
                            **kwargs):
         """
-        Performs PCA on the available spike shapes, and clusters spikes based
-        on their (x, y) location and on the principal components of the shape.
-        Cluster memberships are available as self.spikes.cl.
-        Cluster information is available in the self.clusters dataframe.
+        Clusters spikes based on their (x, y) location and on the other features
+        in HSClustering.features. These are normally principal components of the
+        spike waveforms, computed by HSClustering.ShapePCA. Cluster memberships
+        are available as HSClustering.spikes.cl. Cluster information is
+        available in the HSClustering.clusters dataframe.
 
         Arguments:
-        alpha -- the weight given to PCA components, relative to spatial
-        components clustering_algorithm -- a sklearn.cluster class, defaults to
+        alpha -- the weight given to the other features, relative to spatial
+        components (which have weight 1.)
+        clustering_algorithm -- a sklearn.cluster class, defaults to
         sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN was also tested.
-        pca_ncomponents -- number of PCA components to be considered (def. 2).
-        pca_whiten -- whiten option of the PCA algorithm.
         **kwargs -- additional arguments are passed to the clustering class.
         This may include n_jobs > 1 for parallelisation.
         """
@@ -318,6 +332,15 @@ class Clustering(object):
         self.IsClustered = True
 
     def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000):
+        """
+        Finds the principal components (PCs) of spike shapes contained in the
+        class, and saves them to HSClustering.features, to be used for
+        clustering.
+
+        Arguments -- pca_ncomponents: number of PCs to be used (default 2)
+        pca_whiten -- whiten data before PCA. chunk_size: maximum number of
+        shapes to be used to find PCs, default 1 million.
+        """
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         if self.spikes.shape[0] > 1e6:
             print("Fitting PCA using 1e6 out of",
@@ -364,13 +387,18 @@ class Clustering(object):
 
     def SaveHDF5(self, filename, compression=None, sampling=None):
         """
-        Saves data, cluster centres and ClusterIDs to a hdf5 file.
-        Offers compression of the shapes, 'lzf'
-        appears a good trade-off between speed and performance.
+        Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers
+        compression of the shapes, 'lzf' appears a good trade-off between speed
+        and performance.
 
         If filename is a single name, then all will be saved to a single file.
         If filename is a list of names of the same length as the number of
         experiments, one file per experiment will be saved.
+
+        Arguments:
+        filename -- the names of the file or list of files to be saved.
+        compression -- passed to HDF5, for compression of shapes only.
+        sampling -- provide this information to include it in the file.
         """
 
         if type(filename) == str:
@@ -393,10 +421,11 @@ class Clustering(object):
         HS1.
 
         Arguments:
+        filename -- file to load from
         append -- append to data alreday im memory
-        compute_amplitudes -- compute spike amplitudes (slow)
+        compute_amplitudes -- compute spike amplitudes? (slow, default False)
         chunk_size -- read shapes in chunks of this size to avoid memory
-            problems
+        problems
         compute_cluster_sizes -- count number of spikes in each unit (slow)
         scale -- re-scale shapes (may be required for HS1 data)
         """
@@ -510,6 +539,8 @@ class Clustering(object):
         nshapes -- the number of shapes to plot (default 100).
         ncols -- the number of columns under which to distribute the plots.
         ax -- a matplotlib axis object (defaults to current axis).
+        ylim -- limits of the vertical axis of the plots. If None, try to figure
+        them out.
         """
         nrows = np.ceil(len(units) / ncols)
         if ax is None:
