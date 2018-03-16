@@ -7,7 +7,8 @@ from probe import BioCam
 from hs2 import Clustering
 
 data_path = '/disk/scratch/mhennig/P91_05_07_17_TestMotionSeq/raw/'
-files = ['P91_05_07_17_basicshort_stim1_ctl.brw', 'P91_05_07_17_swn_stim2_ctl.brw']
+files = ['P91_05_07_17_basicshort_stim1_ctl.brw', 'P91_05_07_17_swn_stim2_ctl.brw', 'P91_05_07_17_motionbandseq0_stim4_ctl.brw`']
+
 data_files = [data_path+f for f in files]
 
 # detection parameters
