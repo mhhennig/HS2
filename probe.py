@@ -61,10 +61,9 @@ class NeuralProbe(object):
                          [self.positions[ch, 1], self.positions[neighbor, 1]],
                          '--k', alpha=.7)
         plt.scatter(*self.positions.T)
+        plt.scatter(*self.positions[self.masked_channels].T, c='r')
         for i, pos in enumerate(self.positions):
             plt.annotate(i, pos)
-        plt.ylim([ymin, ymax])
-        plt.xlim([xmin, xmax])
 
     def Read(self, t0, t1):
         raise NotImplementedError("The Read function is not implemented for \
@@ -74,14 +73,15 @@ class NeuralProbe(object):
         channel_positions = []
         for channel in channels:
             if channel >= self.num_channels:
-                raise ValueError('Channel Index too big')
+                raise ValueError(
+                    'Channel index too large, maximum ' + self.num_channels)
             else:
                 channel_positions.append(self.positions[channel])
         return channel_positions
 
 
 class NeuroPixel(NeuralProbe):
-    def __init__(self, data_file_path=None, fps=30000, masked_channels=[385]):
+    def __init__(self, data_file_path=None, fps=30000, masked_channels=None):
 
         NeuralProbe.__init__(
             self, num_channels=385, spike_delay=5,
