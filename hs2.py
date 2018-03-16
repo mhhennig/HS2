@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, absolute_import
 import logging
 import pandas as pd
 import numpy as np
