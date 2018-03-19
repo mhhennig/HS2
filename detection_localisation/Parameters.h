@@ -19,7 +19,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
-#include<bits/stdc++.h>
+//#include<bits/stdc++.h>
 
 using namespace std;
 
