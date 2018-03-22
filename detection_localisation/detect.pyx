@@ -115,7 +115,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
 
     startTime = datetime.now()
     t0 = 0
-    while t0 + tInc + tCut2 <= nFrames:
+    # while t0 + tInc + tCut2 <= nFrames:
+    while t0 + tInc + tCut2 < nFrames:
         t1 = t0 + tInc
         print('# Analysing ' + str(t1 - t0) + ' frames; from ' + str(t0-tCut) + ' to ' + str(t1+tCut2))
         sys.stdout.flush()
@@ -125,12 +126,13 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
-        #print("# vm shape:"+str(len(vm/nRecCh)))
         det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
         if t0 < nFrames - tCut2:
+            print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
+        print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
 
     det.FinishDetection()
     endTime=datetime.now()
