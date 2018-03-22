@@ -389,7 +389,7 @@ of the first spike or the deque is empty.
                                            Parameters::noise_duration)) {
           if (Parameters::to_localize) {
             try {
-              if (!Parameters::debug && spike_to_be_added.frame > 20) {
+              if (Parameters::debug && spike_to_be_added.frame > 20) {
                 ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file,
                                                     filteredsp);
                 spikes_filtered_file.close();
