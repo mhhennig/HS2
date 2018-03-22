@@ -158,3 +158,28 @@ class Mea1k(NeuralProbe):
     def Read(self, t0, t1):
         return self.d['/sig'][self.channels_indices_routed,
                               t0:t1].T.ravel().astype(ctypes.c_short)
+
+class HierlmannVisapyEmulationProbe(NeuralProbe):
+    def __init__(self, data_file_path=None, fps=32000, masked_channels=None):
+
+        NeuralProbe.__init__(
+            self, num_channels=102, spike_delay=5,
+            spike_peak_duration=4, noise_duration=3,
+            noise_amp_percent=1, fps=fps,
+            inner_radius=20,
+            positions_file_path='probes/positions_hierlemann_visapy_emulation',
+            neighbors_file_path='probes/neighbormatrix_hierlemann_visapy_emulation',
+            masked_channels=masked_channels)
+        self.data_file = data_file_path
+        if data_file_path is not None:
+            self.d =  np.load('rawHierlmannVisapy.npy')
+            print(len(self.d))
+            print(self.num_channels)
+            assert len(self.d) / self.num_channels == len(self.d) // \
+                self.num_channels, 'Data not multiple of channel number'
+            self.nFrames = len(self.d) // self.num_channels
+        else:
+            print('Note: data file not specified, things may break')
+
+    def Read(self, t0, t1):
+        return read_flat(self.d, t0, t1, self.num_channels)

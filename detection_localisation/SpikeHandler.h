@@ -8,22 +8,6 @@ using namespace std;
 // Define Infinite (Using INT_MAX caused overflow problems)
 #define INF 10000
 
-struct Point
-{
-    int x;
-    int y;
-    int channel;
-};
-
-struct Line
-{
-    Point p1;
-    Point p2;
-    float a; //ax
-    float b; //by
-    float c; //c
-};
-
 struct CustomLessThan
 {
     bool operator()(tuple<int, float> const &lhs, tuple<int, float> const &rhs) const
@@ -44,12 +28,7 @@ void terminateSpikeHandler();
 //Inner neighbor creation methods
 float channelsDist(int start_channel, int end_channel);
 void fillNeighborLayerMatrices();
-Line createLine(Point p1, Point p2);
-void createBoundaryLines(Point curr_point, vector<Point> &boundary_points, vector<Line> &boundary_lines);
-bool acceptAsBoundaryPoint(Point curr_point, Point central_point, vector<Line> &boundary_lines);
-vector<int> getInnerNeighborsBounding(vector<tuple<int, float>> distances_neighbors, int central_channel);
 vector<int> getInnerNeighborsRadius(vector<tuple<int, float>> distances_neighbors, int central_channel);
-float distBetweenPoints(Point p1, Point p2);
 int** createInnerNeighborMatrix();
 int** createOuterNeighborMatrix();
 

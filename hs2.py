@@ -101,7 +101,7 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False):
+    def DetectFromRaw(self, load=False, verbose=False):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -119,6 +119,65 @@ class HSDetection(object):
         if load:
             # reload data into memory
             self.LoadDetected()
+
+    def PlotData(self, length, frame, channel, ax=None, window_size=200):
+        """
+        Draw a figure with an electrode and its neighbours, showing the raw
+        traces and events. Note that this requires loading the raw data in
+        memory again.
+
+        Arguments:
+        length -- amount of data to be shown
+        frame -- frame to be analyzed
+        channel -- channel where the graph is centered (contains a red dot)
+        ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        window_size -- number of samples shown around a spike
+        """
+        pos, neighs = self.probe.positions, self.probe.neighbors
+
+        #print(event.x, event.y)
+        cutlen = length
+        dst = np.abs(pos[channel][0] - pos[neighs[channel]][:, 0])
+        interdistance = np.min(dst[dst > 0])
+        if ax is None:
+            ax = plt.gca()
+
+        # scatter of the large grey balls for electrode location
+        x = pos[[neighs[channel], 0]]
+        y = pos[[neighs[channel], 1]]
+        plt.scatter(x, y, s=1600, alpha=0.2)
+
+        # electrode numbers
+        for i, txt in enumerate(neighs[channel]):
+            ax.annotate(txt, (x[i], y[i]))
+
+        ws = window_size // 2
+        t1 = np.max((0, frame - ws))
+        t2 = frame + ws
+        scale = interdistance / 110.
+        trange = (np.arange(t1, t2) - frame) * scale
+        start_bluered = frame - t1 - self.cutout_start
+        trange_bluered = trange[start_bluered:start_bluered + cutlen]
+        trange_bluered = np.arange(-self.cutout_start,
+                                   -self.cutout_start + cutlen) * scale
+
+        data = self.probe.Read(t1, t2).reshape(
+            (t2 - t1, self.probe.num_channels))
+
+        # grey and blue traces
+        for n in neighs[channel]:
+            col = 'g' if n in self.probe.masked_channels else 'b'
+            plt.plot(pos[n][0] + trange,
+                     pos[n][1] + data[:, n] * scale, 'gray')
+            plt.plot(pos[n][0] + trange_bluered,
+                     pos[n][1] + data[start_bluered:start_bluered + cutlen,
+                                      n] * scale, col)
+
+        # red overlay for central channel
+        plt.scatter(pos[channel][0], pos[channel][1],  s=200, c='r')
+
+        # # red dot of event location
+        # plt.scatter(event.x, event.y, s=80, c='r')
 
     def PlotTracesChannels(self, eventid, ax=None, window_size=200):
         """

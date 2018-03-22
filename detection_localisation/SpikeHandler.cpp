@@ -186,6 +186,7 @@ given.
 
   spikes_filtered_file.open(file_name + ".bin", ios::binary);
   if (_verbose) {
+      //cout << "OPEN" << endl;
     filteredsp.open(file_name + "_filtered_spikes.asc");
   }
 }
@@ -375,53 +376,6 @@ of the first spike or the deque is empty.
       }
     }
 
-    // if(one_pos == false) {
-    //     for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
-    // 		try {
-    // 			curr_neighbor_channel =
-    // Parameters::inner_neighbor_matrix[channel][i];
-    // 		} catch (...) {
-    // 			spikes_filtered_file.close();
-    // 			cout << "Neighbor matrix improperly created. Terminating SpikeHandler"
-    // << endl;
-    // 			exit(EXIT_FAILURE);
-    // 		}
-    //         //Out of inner neighbors
-    // 		if(curr_neighbor_channel != -1) {
-    //             //Masked neighbor
-    //             if(Parameters::masked_channels[curr_neighbor_channel] == 1) {
-    // 				for(int j = 0; j < amp_cutout_size; j++) {
-    // 					try {
-    //   						curr_reading =
-    //   Parameters::raw_data[(frame - Parameters::spike_delay -
-    //   frames_processed + Parameters::index_data + j)*Parameters::num_channels
-    //   + curr_neighbor_channel];
-    // 					} catch (...) {
-    // 						spikes_filtered_file.close();
-    // 						cout << "Raw Data and it parameters entered incorrectly, could not
-    // access data. Terminating SpikeHandler." << endl;
-    // 						exit(EXIT_FAILURE);
-    // 					}
-    //
-    // 					int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE -
-    // Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]);
-    //                     cout << "curr amp: " << curr_amp << endl;
-    //                     cout << "curr reading: " << curr_reading << endl;
-    //                     cout << "aGlobal: " << Parameters::aGlobal << endl;
-    //                     cout << "baselines: " <<
-    //                     Parameters::baselines[curr_neighbor_channel][Parameters::index_baselines]
-    //                     << endl;
-    //                     cout << "ASCALE: " << ASCALE << endl;
-    // 				}
-    //             }
-    // 		}
-    // 		//Out of neighbors to add cutout for
-    // 		else {
-    // 			break;
-    // 		}
-    // 	}
-    // }
-
     bool isAdded = false;
     while (!isAdded) {
       if (Parameters::spikes_to_be_processed.empty()) {
@@ -435,7 +389,7 @@ of the first spike or the deque is empty.
                                            Parameters::noise_duration)) {
           if (Parameters::to_localize) {
             try {
-              if (Parameters::debug && spike_to_be_added.frame > 20) {
+              if (!Parameters::debug && spike_to_be_added.frame > 20) {
                 ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file,
                                                     filteredsp);
                 spikes_filtered_file.close();
@@ -537,16 +491,7 @@ void fillNeighborLayerMatrices() {
     if (distances_neighbors.size() != 0) {
       sort(begin(distances_neighbors), end(distances_neighbors),
            CustomLessThan());
-      if (Parameters::debug) {
-        cout << "Found Distances" << endl;
-      }
-      // inner_neighbors = getInnerNeighborsBounding(distances_neighbors, i);
       inner_neighbors = getInnerNeighborsRadius(distances_neighbors, i);
-    }
-
-    if (Parameters::debug) {
-      cout << "Got inner neighbors" << endl;
-      cout << i << endl;
     }
 
     vector<int>::iterator it;
@@ -563,10 +508,6 @@ void fillNeighborLayerMatrices() {
     while (k < Parameters::max_neighbors - 1) {
       Parameters::inner_neighbor_matrix[i][k] = -1;
       ++k;
-    }
-    if (Parameters::debug) {
-      cout << "Filling Inner Neighbors" << endl;
-      cout << i << endl;
     }
     // Fill outer neighbor matrix
     k = 0;
@@ -614,150 +555,6 @@ getInnerNeighborsRadius(vector<tuple<int, float>> distances_neighbors,
     }
   }
   return inner_channels;
-}
-
-vector<int>
-getInnerNeighborsBounding(vector<tuple<int, float>> distances_neighbors,
-                          int central_channel) {
-  vector<int> inner_neighbors;
-  vector<Point> boundary_points;
-  vector<Line> boundary_lines;
-  vector<tuple<int, float>>::iterator it;
-  it = distances_neighbors.begin();
-  int curr_neighbor;
-  int central_x = Parameters::channel_positions[central_channel][0];
-  int central_y = Parameters::channel_positions[central_channel][1];
-  Point central_point = {central_x, central_y, central_channel};
-  Point curr_point;
-  Point prev_point;
-  int curr_x;
-  int curr_y;
-  while (it != distances_neighbors.end()) {
-    curr_neighbor = get<0>(*it);
-    curr_x = Parameters::channel_positions[curr_neighbor][0];
-    curr_y = Parameters::channel_positions[curr_neighbor][1];
-    curr_point = {curr_x, curr_y, curr_neighbor};
-
-    if (boundary_points.size() == 0) {
-      boundary_points.push_back(curr_point);
-      ++it;
-    } else if (boundary_points.size() == 1) {
-      prev_point = boundary_points.front();
-      Line newLine = createLine(curr_point, prev_point);
-      boundary_lines.push_back(newLine);
-      boundary_points.push_back(curr_point);
-      ++it;
-    } else {
-      if (acceptAsBoundaryPoint(curr_point, central_point, boundary_lines)) {
-        boundary_points.push_back(curr_point);
-        createBoundaryLines(curr_point, boundary_points, boundary_lines);
-        ++it;
-      } else {
-        ++it;
-      }
-    }
-  }
-  vector<int> inner_channels;
-  vector<Point>::iterator it2;
-  it2 = boundary_points.begin();
-  Point curr_bp;
-  int curr_channel;
-  while (it2 != boundary_points.end()) {
-    curr_bp = *it2;
-    curr_channel = curr_bp.channel;
-    inner_channels.push_back(curr_channel);
-    ++it2;
-  }
-  return inner_channels;
-}
-
-void createBoundaryLines(Point curr_point, vector<Point> &boundary_points,
-                         vector<Line> &boundary_lines) {
-  Point prev_bp;
-  for (size_t i = 0; i < boundary_points.size(); i++) {
-    prev_bp = boundary_points.at(i);
-    Line newLine = createLine(curr_point, prev_bp);
-    boundary_lines.push_back(newLine);
-  }
-}
-
-bool acceptAsBoundaryPoint(Point curr_point, Point central_point,
-                           vector<Line> &boundary_lines) {
-  bool accept_bp = true;
-  Line curr_bl;
-  float line_dist_from_curr_point;
-  float line_dist_from_central_point;
-  vector<Line>::iterator it;
-  it = boundary_lines.begin();
-  while (it != boundary_lines.end()) {
-    curr_bl = *it;
-    line_dist_from_curr_point =
-        curr_bl.a * curr_point.x + curr_bl.b * curr_point.y + curr_bl.c;
-    line_dist_from_central_point =
-        curr_bl.a * central_point.x + curr_bl.b * central_point.y + curr_bl.c;
-    // On same side of boundary line
-    if (line_dist_from_curr_point < 0 && line_dist_from_central_point < 0) {
-      accept_bp = true;
-    }
-    // On same side of boundary line
-    else if (line_dist_from_curr_point > 0 &&
-             line_dist_from_central_point > 0) {
-      accept_bp = true;
-    } else if (line_dist_from_central_point == 0) {
-      accept_bp = true;
-    } else if (line_dist_from_curr_point == 0) {
-      accept_bp = true;
-    }
-    // On opposite sides of boundary line
-    else {
-      accept_bp = false;
-      break;
-    }
-    ++it;
-  }
-  return accept_bp;
-}
-
-float distBetweenPoints(Point p1, Point p2) {
-  float x_displacement;
-  float y_displacement;
-  float dist;
-  x_displacement = p1.x - p2.x;
-  y_displacement = p1.y - p2.y;
-  dist = sqrt(pow(x_displacement, 2) + pow(y_displacement, 2));
-
-  return dist;
-}
-
-Line createLine(Point p1, Point p2) {
-  Line newLine;
-  float dx, dy;
-  float slope;
-  float y_intercept;
-  dx = p1.x - p2.x;
-  dy = p1.y - p2.y;
-  if (dx == 0) {
-    newLine.p1 = p1;
-    newLine.p2 = p2;
-    newLine.a = 1;
-    newLine.b = 0;
-    newLine.c = -p1.x;
-  } else if (dy == 0) {
-    newLine.p1 = p1;
-    newLine.p2 = p2;
-    newLine.a = 0;
-    newLine.b = 1;
-    newLine.c = -p1.y;
-  } else {
-    slope = dy / dx;
-    y_intercept = p1.y - slope * p1.x;
-    newLine.p1 = p1;
-    newLine.p2 = p2;
-    newLine.a = -slope;
-    newLine.b = 1;
-    newLine.c = -y_intercept;
-  }
-  return newLine;
 }
 
 int **createInnerNeighborMatrix() {

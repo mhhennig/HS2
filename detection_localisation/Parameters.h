@@ -23,13 +23,6 @@
 
 using namespace std;
 
-//Event is a sparse representation of a spike. Used for speed when spike is not necessary.
-struct Event {
-	int amplitude;
-	int channel;
-	int frame;
-};
-
 //Internal representation of a spike. User has no need to use it.
 struct Spike {
 	int amplitude;
@@ -37,9 +30,9 @@ struct Spike {
 	int frame;
 	vector<int> amp_cutouts;
 	vector<int32_t> written_cutout;
-    //These contain all information of what occurred at neighbors
-    vector<Event> inner_neighbors;
-    vector<Event> outer_neighbors;
+    // //These contain all information of what occurred at neighbors
+    // vector<Event> inner_neighbors;
+    // vector<Event> outer_neighbors;
 };
 
 namespace Parameters {
