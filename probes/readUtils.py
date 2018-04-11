@@ -2,6 +2,7 @@
 import h5py
 import ctypes
 
+import numpy as np
 
 def read_flat(d, t0, t1, nch):
     return d[t0*nch:t1*nch].astype(ctypes.c_short)
@@ -76,3 +77,22 @@ def readHDF5t_101(rf, t0, t1, nch):
         raise Exception('Not sure about this one.')
         return rf['3BData/Raw'][nch*t1:nch*t0].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
+
+
+def getNeuroSeekerParams(rf, pipette=False):
+    if pipette:
+        return rf['kampff_probe_data'].attrs['no_frames'], rf.attrs['frequency'], 1, [1]
+
+    return (rf['kampff_probe_data'].attrs['no_frames'],
+            rf.attrs['frequency'],
+            rf['kampff_probe_data'].attrs['no_channels'],
+            np.arange(rf['kampff_probe_data'].attrs['no_channels']),
+            rf.attrs['probe_closest_electrode'])
+
+
+def readNeuroSeekerProbe(rf, t0, t1):
+    return (rf['kampff_probe_data'][t0:t1].flatten() - 20000).astype(ctypes.c_short)
+
+
+def readNeuroSeekerPipette(rf, t0, t1):
+    return 50000 - rf['kampff_pipette_data'][t0:t1].flatten()
