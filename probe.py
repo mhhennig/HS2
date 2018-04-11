@@ -172,9 +172,9 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
             masked_channels=masked_channels)
         self.data_file = data_file_path
         if data_file_path is not None:
-            self.d =  np.load('rawHierlmannVisapy.npy')
-            print(len(self.d))
-            print(self.num_channels)
+            self.d =  np.load(self.data_file)
+            print('File size: '+str(len(self.d)))
+            print('Number of channels: '+str(self.num_channels))
             assert len(self.d) / self.num_channels == len(self.d) // \
                 self.num_channels, 'Data not multiple of channel number'
             self.nFrames = len(self.d) // self.num_channels
