@@ -14,9 +14,34 @@ from tqdm import tqdm
 
 
 class OptimiseParameters(object):
+    """ This class provides a simple way to optimise detection and sorting parameters of a spike sorting toolkit. The problem of finding best parameters can be reframed as finding a minimum of such black-box function f(x) that given a vector of (hyper)parameters x it performs detection/sorting and returns some scalar utility value reflecting the detection/sorting correctness. This minimum is searched for using Bayesian Optimisation with a Gaussian Process to approximate f(x) and the Expected Improvement acquisition function to select next values of x to try. Together with parameter regularisation, this provides a powerful framework for both optimisation and validation of spike sorting toolkits.
+
+    To automatically evaluate the correctness of detection/sorting a paired ground-truth(GT) recording is required: a spiketrain with timestamps of true events.
+
+    The correctness (=f(x)) of the detection performance is then determined as the number of detections missed on a particular channel (i.e. FNs). For sorting, we examine the cluster with most GT spikes, define precision & recall using that cluster and then define the utility as a negative F_1 score.
+
+    Usage:
+        1. Create an OptimiseParameters object by calling its constructor with a GT spiketrain, a HSDetection object, a HSClustering object and a Probe object. Use optimise_detection and optimise_clustering flags to specify parameters of which part of the pipeline shall be optimised.
+        2. Call run().
+
+    Parameters:
+        closest_ch - a channel on the probe closest to the ground-truth recording device. I.E. a channel on which we expect the detection to be perfect.
+
+        detec_params_to_opt - dictionary of parameters to be optimised together with respective ranges of their values defined as {"parameter_name": (lowest_value_to_be_tried, highest_value_to_be_tried), "parameter2_name": ...}.
+
+        clust_params_to_opt - see detec_params_to_opt.
+
+        true_positive_timewindow - (miliseconds). when optimising detection, how long to look before and after a GT spike for a spike on a channel on the probe.
+
+        detec_run_schedule - a tuple where the *second* element is the number of random initiations before the optimisation begins, and the *first* element is the number of iterations the optimisation should be run for, including the random initiations.
+
+        clust_run_schedule - see detec_run_schedule.
+
+        clust_max_value - the current implementation (Mar2018) of HSClustering throws an error when parameters are set to ridiculous values. When this happens, what utility value should be returned.
+
+        detec_outfile, clust_outfile - paths where optimisation results will be stored in a pickled format.
     """
-    TODO: nice detailed comment with usage & constructor description
-    """
+
     def __init__(self, gt_spiketrain, closest_ch, Probe, HSDetection, detec_params_to_opt, HSClustering, clust_params_to_opt, optimise_detection=True, optimise_clustering=True, true_positive_timewindow=0.3, detec_run_schedule=[150, 100], clust_run_schedule=[150, 100], clust_max_value=0, detec_outfile='result_optim_params_detect', clust_outfile='result_optim_params_clust'):
 
         logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -45,9 +70,16 @@ class OptimiseParameters(object):
 
         # Double-check threshold parameter is included for detection oprimisation
         if optimise_detection:
-            assert 'threshold' in self.detec_params, "The detec_params_to_opt dictionary doesn't contain an entry for 'threshold' parameter. This parameter is required for regularisation."
+            assert 'threshold' in self.detec_params, "The detec_params_to_opt dictionary doesn't contain an entry for 'threshold' parameter. This parameter is required as it is used for detection regularisation."
 
     def run(self):
+        """ Runs the optimisation of detection or sorting, depending of the optimise_detection and optimise_clustering flags.
+
+        For each, saves results in detec_outfile or clust_outfile respectively. If both detection and sorting are being optimised, the most optimal detection parameters found are used for optimising sorting.
+        The most optimal clustering configuration is saved into Clusters.hdf5
+
+        Returns None, unless sorting is optimised, in which case returns a new HSClustering object with the optimal clustering performance.
+        """
         if self.optimise_detection:
             results = self.optimise(
                 self.detec_params, self.detection_wrapper, self.detec_run_schedule)
@@ -97,7 +129,7 @@ class OptimiseParameters(object):
 
             self.save_results(results, self.clust_outfile)
 
-        return self.HSC
+            return self.HSC
 
     def optimise(self, parameter_definitions, function, run_schedule):
         # Parse parameter definitions to a list of skopt dimensions
@@ -152,7 +184,8 @@ class OptimiseParameters(object):
 
         logging.info("Detecting spikes with parameters: {}".format(parameters))
 
-        # Little hack to redirect the C++ output, parse it and log it in a nice progress bar
+        # Little hack to redirect the C++ output of HSDetection, parse it and log
+        # it in a nice progress bar
         class ParseSTDOut:
             def __init__(self, pbar):
                 self.pbar = pbar
@@ -171,14 +204,13 @@ class OptimiseParameters(object):
                 self.HSD.DetectFromRaw(load=True)
 
     def detection_utility(self, missed_detection_per_channel, threshold_value):
-        """Defines the utility for evaluating detection performance.
+        """ Defines the utility for evaluating detection performance.
         How many detections were missed on the most verbose channel REGULARISED by the threshold (we want to have threshold as strict as possible).
         """
         return missed_detection_per_channel[self.closest_ch] - threshold_value
 
     def detection_evaluate_per_channel(self, ch_spikes, neigh_spikes, channel, eval_queue):
-        """
-         For every groundtruth spike, finds the closest spike from the current spiketrain and computes it's difference. If this difference is smaller than the true_positive_timewindow, we count it as a True Positive, else a True Negative. This procedure is first performed on the central channel spiketrain (ch_spikes) and then on the combined spiketrain from all neighbouring channels (neigh_spikes)
+        """ For every groundtruth spike, finds the closest spike from the current spiketrain and computes it's difference. If this difference is smaller than the true_positive_timewindow, we count it as a True Positive, else a True Negative. This procedure is first performed on the central channel spiketrain (ch_spikes) and then on the combined spiketrain from all neighbouring channels (neigh_spikes)
         """
 
         # If no spikes detected, count all gt_spikes as FNs
@@ -263,8 +295,7 @@ class OptimiseParameters(object):
         eval_queue.put((channel, sorted(TPs), sorted(FNs)))
 
     def detection_evaluate(self, n_CPUs=cpu_count() - 1):
-        """
-         Parallelised detection_evaluate_per_channel() over n_CPUs processes. Each process is given spiketrain from one channel (data-parallelism).
+        """ Parallelised detection_evaluate_per_channel() over n_CPUs processes. Each process is given spiketrain from one channel (data-parallelism).
         """
         num_channels = self.HSD.probe.num_channels
 
@@ -315,9 +346,10 @@ class OptimiseParameters(object):
         clustering_params = {key: chosen_values[i] for i, key in enumerate(self.clust_params)}
         logging.info("Clustering spikes with parameters: {}".format(clustering_params))
         try:
-            self.HSC.ShapePCA(pca_ncomponents=chosen_values[2], pca_whiten=True)
-            self.HSC.CombinedClustering(alpha=chosen_values[1],
-                                        bandwidth=chosen_values[0],
+            self.HSC.ShapePCA(
+                pca_ncomponents=clustering_params['pca_ncomponents'], pca_whiten=True)
+            self.HSC.CombinedClustering(alpha=clustering_params['alpha'],
+                                        bandwidth=clustering_params['bandwidth'],
                                         bin_seeding=True,
                                         min_bin_freq=2,
                                         n_jobs=-1)
@@ -349,8 +381,7 @@ class OptimiseParameters(object):
         return -1 * 2 * (precision * recall) / (precision + recall)
 
     def clustering_evaluate(self):
-        """
-         Finds the cluster which contains the most GT spikes and identifies TPs and FPs:
+        """ Finds the cluster which contains the most GT spikes and identifies TPs and FPs:
          TP = a GT spike in this clusters
          FP = a spike in this cluster which is not in the GT
         """
