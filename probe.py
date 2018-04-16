@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 from probes.readUtils import read_flat
 from probes.readUtils import openHDF5file, getHDF5params
 from probes.readUtils import readHDF5t_100, readHDF5t_101
+from probes.readUtils import getNeuroSeekerParams, readNeuroSeekerProbe
 import h5py
 import ctypes
 import os.path
@@ -195,3 +196,21 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
+
+class NeuroSeeker_128(NeuralProbe):
+    """
+     A 128-channel probe designed by the NeuroSeeker project in 2015.
+     https://doi.org/10.1109/TRANSDUCERS.2015.7181274
+    """
+    def __init__(self, data_file_path):
+        NeuralProbe.__init__(self, num_channels=128, spike_delay=5,
+                             spike_peak_duration=5, noise_duration=2,
+                             noise_amp_percent=.95, fps=None, inner_radius=1.42,
+                             positions_file_path='probes/positions_neuroseeker_128',
+                             neighbors_file_path='probes/neighbormatrix_neuroseeker_128')
+        self.data_file = data_file_path
+        self.d = openHDF5file(data_file_path)
+        self.nFrames, self.fps, self.num_channels, chIndices, self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
+
+    def Read(self, t0, t1):
+        return readNeuroSeekerProbe(self.d, t0, t1)

@@ -72,6 +72,13 @@ class HSDetection(object):
             self.out_file_name = out_file_name + ".bin"
         self.save_all = save_all
 
+    def SetAddParameters(self, dict_of_new_parameters):
+        """
+         Adds and merges dict_of_new_parameters with the current fields of the object.
+         Uses the PEP448 convention to group two dics together.
+        """
+        self.__dict__ = {**self.__dict__, **dict_of_new_parameters}
+
     def LoadDetected(self):
         """
         Reads a binary file with spikes detected with the DetectFromRaw()
