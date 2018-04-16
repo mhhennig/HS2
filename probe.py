@@ -6,6 +6,13 @@ from probes.readUtils import openHDF5file, getHDF5params
 from probes.readUtils import readHDF5t_100, readHDF5t_101
 import h5py
 import ctypes
+import os.path
+
+this_file = os.path.dirname(os.path.abspath(__file__))
+
+
+def in_probes_dir(file):
+    return os.path.join(this_file, 'probes', file)
 
 
 class NeuralProbe(object):
@@ -88,8 +95,8 @@ class NeuroPixel(NeuralProbe):
             spike_peak_duration=4, noise_duration=3,
             noise_amp_percent=1, fps=fps,
             inner_radius=40,
-            positions_file_path='probes/positions_neuropixel',
-            neighbors_file_path='probes/neighbormatrix_neuropixel',
+            positions_file_path=in_probes_dir('positions_neuropixel'),
+            neighbors_file_path=in_probes_dir('neighbormatrix_neuropixel'),
             masked_channels=masked_channels)
         self.data_file = data_file_path
         if data_file_path is not None:
@@ -119,13 +126,14 @@ class BioCam(NeuralProbe):
             print('Note: data file not specified, setting some defaults')
             nRecCh = 4096
             sfd = fps
-        NeuralProbe.__init__(self, num_channels=nRecCh, spike_delay=5,
-                             spike_peak_duration=4, noise_duration=2,
-                             noise_amp_percent=1, fps=sfd,
-                             inner_radius=1.5,
-                             positions_file_path='probes/positions_biocam',
-                             neighbors_file_path='probes/neighbormatrix_biocam',
-                             masked_channels=masked_channels)
+        NeuralProbe.__init__(
+            self, num_channels=nRecCh, spike_delay=5,
+            spike_peak_duration=4, noise_duration=2,
+            noise_amp_percent=1, fps=sfd,
+            inner_radius=1.5,
+            positions_file_path=in_probes_dir('positions_biocam'),
+            neighbors_file_path=in_probes_dir('neighbormatrix_biocam'),
+            masked_channels=masked_channels)
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
@@ -135,13 +143,14 @@ class Mea1k(NeuralProbe):
     def __init__(self, data_file_path=None, fps=20000, number_of_frames=4450600,
                  masked_channels=None):
 
-        NeuralProbe.__init__(self, num_channels=69, spike_delay=5,
-                             spike_peak_duration=4, noise_duration=2,
-                             noise_amp_percent=1, fps=fps,
-                             inner_radius=20,
-                             positions_file_path='probes/positions_mea1k',
-                             neighbors_file_path='probes/neighbormatrix_mea1k',
-                             masked_channels=masked_channels)
+        NeuralProbe.__init__(
+            self, num_channels=69, spike_delay=5,
+            spike_peak_duration=4, noise_duration=2,
+            noise_amp_percent=1, fps=fps,
+            inner_radius=20,
+            positions_file_path=in_probes_dir('positions_mea1k'),
+            neighbors_file_path=in_probes_dir('neighbormatrix_mea1k'),
+            masked_channels=masked_channels)
         self.data_file = data_file_path
         if data_file_path is not None:
             d = h5py.File(data_file_path)
@@ -159,6 +168,7 @@ class Mea1k(NeuralProbe):
         return self.d['/sig'][self.channels_indices_routed,
                               t0:t1].T.ravel().astype(ctypes.c_short)
 
+
 class HierlmannVisapyEmulationProbe(NeuralProbe):
     def __init__(self, data_file_path=None, fps=32000, masked_channels=None):
 
@@ -167,12 +177,14 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
             spike_peak_duration=4, noise_duration=3,
             noise_amp_percent=1, fps=fps,
             inner_radius=20,
-            positions_file_path='probes/positions_hierlemann_visapy_emulation',
-            neighbors_file_path='probes/neighbormatrix_hierlemann_visapy_emulation',
+            positions_file_path=in_probes_dir(
+                'positions_hierlemann_visapy_emulation'),
+            neighbors_file_path=in_probes_dir(
+                'neighbormatrix_hierlemann_visapy_emulation'),
             masked_channels=masked_channels)
         self.data_file = data_file_path
         if data_file_path is not None:
-            self.d =  np.load(self.data_file)
+            self.d = np.load(self.data_file)
             print('File size: '+str(len(self.d)))
             print('Number of channels: '+str(self.num_channels))
             assert len(self.d) / self.num_channels == len(self.d) // \
