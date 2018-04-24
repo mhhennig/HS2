@@ -21,7 +21,7 @@ class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
                  noise_duration, noise_amp_percent, inner_radius,
                  fps, positions_file_path, neighbors_file_path,
-                 masked_channels=None):
+                 masked_channels=None, recorded_channels=None):
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -37,6 +37,25 @@ class NeuralProbe(object):
 
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
+
+        # if a probe only records a subset of channels, filter out unused channels
+        # this may happen in Biocam recordings
+        # note this uses positions to identify recorded channels
+        # requires channels are an ordered list
+        if recorded_channels is not None:
+            inds = np.zeros(self.num_channels, dtype=int)
+            for i,c in enumerate(recorded_channels):
+                inds[i] = np.where(np.all((self.positions-np.array([c[0]-1,c[1]-1]))==0, axis=1))[0]
+            self.positions = self.positions[inds]
+            x0 = np.min([p[0] for p in self.positions])
+            y0 = np.min([p[1] for p in self.positions])
+            x1 = np.max([p[0] for p in self.positions])
+            y1 = np.max([p[1] for p in self.positions])
+            lm = np.zeros((64,64),dtype=int)-1
+            lm[self.positions[0][0]:, self.positions[0][1]:] = np.arange(self.num_channels).reshape(x1-x0+1, y1-y0+1).T
+            self.neighbors = [lm.flatten()[self.neighbors[i]] for i in inds]
+            self.neighbors = [n[(n>=0)] for n in self.neighbors]
+            self.positions = self.positions-np.min(self.positions,axis=0)
 
     # Load in neighbor and positions files
     def loadNeighbors(self, neighbors_file_path):
@@ -124,9 +143,15 @@ class BioCam(NeuralProbe):
             else:
                 self.read_function = readHDF5t_101
         else:
-            print('Note: data file not specified, setting some defaults')
+            print('# Note: data file not specified, setting some defaults')
             nRecCh = 4096
             sfd = fps
+        if nRecCh is not 4096:
+            print('# Note: only '+str(nRecCh)+' channels recorded, fixing positions/neighbors')
+            print('# This may break!')
+            recorded_channels = self.d['3BRecInfo']['3BMeaStreams']['Raw']['Chs']
+        else:
+            recorded_channels = None
         NeuralProbe.__init__(
             self, num_channels=nRecCh, spike_delay=5,
             spike_peak_duration=4, noise_duration=2,
@@ -134,7 +159,7 @@ class BioCam(NeuralProbe):
             inner_radius=1.5,
             positions_file_path=in_probes_dir('positions_biocam'),
             neighbors_file_path=in_probes_dir('neighbormatrix_biocam'),
-            masked_channels=masked_channels)
+            masked_channels=masked_channels, recorded_channels=recorded_channels)
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)

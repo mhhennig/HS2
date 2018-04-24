@@ -17,7 +17,12 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
-        void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay,
+        # void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay,
+        #                       int spike_peak_duration, string file_name, int noise_duration,
+        #                       float noise_amp_percent, float inner_radius, int* _masked_channels, \
+        #                       int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
+        #                       int maa, int ahpthr, int maxsl, int minsl, bool verbose)
+        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
@@ -111,7 +116,17 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+    cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
+    # cdef np.ndarray[long, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_long)
+    for i,p in enumerate(probe.positions):
+      position_matrix[i,0] = p[0]
+      position_matrix[i,1] = p[1]
+    cdef np.ndarray[int, ndim=2, mode = "c"] neighbor_matrix = np.zeros((nRecCh,np.max([len(p) for p in probe.neighbors])), dtype=ctypes.c_int)-1
+    for i,p in enumerate(probe.neighbors):
+      neighbor_matrix[i,:len(p)] = p
+
+    det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+    # det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
 
     startTime = datetime.now()
     t0 = 0
