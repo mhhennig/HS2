@@ -232,19 +232,23 @@ class HSDetection(object):
 
         data = self.probe.Read(t1, t2).reshape(
             (t2 - t1, self.probe.num_channels))
-
+        if np.mean(data)>1000:
+            ys = -2048
+        else:
+            ys = 0
+        data[data-np.mean(data)<-1000] = -ys
         # grey and blue traces
         for n in neighs[event.ch]:
             col = 'g' if n in self.probe.masked_channels else 'b'
             plt.plot(pos[n][0] + trange,
-                     pos[n][1] + data[:, n] * scale, 'gray')
+                     pos[n][1] + (data[:, n]+ys) * scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
-                     pos[n][1] + data[start_bluered:start_bluered + cutlen,
-                                      n] * scale, col)
+                     pos[n][1] + (data[start_bluered:start_bluered + cutlen,
+                                      n]+ys) * scale, col)
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
-                 pos[event.ch][1] + event.Shape * scale, 'r')
+                 pos[event.ch][1] + (event.Shape+ys) * scale, 'r')
 
         # red dot of event location
         plt.scatter(event.x, event.y, s=80, c='r')
