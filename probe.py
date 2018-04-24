@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from probes.readUtils import read_flat
 from probes.readUtils import openHDF5file, getHDF5params
-from probes.readUtils import readHDF5t_100, readHDF5t_101
+from probes.readUtils import readHDF5t_100, readHDF5t_101, readHDF5t_100_i, readHDF5t_101_i
 from probes.readUtils import getNeuroSeekerParams, readNeuroSeekerProbe
 import h5py
 import ctypes
@@ -136,19 +136,26 @@ class BioCam(NeuralProbe):
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = openHDF5file(data_file_path)
-            self.nFrames, sfd, nRecCh, chIndices, file_format = getHDF5params(
+            self.nFrames, sfd, nRecCh, chIndices, file_format, inversion = getHDF5params(
                 self.d)
+            print('# Signal inversion looks like '+str(inversion)+', guessing he right method for data access.\n# If your detection results look strange, signal polarity is wrong. With 3Brain you never know when they swap it next :)')
             if file_format == 100:
-                self.read_function = readHDF5t_100
+                if inversion is -1:
+                    self.read_function = readHDF5t_100
+                else:
+                    self.read_function = readHDF5t_100_i
             else:
-                self.read_function = readHDF5t_101
+                if inversion is -1:
+                    self.read_function = readHDF5t_101
+                else:
+                    self.read_function = readHDF5t_101_i
         else:
             print('# Note: data file not specified, setting some defaults')
             nRecCh = 4096
             sfd = fps
         if nRecCh is not 4096:
             print('# Note: only '+str(nRecCh)+' channels recorded, fixing positions/neighbors')
-            print('# This may break!')
+            print('# This may break - known to work only for rectangular sections!')
             recorded_channels = self.d['3BRecInfo']['3BMeaStreams']['Raw']['Chs']
         else:
             recorded_channels = None
@@ -188,7 +195,7 @@ class Mea1k(NeuralProbe):
             self.channels_indices_routed = channel_indices[routed]
             self.nFrames = number_of_frames
         else:
-            print('Note: data file not specified, setting some defaults')
+            print('# Note: data file not specified, setting some defaults')
 
     def Read(self, t0, t1):
         return self.d['/sig'][self.channels_indices_routed,
@@ -217,7 +224,7 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
                 self.num_channels, 'Data not multiple of channel number'
             self.nFrames = len(self.d) // self.num_channels
         else:
-            print('Note: data file not specified, things may break')
+            print('# Note: data file not specified, things may break')
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)

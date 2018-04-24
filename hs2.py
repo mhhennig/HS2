@@ -186,7 +186,7 @@ class HSDetection(object):
         # # red dot of event location
         # plt.scatter(event.x, event.y, s=80, c='r')
 
-    def PlotTracesChannels(self, eventid, ax=None, window_size=200):
+    def PlotTracesChannels(self, eventid, ax=None, window_size=200, show_channels=True, ascale=1, show_channel_numbers=True, show_loc=True):
         """
         Draw a figure with an electrode and its neighbours, showing the raw
         traces and events. Note that this requires loading the raw data in
@@ -214,16 +214,18 @@ class HSDetection(object):
         # scatter of the large grey balls for electrode location
         x = pos[[neighs[event.ch], 0]]
         y = pos[[neighs[event.ch], 1]]
-        plt.scatter(x, y, s=1600, alpha=0.2)
+        if show_channels:
+            plt.scatter(x, y, s=1600, alpha=0.2)
 
         # electrode numbers
-        for i, txt in enumerate(neighs[event.ch]):
-            ax.annotate(txt, (x[i], y[i]))
+        if show_channel_numbers:
+            for i, txt in enumerate(neighs[event.ch]):
+                ax.annotate(txt, (x[i], y[i]))
 
         ws = window_size // 2
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
-        scale = interdistance / 110.
+        scale = interdistance / 110. * ascale
         trange = (np.arange(t1, t2) - event.t) * scale
         start_bluered = event.t - t1 - self.cutout_start
         trange_bluered = trange[start_bluered:start_bluered + cutlen]
@@ -236,7 +238,7 @@ class HSDetection(object):
             ys = -2048
         else:
             ys = 0
-        data[data-np.mean(data)<-1000] = -ys
+        data[data-np.mean(data)<-1000] = -ys # get rid of out-of-regime channels
         # grey and blue traces
         for n in neighs[event.ch]:
             col = 'g' if n in self.probe.masked_channels else 'b'
@@ -251,7 +253,9 @@ class HSDetection(object):
                  pos[event.ch][1] + (event.Shape+ys) * scale, 'r')
 
         # red dot of event location
-        plt.scatter(event.x, event.y, s=80, c='r')
+        if show_loc:
+            plt.scatter(event.x, event.y, s=80, c='r')
+        return ax
 
     def PlotDensity(self, binsize=1., invert=False, ax=None):
         raise NotImplementedError()
