@@ -81,23 +81,30 @@ def readHDF5t_100_i(rf, t0, t1, nch):
 def readHDF5t_101(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
-        return rf['3BData/Raw'][nch*t0:nch*t1].reshape(
+        d = rf['3BData/Raw'][nch*t0:nch*t1].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
+        d[d > 200] = 0
+        return d
     else:  # Reversed read
         raise Exception('Reading backwards? Not sure about this.')
-        return rf['3BData/Raw'][nch*t1:nch*t0].reshape(
+        d = rf['3BData/Raw'][nch*t1:nch*t0].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
+        d[d > 200] = 0
+        return d
 
 def readHDF5t_101_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
-        return 2048-rf['3BData/Raw'][nch*t0:nch*t1].reshape(
+        d = 2048-rf['3BData/Raw'][nch*t0:nch*t1].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
+        d[d > 200] = 0
+        return d
     else:  # Reversed read
         raise Exception('Reading backwards? Not sure about this.')
-        return 2048-rf['3BData/Raw'][nch*t1:nch*t0].reshape(
+        d = 2048-rf['3BData/Raw'][nch*t1:nch*t0].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
-
+        d[d > 200] = 0
+        return d
 
 def getNeuroSeekerParams(rf, pipette=False):
     if pipette:
