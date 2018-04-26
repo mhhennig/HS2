@@ -39,7 +39,7 @@ def read_flat(d, t0, t1, nch):
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False):
+               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False, nFrames=None):
     """ Read data from a file and pipe it to the spike detector. """
 
     nSec = probe.nFrames / sf  # the duration in seconds of the recording
@@ -58,7 +58,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     to_localize = _to_localize
     verbose = _verbose
     nRecCh = num_channels
-    nFrames = probe.nFrames
+    if nFrames is None:
+      nFrames = probe.nFrames
     masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
@@ -83,7 +84,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         print("# Not Masking any Channels")
 
     if verbose is True:
-        print("# Writing out ectended detection info")
+        print("# Writing out extended detection info")
 
     print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
@@ -145,7 +146,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
         if t0 < nFrames - tCut2:
-            print('# updating tInc')
+            # print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
         print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
 

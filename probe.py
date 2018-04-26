@@ -44,17 +44,22 @@ class NeuralProbe(object):
         # requires channels are an ordered list
         if recorded_channels is not None:
             inds = np.zeros(self.num_channels, dtype=int)
+            # recorded_channels = np.roll(recorded_channels,1,axis=1)
             for i,c in enumerate(recorded_channels):
-                inds[i] = np.where(np.all((self.positions-np.array([c[0]-1,c[1]-1]))==0, axis=1))[0]
+                inds[i] = np.where(np.all((self.positions-np.array([c[1]-1,c[0]-1]))==0, axis=1))[0]
             self.positions = self.positions[inds]
             x0 = np.min([p[0] for p in self.positions])
             y0 = np.min([p[1] for p in self.positions])
             x1 = np.max([p[0] for p in self.positions])
             y1 = np.max([p[1] for p in self.positions])
+            print('# ',x0,x1,y0,y1,x1-x0+1,y1-y0+1,num_channels)
             lm = np.zeros((64,64),dtype=int)-1
-            lm[self.positions[0][0]:, self.positions[0][1]:] = np.arange(self.num_channels).reshape(x1-x0+1, y1-y0+1).T
+            # lm[self.positions[0][0]:, self.positions[0][1]:] = np.arange(self.num_channels).reshape(x1-x0+1, y1-y0+1).T
+            # oddness because x/y are transposed in brw
+            lm[y0:y1+1, x0:x1+1] = np.arange(self.num_channels).T.reshape(y1-y0+1, x1-x0+1)#.T
             self.neighbors = [lm.flatten()[self.neighbors[i]] for i in inds]
             self.neighbors = [n[(n>=0)] for n in self.neighbors]
+            # self.positions = np.roll(self.positions,1,axis=1)
             self.positions = self.positions-np.min(self.positions,axis=0)
 
     # Load in neighbor and positions files
@@ -145,7 +150,7 @@ class BioCam(NeuralProbe):
                 else:
                     self.read_function = readHDF5t_100_i
             else:
-                if inversion is -1:
+                if inversion is not -1:
                     self.read_function = readHDF5t_101
                 else:
                     self.read_function = readHDF5t_101_i
@@ -161,9 +166,9 @@ class BioCam(NeuralProbe):
             recorded_channels = None
         NeuralProbe.__init__(
             self, num_channels=nRecCh, spike_delay=5,
-            spike_peak_duration=4, noise_duration=2,
+            spike_peak_duration=4, noise_duration=int(sfd*0.0009),
             noise_amp_percent=1, fps=sfd,
-            inner_radius=1.5,
+            inner_radius=1.75,
             positions_file_path=in_probes_dir('positions_biocam'),
             neighbors_file_path=in_probes_dir('neighbormatrix_biocam'),
             masked_channels=masked_channels, recorded_channels=recorded_channels)
