@@ -39,6 +39,7 @@ def getHDF5params(rf):
         raise Exception('Unknown data file format.')
 
     print('# 3Brain data format: '+str(file_format)+' signal inversion '+str(signalInv))
+    print('#       signal range:  '+str(recVars['MinVolt'].value[0])+' - '+str(recVars['MaxVolt'].value[0]))
     # Compute indices
     rawIndices = rf['3BRecInfo/3BMeaStreams/Raw/Chs'].value
 
