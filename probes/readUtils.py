@@ -61,7 +61,7 @@ def readHDF5t_100(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
         d = 2048 - rf['3BData/Raw'][t0:t1].flatten('C').astype(ctypes.c_short)
-        d[d > 1500] = 0
+        d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
     else:  # Reversed read
         raise Exception('Reading backwards? Not sure about this.')
@@ -72,7 +72,7 @@ def readHDF5t_100_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
         d = rf['3BData/Raw'][t0:t1].flatten('C').astype(ctypes.c_short) - 2048
-        d[d > 1500] = 0
+        d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
     else:  # Reversed read
         raise Exception('Reading backwards? Not sure about this.')
@@ -84,13 +84,13 @@ def readHDF5t_101(rf, t0, t1, nch):
     if t0 <= t1:
         d = rf['3BData/Raw'][nch*t0:nch*t1].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
-        d[d < 1500] = 0
+        d[np.abs(d) > 1500] = 0
         return d
     else:  # Reversed read
         raise Exception('Reading backwards? Not sure about this.')
         d = rf['3BData/Raw'][nch*t1:nch*t0].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
-        d[d < 1500] = 0
+        d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
 
 def readHDF5t_101_i(rf, t0, t1, nch):
@@ -98,13 +98,13 @@ def readHDF5t_101_i(rf, t0, t1, nch):
     if t0 <= t1:
         d = 2048-rf['3BData/Raw'][nch*t0:nch*t1].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
-        d[d > 1500] = 0
+        d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
     else:  # Reversed read
         raise Exception('Reading backwards? Not sure about this.')
         d = 2048-rf['3BData/Raw'][nch*t1:nch*t0].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
-        d[d > 1500] = 0
+        d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
 
 def getNeuroSeekerParams(rf, pipette=False):
