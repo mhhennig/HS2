@@ -108,7 +108,7 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False, verbose=False, nFrames=None):
+    def DetectFromRaw(self, load=False, verbose=False, nFrames=None, tInc=50000):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -122,7 +122,7 @@ class HSDetection(object):
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
                    self.maa, self.maxsl, self.minsl, self.ahpthr,
-                   self.tpre, self.tpost, self.save_all, nFrames=nFrames)
+                   self.tpre, self.tpost, self.save_all, nFrames=nFrames, tInc=tInc)
         if load:
             # reload data into memory
             self.LoadDetected()

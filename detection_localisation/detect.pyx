@@ -39,7 +39,7 @@ def read_flat(d, t0, t1, nch):
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False, nFrames=None):
+               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False, nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
     nSec = probe.nFrames / sf  # the duration in seconds of the recording
@@ -104,7 +104,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     tCut2 = max(tpostf + 1 - maxsl, cutout_end+maxsl)
     print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
 
-    tInc = min(nFrames-tCut-tCut2, 50000) # cap at specified number of frames
+    tInc = min(nFrames-tCut-tCut2, tInc) # cap at specified number of frames
     maxFramesProcessed = tInc;
     print('# tInc: '+str(tInc))
     # ! To be consistent, X and Y have to be swappped
