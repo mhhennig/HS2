@@ -8,7 +8,7 @@ from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
 from clustering.mean_shift_ import MeanShift
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, FastICA
 from os.path import splitext
 
 
@@ -446,6 +446,36 @@ class HSClustering(object):
 
         return _pcs
 
+    def ShapeICA(self, ica_ncomponents=2, ica_whiten=True, chunk_size=1000000):
+        """
+        Finds the principal components (PCs) of spike shapes contained in the
+        class, and saves them to HSClustering.features, to be used for
+        clustering.
+
+        Arguments -- ica_ncomponents: number of ICs to be used (default 2)
+        ica_whiten -- whiten data before ICA. chunk_size: maximum number of
+        shapes to be used to find ICs, default 1 million.
+        """
+        ica = FastICA(n_components=ica_ncomponents, whiten=ica_whiten)
+        if self.spikes.shape[0] > 1e6:
+            print("Fitting ICA using 1e6 out of",
+                  self.spikes.shape[0], "spikes...")
+            inds = np.random.choice(self.spikes.shape[0], int(1e6),
+                                    replace=False)
+            ica.fit(np.array(list(self.spikes.Shape[inds])))
+        else:
+            print("Fitting iCA using", self.spikes.shape[0], "spikes...")
+            ica.fit(np.array(list(self.spikes.Shape)))
+        self.pca = ica
+        _pcs = np.empty((self.spikes.shape[0], ica_ncomponents))
+        for i in range(self.spikes.shape[0] // chunk_size + 1):
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(np.array(
+                list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
+        self.features = _pcs
+
+        return _pcs
+    
+    
     def _savesinglehdf5(self, filename, limits, compression, sampling):
         if limits is not None:
             spikes = self.spikes[limits[0]:limits[1]]
