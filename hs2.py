@@ -344,7 +344,7 @@ class HSClustering(object):
             self.expinds = [0]
             self.IsClustered = False
 
-    def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
+    def CombinedClustering(self, alpha, clustering_algorithm=MeanShift, cluster_subset=None,
                            **kwargs):
         """
         Clusters spikes based on their (x, y) location and on the other features
@@ -357,7 +357,8 @@ class HSClustering(object):
         alpha -- the weight given to the other features, relative to spatial
         components (which have weight 1.)
         clustering_algorithm -- a sklearn.cluster class, defaults to
-        sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN was also tested.
+        sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN is a possible alternative. The class passed here has to have a method fit, and a predict method if cluster_subset is non-zero.
+        cluster_subset -- Number of spikes used to build clusters, spikes are then assigned to the nearest by Euclidean distance
         **kwargs -- additional arguments are passed to the clustering class.
         This may include n_jobs > 1 for parallelisation.
         """
@@ -372,17 +373,17 @@ class HSClustering(object):
         clusterer = clustering_algorithm(**kwargs)
         #clusterer.fit(fourvec)
 
-        if self.spikes.shape[0] > 1e6:
-            print("Clustering using 1e6 out of",
-                  self.spikes.shape[0], "spikes...")
+        if cluster_subset is not None:
+            print("Clustering using "+str(cluster_subset)+" out of " +
+                  str(self.spikes.shape[0])+ " spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
             clusterer.fit(fourvec[inds])
-            print("Predicting cluster labels for ", self.spikes.shape[0], "spikes...")
+            print("Predicting cluster labels for " + str(self.spikes.shape[0]) + " spikes...")
             self.spikes['cl'] = clusterer.predict(fourvec)
             self.NClusters = len(np.unique(clusterer.labels_))
         else:
-            print("Clustering ", self.spikes.shape[0], "spikes...")
+            print("Clustering "+ str(self.spikes.shape[0]) + " spikes...")
             self.spikes['cl'] = clusterer.fit(fourvec)
             self.NClusters = len(np.unique(self.spikes['cl']))
         
