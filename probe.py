@@ -158,7 +158,7 @@ class BioCam(NeuralProbe):
             print('# Note: data file not specified, setting some defaults')
             nRecCh = 4096
             sfd = fps
-        if nRecCh is not 4096:
+        if nRecCh < 4096:
             print('# Note: only '+str(nRecCh)+' channels recorded, fixing positions/neighbors')
             print('# This may break - known to work only for rectangular sections!')
             recorded_channels = self.d['3BRecInfo']['3BMeaStreams']['Raw']['Chs']
