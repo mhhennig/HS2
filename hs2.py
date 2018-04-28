@@ -370,10 +370,22 @@ class HSClustering(object):
 
         print('Clustering...')
         clusterer = clustering_algorithm(**kwargs)
-        clusterer.fit(fourvec)
+        #clusterer.fit(fourvec)
 
-        self.spikes['cl'] = clusterer.labels_
-        self.NClusters = len(np.unique(clusterer.labels_))
+        if self.spikes.shape[0] > 1e6:
+            print("Clustering using 1e6 out of",
+                  self.spikes.shape[0], "spikes...")
+            inds = np.random.choice(self.spikes.shape[0], int(1e6),
+                                    replace=False)
+            clusterer.fit(fourvec[inds])
+            print("Predicting cluster labels for ", self.spikes.shape[0], "spikes...")
+            self.spikes['cl'] = clusterer.predict(fourvec)
+            self.NClusters = len(np.unique(clusterer.labels_))
+        else:
+            print("Clustering ", self.spikes.shape[0], "spikes...")
+            self.spikes['cl'] = clusterer.fit(fourvec)
+            self.NClusters = len(np.unique(self.spikes['cl']))
+        
         print("Number of estimated clusters:", self.NClusters)
 
         self.centers = np.zeros((self.NClusters, 2))
