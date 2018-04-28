@@ -376,7 +376,7 @@ class HSClustering(object):
         if cluster_subset is not None:
             print("Clustering using "+str(cluster_subset)+" out of " +
                   str(self.spikes.shape[0])+ " spikes...")
-            inds = np.random.choice(self.spikes.shape[0], int(1e6),
+            inds = np.random.choice(self.spikes.shape[0], int(cluster_subset),
                                     replace=False)
             clusterer.fit(fourvec[inds])
             print("Predicting cluster labels for " + str(self.spikes.shape[0]) + " spikes...")
