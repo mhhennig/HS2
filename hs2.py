@@ -384,7 +384,7 @@ class HSClustering(object):
             self.NClusters = len(np.unique(clusterer.labels_))
         else:
             print("Clustering "+ str(self.spikes.shape[0]) + " spikes...")
-            self.spikes['cl'] = clusterer.fit(fourvec)
+            self.spikes['cl'] = clusterer.fit_predict(fourvec)
             self.NClusters = len(np.unique(self.spikes['cl']))
         
         print("Number of estimated clusters:", self.NClusters)
