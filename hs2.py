@@ -726,7 +726,7 @@ class HSClustering(object):
                     # seems this is a problem when zooming with x/ylim
         return ax
 
-    def PlotNeighbourhood(self, cl, radius=1):
+    def PlotNeighbourhood(self, cl, radius=1, show_cluster_numbers=True, max_spikes=10000, alpha=0.4):
         """
         Plot all units and spikes in the neighbourhood of cluster cl.
 
@@ -756,10 +756,13 @@ class HSClustering(object):
         for i_cl, cl_t in enumerate(clInds):
             cx, cy = self.clusters['ctr_x'][cl_t], self.clusters['ctr_y'][cl_t]
             inds = np.where(self.spikes.cl == cl_t)[0]
+            if max_spikes is not None:
+                inds = inds[:max_spikes]
             x, y = self.spikes.x[inds], self.spikes.y[inds]
             ax[0].scatter(x, y, c=plt.cm.hsv(
-                self.clusters['Color'][cl_t]), s=3, alpha=0.4)
-            ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
+                self.clusters['Color'][cl_t]), s=3, alpha=alpha)
+            if show_cluster_numbers:
+                ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
             for i in inds[:20]:
                 ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8))
             ax[i_cl + 2].plot(
@@ -780,3 +783,4 @@ class HSClustering(object):
                 ax[1].plot(self.spikes.Shape[i], color=(0.4, 0.4, 0.4))
             ax[1].plot(
                 np.mean(self.spikes.Shape[spInds].values, axis=0), color='k')
+        return ax
