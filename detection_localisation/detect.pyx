@@ -17,7 +17,12 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
-        void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay,
+        # void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay,
+        #                       int spike_peak_duration, string file_name, int noise_duration,
+        #                       float noise_amp_percent, float inner_radius, int* _masked_channels, \
+        #                       int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
+        #                       int maa, int ahpthr, int maxsl, int minsl, bool verbose)
+        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
@@ -34,7 +39,7 @@ def read_flat(d, t0, t1, nch):
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False):
+               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False, nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
     nSec = probe.nFrames / sf  # the duration in seconds of the recording
@@ -53,7 +58,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     to_localize = _to_localize
     verbose = _verbose
     nRecCh = num_channels
-    nFrames = probe.nFrames
+    if nFrames is None:
+      nFrames = probe.nFrames
     masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
@@ -78,7 +84,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         print("# Not Masking any Channels")
 
     if verbose is True:
-        print("# Writing out ectended detection info")
+        print("# Writing out extended detection info")
 
     print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
@@ -98,7 +104,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     tCut2 = max(tpostf + 1 - maxsl, cutout_end+maxsl)
     print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
 
-    tInc = min(nFrames-tCut-tCut2, 50000) # cap at specified number of frames
+    tInc = min(nFrames-tCut-tCut2, tInc) # cap at specified number of frames
     maxFramesProcessed = tInc;
     print('# tInc: '+str(tInc))
     # ! To be consistent, X and Y have to be swappped
@@ -111,7 +117,17 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
-    det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+    cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
+    # cdef np.ndarray[long, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_long)
+    for i,p in enumerate(probe.positions):
+      position_matrix[i,0] = p[0]
+      position_matrix[i,1] = p[1]
+    cdef np.ndarray[int, ndim=2, mode = "c"] neighbor_matrix = np.zeros((nRecCh,np.max([len(p) for p in probe.neighbors])), dtype=ctypes.c_int)-1
+    for i,p in enumerate(probe.neighbors):
+      neighbor_matrix[i,:len(p)] = p
+
+    det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+    # det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
 
     startTime = datetime.now()
     t0 = 0
@@ -130,7 +146,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
         if t0 < nFrames - tCut2:
-            print('# updating tInc')
+            # print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
         print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
 

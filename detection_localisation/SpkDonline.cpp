@@ -41,15 +41,24 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   fpost = tpostf;
 }
 
-void Detection::SetInitialParams(string positions_file_path,
-                                 string neighbors_file_path, int num_channels,
-                                 int spike_delay, int spike_peak_duration,
-                                 string file_name, int noise_duration,
-                                 float noise_amp_percent, float inner_radius,
-                                 int *_masked_channels, int max_neighbors,
-                                 bool to_localize, int thres, int cutout_start,
-                                 int cutout_end, int maa, int ahpthr, int maxsl,
-                                 int minsl, bool verbose) {
+// void Detection::SetInitialParams(string positions_file_path,
+//                                  string neighbors_file_path, int num_channels,
+//                                  int spike_delay, int spike_peak_duration,
+//                                  string file_name, int noise_duration,
+//                                  float noise_amp_percent, float inner_radius,
+//                                  int *_masked_channels, int max_neighbors,
+//                                  bool to_localize, int thres, int cutout_start,
+//                                  int cutout_end, int maa, int ahpthr, int maxsl,
+//                                  int minsl, bool verbose) {
+void Detection::SetInitialParams(int * pos_mtx,
+                                int * neigh_mtx, int num_channels,
+                                int spike_delay, int spike_peak_duration,
+                                string file_name, int noise_duration,
+                                float noise_amp_percent, float inner_radius,
+                                int *_masked_channels, int max_neighbors,
+                                bool to_localize, int thres, int cutout_start,
+                                int cutout_end, int maa, int ahpthr, int maxsl,
+                                int minsl, bool verbose) {
   // set the detection parameters
   // set the detection parameters
   threshold = thres;
@@ -61,18 +70,30 @@ void Detection::SetInitialParams(string positions_file_path,
   int **neighbor_matrix;
   // masked_channels = new int[NChannels];
   masked_channels = _masked_channels;
-  cout << "masked:";
+  // cout << "masked:";
   // for(int i=0; i<NChannels; i++){
   //   // masked_channels[i] = _masked_channels[i];
   //   cout << masked_channels[i] << " ";
   // }
-  cout << "\n";
+
   // masked_channels = _masked_channels;
   channel_positions = createPositionMatrix(num_channels);
+  for(int i=0; i<num_channels; i++){
+    channel_positions[i][0] = pos_mtx[2*i];
+    channel_positions[i][1] = pos_mtx[2*i+1];
+  }
   neighbor_matrix = createNeighborMatrix(num_channels, max_neighbors);
-  buildPositionsMatrix(channel_positions, positions_file_path, num_channels, 2);
-  buildNeighborMatrix(neighbor_matrix, neighbors_file_path, num_channels,
-                      max_neighbors);
+  for(int i=0; i<num_channels; i++){
+    for(int j=0; j<max_neighbors; j++) {
+      neighbor_matrix[i][j] = neigh_mtx[i*max_neighbors+j];
+    }
+  }
+  // cout << "22\n";
+  // buildPositionsMatrix(channel_positions, positions_file_path, num_channels, 2);
+  // cout << "33\n";
+  // buildNeighborMatrix(neighbor_matrix, neighbors_file_path, num_channels,
+  //                     max_neighbors);
+  //                     cout << "\n";
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
   currQmsPosition = -1;
   _spike_delay = spike_delay;
