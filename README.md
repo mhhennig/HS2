@@ -12,7 +12,7 @@ G. Hilgen, M. Sorbaro, S. Pirmoradian, J.-O. Muthmann, I. Kepiro, S. Ullo, C. Ju
 
 This implementation is highly efficient, spike detection and localisation runs in real time on recordings from 4,096 channels at 7kHz on a desktop PC. Large recordings with millions of events can be sorted in minutes.
 
-Since we believe publicly funded research code should be free and open, all code is released under GPL-2.0.
+Since we believe publicly funded research code should be free and open, all code is released under GPL-3.0.
 
 ### Supported systems  <a name="systems"></a>
 
