@@ -1,39 +1,56 @@
-# HerdingSpikes
-## Spike detection, localisation and sorting for high density MEAs
+# Herding Spikes 2
 
-This class provides a simple interface to the detection, localisation and
-clustering of spike data from dense multielectrode arrays according to the
-methods described in the following papers:
+![Spikes](documentation/pictures/spikes.png)
 
-Muthmann, J. O., Amin, H., Sernagor, E., Maccione, A., Panas, D.,
-Berdondini, L., ... & Hennig, M. H. (2015). Spike detection for large neural
-populations using high density multielectrode arrays.
-Frontiers in neuroinformatics, 9.
+## Software for high density electrophysiology
 
-Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
-Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
-large-scale, high-density multielectrode arrays.
-Cell reports, 18(10), 2521-2532.
+This software provides functionality for the detection, localisation and clustering of spike data from dense multielectrode arrays based on the methods described in the following papers:
 
-## Compilation of Cython code
-```
-cd detection_localisation
-python3 setup.py build_ext --inplace
-cd ..
-```
+J.-O. Muthmann, H. Amin, E. Sernagor, A. Maccione, D. Panas, L. Berdondini, U.S. Bhalla, M.H. Hennig MH (2015). [Spike detection for large neural populations using high density multielectrode arrays](http://journal.frontiersin.org/article/10.3389/fninf.2015.00028/abstract). Front. Neuroinform. 9:28. doi: 10.3389/fninf.2015.00028.
+
+G. Hilgen, M. Sorbaro, S. Pirmoradian, J.-O. Muthmann, I. Kepiro, S. Ullo, C. Juarez Ramirez, A. Puente Encinas, A. Maccione, L. Berdondini, V. Murino, D. Sona, F. Cella Zanacchi, E. Sernagor, M.H. Hennig (2016). [Unsupervised spike sorting for large scale, high density multielectrode arrays.](http://www.cell.com/cell-reports/fulltext/S2211-1247(17)30236-X) Cell Reports 18, 2521–2532. bioRxiv: <http://dx.doi.org/10.1101/048645>.
+
+This implementation is highly efficient, spike detection and localisation runs in real time on recordings from 4,096 channels at 7kHz on a desktop PC. Large recordings with millions of events can be sorted in minutes.
+
+Since we believe publicly funded research code should be free and open, all code is released under GPL-2.0.
+
+### Supported systems  <a name="systems"></a>
+
+- [3Brain](http://3brain.com/) BIOCAM and BIOCAM X
+- [Neuropixel array](https://www.ucl.ac.uk/neuropixels)
+- [ETH MEA1K](https://www.bsse.ethz.ch/bel/research/cmos-microsystems/microelectrode-systems.html)
+- [128 channel Neuroseeker array](http://neuroseeker.eu/)
+
+## Contributors, alphabetical <a name="people"></a>
+
+- [Matthias Hennig](http://homepages.inf.ed.ac.uk/mhennig/index.html): Spike sorting
+- [Jano Horvath](https://github.com/JanoHorvath): Parameter optimisation
+- [Cole Hurwitz](https://github.com/colehurwitz31): Spike detection, localisation and sorting
+- [Oliver Muthmann](mailto:ollimuh@googlemail.com): Spike detection and localisation
+- [Albert Puente Encinas](https://github.com/albertpuente): C++ implementation, optimisation and parallelisation
+- [Martino Sorbaro](http://martinosorb.github.io): Spike sorting
+- [Cesar Juarez Ramirez](mailto:cesaripn2@gmail.com): Visualisation
+- [Raimon Wintzer](https://github.com/lsIand): GUI and visualisation
+
+## Quick start <a name="quickstart"></a>
+
+The code has been tested with Python version 3.6. It is essential the following packages are available:
+`Cython numpy scipy h5py pandas sklearn matplotlib`.
+
+These can be automatically installed using the following command:
+
+    pip install -r requirements.txt
+
+Next, the C++ code has to be compiled, using the following commands:
+
+    cd detection_localisation
+    python3 setup.py build_ext --inplace
+    cd ..
+
 Yes, you need to `cd`.
 
-## Using HDBSCAN
+Example code for the different supported systems is in the folder [notebooks](notebooks). Go [here](documentation) for documentation. A worked example for Biocam data is [here](documentation/biocam/BioCam-demo.md).
 
-We have now included DBSCAN and [HDBSCAN](https://hdbscan.readthedocs.io/en/latest/comparing_clustering_algorithms.html) as clustering algorithms. These give better results compared to Mean Shift. HDBSCAN appears particularly suited, and scales well. To use this, install the ``hdbscan`` package with ``pip`` or conda. 
+## Contact
 
-## Examples
-
-Example data for the NeuroPixel array are on theia:
-* A short sample is here: ``/disk/scratch/mhennig/neuropixel/data/rawDataSample.bin``
-* This is a whole 60 minute recording: ``/disk/scratch/mhennig/neuropixel/data/Hopkins_20160722_g0_t0.imec.ap_CAR.bin``
-
-Example data for the 3Brain Biocam array are on theia in:
-``/disk/scratch/mhennig/P29_16_07_14/P29_16_05_14_retina02_left_stim3_fullarray_fullfieldHDF5.brw``
-
-A tutorial on how to reproduce the workflow is in the localised_spikes_clustered Jupyter notebook.
+The herders are based at the School of Informatics, University of Edinburgh. Contact us [here](http://homepages.inf.ed.ac.uk/mhennig/contact/), we are happy to help.
