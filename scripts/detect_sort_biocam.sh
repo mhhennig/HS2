@@ -1,10 +1,14 @@
+# Detect and sort multiple recordings
+# this example reads Biocam files
+import sys
+sys.path.append('..')
 from hs2 import HSDetection, HSClustering
 from probe import BioCam
 from datetime import datetime
 
 
 if __name__ == '__main__':
-    data_path = '/disk/scratch/mhennig/P91_05_07_17_TestMotionSeq/raw/'
+    data_path = '/path/to/P91_05_07_17_TestMotionSeq/raw/'
     files = ['P91_05_07_17_basicshort_stim1_ctl.brw', 'P91_05_07_17_swn_stim2_ctl.brw', 'P91_05_07_17_motionbandseq0_stim4_ctl.brw']
     data_files = [data_path+f for f in files]
 
@@ -33,6 +37,7 @@ if __name__ == '__main__':
                         maa=0, maxsl=12, minsl=3, ahpthr=0, out_file_name=out_file,
                         save_all=False)
             H.DetectFromRaw()
+            # garbage collect
             del H
             del Probe
         print('Time taken for detection: ' + str(datetime.now() - startTime))
