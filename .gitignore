@@ -1,6 +1,7 @@
 # Data files and compiled files
 detect.cpp
 ProcessedSpikes
+HS2venv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
