@@ -144,10 +144,10 @@ class BioCam(NeuralProbe):
             self.d = openHDF5file(data_file_path)
             self.nFrames, sfd, nRecCh, chIndices, file_format, inversion = getHDF5params(
                 self.d)
-            print('# Signal inversion looks like', inversion, ', guessing the "\
-                "right method for data access.\n# If your detection results "\
-                "look strange, signal polarity is wrong. With 3Brain you never"\
-                " know when they swap it next :)')
+            print("# Signal inversion looks like", inversion, ", guessing the "
+                  "right method for data access.\n# If your detection results "
+                  "look strange, signal polarity is wrong.\n# With 3Brain you "
+                  "never know when they swap it next :)")
             if file_format == 100:
                 if inversion is -1:
                     self.read_function = readHDF5t_100
