@@ -4,6 +4,7 @@ import ctypes
 
 import numpy as np
 
+
 def read_flat(d, t0, t1, nch):
     return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
@@ -38,8 +39,9 @@ def getHDF5params(rf):
     else:
         raise Exception('Unknown data file format.')
 
-    print('# 3Brain data format: '+str(file_format)+' signal inversion '+str(signalInv))
-    print('#       signal range:  '+str(recVars['MinVolt'].value[0])+' - '+str(recVars['MaxVolt'].value[0]))
+    print('# 3Brain data format:', file_format, 'signal inversion', signalInv)
+    print('#       signal range: ', recVars['MinVolt'].value[0], '- ',
+          recVars['MaxVolt'].value[0])
     # Compute indices
     rawIndices = rf['3BRecInfo/3BMeaStreams/Raw/Chs'].value
 
@@ -68,6 +70,7 @@ def readHDF5t_100(rf, t0, t1, nch):
         return 2048 - rf['3BData/Raw'][t1:t0].flatten(
                     'F').astype(ctypes.c_short)
 
+
 def readHDF5t_100_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
@@ -78,6 +81,7 @@ def readHDF5t_100_i(rf, t0, t1, nch):
         raise Exception('Reading backwards? Not sure about this.')
         return rf['3BData/Raw'][t1:t0].flatten(
                     'F').astype(ctypes.c_short) - 2048
+
 
 def readHDF5t_101(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
@@ -93,6 +97,7 @@ def readHDF5t_101(rf, t0, t1, nch):
         d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
 
+
 def readHDF5t_101_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
@@ -107,9 +112,11 @@ def readHDF5t_101_i(rf, t0, t1, nch):
         d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
 
+
 def getNeuroSeekerParams(rf, pipette=False):
     if pipette:
-        return rf['kampff_probe_data'].attrs['no_frames'], rf.attrs['frequency'], 1, [1]
+        return rf['kampff_probe_data'].attrs['no_frames'], \
+            rf.attrs['frequency'], 1, [1]
 
     return (rf['kampff_probe_data'].attrs['no_frames'],
             rf.attrs['frequency'],

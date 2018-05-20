@@ -74,8 +74,8 @@ class HSDetection(object):
 
     def SetAddParameters(self, dict_of_new_parameters):
         """
-         Adds and merges dict_of_new_parameters with the current fields of the object.
-         Uses the PEP448 convention to group two dics together.
+         Adds and merges dict_of_new_parameters with the current fields of the
+         object. Uses the PEP448 convention to group two dics together.
         """
         self.__dict__ = {**self.__dict__, **dict_of_new_parameters}
 
@@ -108,7 +108,8 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False, verbose=False, nFrames=None, tInc=50000):
+    def DetectFromRaw(self, load=False, verbose=False,
+                      nFrames=None, tInc=50000):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -122,7 +123,8 @@ class HSDetection(object):
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
                    self.maa, self.maxsl, self.minsl, self.ahpthr,
-                   self.tpre, self.tpost, self.save_all, nFrames=nFrames, tInc=tInc)
+                   self.tpre, self.tpost, self.save_all,
+                   nFrames=nFrames, tInc=tInc)
         if load:
             # reload data into memory
             self.LoadDetected()
@@ -142,7 +144,6 @@ class HSDetection(object):
         """
         pos, neighs = self.probe.positions, self.probe.neighbors
 
-        #print(event.x, event.y)
         cutlen = length
         dst = np.abs(pos[channel][0] - pos[neighs[channel]][:, 0])
         interdistance = np.min(dst[dst > 0])
@@ -186,7 +187,9 @@ class HSDetection(object):
         # # red dot of event location
         # plt.scatter(event.x, event.y, s=80, c='r')
 
-    def PlotTracesChannels(self, eventid, ax=None, window_size=200, show_channels=True, ascale=1, show_channel_numbers=True, show_loc=True):
+    def PlotTracesChannels(self, eventid, ax=None, window_size=200,
+                           show_channels=True, ascale=1,
+                           show_channel_numbers=True, show_loc=True):
         """
         Draw a figure with an electrode and its neighbours, showing the raw
         traces and events. Note that this requires loading the raw data in
@@ -234,11 +237,11 @@ class HSDetection(object):
 
         data = self.probe.Read(t1, t2).reshape(
             (t2 - t1, self.probe.num_channels))
-        if np.mean(data)>1000:
+        if np.mean(data) > 1000:
             ys = -2048
         else:
             ys = 0
-        data[data-np.mean(data)<-1000] = -ys # get rid of out-of-regime channels
+        data[data-np.mean(data) < -1000] = -ys  # get rid of out-of-regime chs
         # grey and blue traces
         for n in neighs[event.ch]:
             col = 'g' if n in self.probe.masked_channels else 'b'
@@ -246,7 +249,7 @@ class HSDetection(object):
                      pos[n][1] + (data[:, n]+ys) * scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
                      pos[n][1] + (data[start_bluered:start_bluered + cutlen,
-                                      n]+ys) * scale, col)
+                                       n]+ys) * scale, col)
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
@@ -344,8 +347,8 @@ class HSClustering(object):
             self.expinds = [0]
             self.IsClustered = False
 
-    def CombinedClustering(self, alpha, clustering_algorithm=MeanShift, cluster_subset=None,
-                           **kwargs):
+    def CombinedClustering(self, alpha, clustering_algorithm=MeanShift,
+                           cluster_subset=None, **kwargs):
         """
         Clusters spikes based on their (x, y) location and on the other features
         in HSClustering.features. These are normally principal components of the
@@ -357,8 +360,11 @@ class HSClustering(object):
         alpha -- the weight given to the other features, relative to spatial
         components (which have weight 1.)
         clustering_algorithm -- a sklearn.cluster class, defaults to
-        sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN is a possible alternative. The class passed here has to have a method fit, and a predict method if cluster_subset is non-zero.
-        cluster_subset -- Number of spikes used to build clusters, spikes are then assigned to the nearest by Euclidean distance
+        sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN is a possible
+        alternative. The class passed here has to have a method fit, and a
+        predict method if cluster_subset is non-zero.
+        cluster_subset -- Number of spikes used to build clusters, spikes are
+        then assigned to the nearest by Euclidean distance
         **kwargs -- additional arguments are passed to the clustering class.
         This may include n_jobs > 1 for parallelisation.
         """
@@ -371,22 +377,22 @@ class HSClustering(object):
 
         print('Clustering...')
         clusterer = clustering_algorithm(**kwargs)
-        #clusterer.fit(fourvec)
 
         if cluster_subset is not None:
-            print("Clustering using "+str(cluster_subset)+" out of " +
-                  str(self.spikes.shape[0])+ " spikes...")
+            print("Clustering using", cluster_subset, "out of",
+                  self.spikes.shape[0], " spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(cluster_subset),
                                     replace=False)
             clusterer.fit(fourvec[inds])
-            print("Predicting cluster labels for " + str(self.spikes.shape[0]) + " spikes...")
+            print("Predicting cluster labels for",
+                  self.spikes.shape[0], "spikes...")
             self.spikes['cl'] = clusterer.predict(fourvec)
             self.NClusters = len(np.unique(clusterer.labels_))
         else:
-            print("Clustering "+ str(self.spikes.shape[0]) + " spikes...")
+            print("Clustering", self.spikes.shape[0], "spikes...")
             self.spikes['cl'] = clusterer.fit_predict(fourvec)
             self.NClusters = len(np.unique(self.spikes['cl']))
-        
+
         print("Number of estimated clusters:", self.NClusters)
 
         self.centers = np.zeros((self.NClusters, 2))
@@ -475,8 +481,7 @@ class HSClustering(object):
         self.features = _pcs
 
         return _pcs
-    
-    
+
     def _savesinglehdf5(self, filename, limits, compression, sampling):
         if limits is not None:
             spikes = self.spikes[limits[0]:limits[1]]
@@ -726,7 +731,8 @@ class HSClustering(object):
                     # seems this is a problem when zooming with x/ylim
         return ax
 
-    def PlotNeighbourhood(self, cl, radius=1, show_cluster_numbers=True, max_spikes=10000, alpha=0.4):
+    def PlotNeighbourhood(self, cl, radius=1, show_cluster_numbers=True,
+                          max_spikes=10000, alpha=0.4):
         """
         Plot all units and spikes in the neighbourhood of cluster cl.
 

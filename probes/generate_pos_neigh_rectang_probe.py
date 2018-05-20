@@ -8,7 +8,8 @@ n_channels = 128
 n_rows = 32
 n_cols = 4
 
-assert n_rows * n_cols == n_channels, "Product of the number of rows and columns doesn't equal number of channels."
+assert n_rows * n_cols == n_channels, "Product of the number of rows and "\
+    "columns doesn't equal number of channels."
 
 ch_positions = np.asarray(list(product(range(n_rows), range(n_cols))))
 

@@ -42,7 +42,13 @@ class OptimiseParameters(object):
         detec_outfile, clust_outfile - paths where optimisation results will be stored in a pickled format.
     """
 
-    def __init__(self, gt_spiketrain, closest_ch, Probe, HSDetection, detec_params_to_opt, HSClustering, clust_params_to_opt, optimise_detection=True, optimise_clustering=True, true_positive_timewindow=0.3, detec_run_schedule=[150, 100], clust_run_schedule=[150, 100], clust_max_value=0, detec_outfile='result_optim_params_detect', clust_outfile='result_optim_params_clust'):
+    def __init__(self, gt_spiketrain, closest_ch, Probe, HSDetection,
+                 detec_params_to_opt, HSClustering, clust_params_to_opt,
+                 optimise_detection=True, optimise_clustering=True,
+                 true_positive_timewindow=0.3, detec_run_schedule=[150, 100],
+                 clust_run_schedule=[150, 100], clust_max_value=0,
+                 detec_outfile='result_optim_params_detect',
+                 clust_outfile='result_optim_params_clust'):
 
         logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -52,7 +58,8 @@ class OptimiseParameters(object):
         self.optimise_detection = optimise_detection
         if optimise_detection:
             self.HSD = HSDetection
-            # OrderedDict guarantees the correspondence between the order of .keys() and .values()
+            # OrderedDict guarantees the correspondence between
+            # the order of .keys() and .values()
             self.detec_params = OrderedDict(detec_params_to_opt)
             self.detec_outfile = detec_outfile
             self.detec_run_schedule = detec_run_schedule

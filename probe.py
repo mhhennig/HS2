@@ -3,7 +3,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from probes.readUtils import read_flat
 from probes.readUtils import openHDF5file, getHDF5params
-from probes.readUtils import readHDF5t_100, readHDF5t_101, readHDF5t_100_i, readHDF5t_101_i
+from probes.readUtils import readHDF5t_100, readHDF5t_101
+from probes.readUtils import readHDF5t_100_i, readHDF5t_101_i
 from probes.readUtils import getNeuroSeekerParams, readNeuroSeekerProbe
 import h5py
 import ctypes
@@ -45,22 +46,22 @@ class NeuralProbe(object):
         if recorded_channels is not None:
             inds = np.zeros(self.num_channels, dtype=int)
             # recorded_channels = np.roll(recorded_channels,1,axis=1)
-            for i,c in enumerate(recorded_channels):
-                inds[i] = np.where(np.all((self.positions-np.array([c[1]-1,c[0]-1]))==0, axis=1))[0]
+            for i, c in enumerate(recorded_channels):
+                inds[i] = np.where(np.all((
+                    self.positions-np.array([c[1]-1, c[0]-1])) == 0, axis=1))[0]
             self.positions = self.positions[inds]
             x0 = np.min([p[0] for p in self.positions])
             y0 = np.min([p[1] for p in self.positions])
             x1 = np.max([p[0] for p in self.positions])
             y1 = np.max([p[1] for p in self.positions])
-            print('# ',x0,x1,y0,y1,x1-x0+1,y1-y0+1,num_channels)
-            lm = np.zeros((64,64),dtype=int)-1
-            # lm[self.positions[0][0]:, self.positions[0][1]:] = np.arange(self.num_channels).reshape(x1-x0+1, y1-y0+1).T
+            print('# ', x0, x1, y0, y1, x1-x0+1, y1-y0+1, num_channels)
+            lm = np.zeros((64, 64), dtype=int)-1
             # oddness because x/y are transposed in brw
-            lm[y0:y1+1, x0:x1+1] = np.arange(self.num_channels).T.reshape(y1-y0+1, x1-x0+1)#.T
+            lm[y0:y1+1, x0:x1+1] = np.arange(self.num_channels).T.reshape(
+                y1-y0+1, x1-x0+1)
             self.neighbors = [lm.flatten()[self.neighbors[i]] for i in inds]
-            self.neighbors = [n[(n>=0)] for n in self.neighbors]
-            # self.positions = np.roll(self.positions,1,axis=1)
-            self.positions = self.positions-np.min(self.positions,axis=0)
+            self.neighbors = [n[(n >= 0)] for n in self.neighbors]
+            self.positions = self.positions-np.min(self.positions, axis=0)
 
     # Load in neighbor and positions files
     def loadNeighbors(self, neighbors_file_path):
@@ -143,7 +144,10 @@ class BioCam(NeuralProbe):
             self.d = openHDF5file(data_file_path)
             self.nFrames, sfd, nRecCh, chIndices, file_format, inversion = getHDF5params(
                 self.d)
-            print('# Signal inversion looks like '+str(inversion)+', guessing he right method for data access.\n# If your detection results look strange, signal polarity is wrong. With 3Brain you never know when they swap it next :)')
+            print('# Signal inversion looks like', inversion, ', guessing the "\
+                "right method for data access.\n# If your detection results "\
+                "look strange, signal polarity is wrong. With 3Brain you never"\
+                " know when they swap it next :)')
             if file_format == 100:
                 if inversion is -1:
                     self.read_function = readHDF5t_100
@@ -159,7 +163,7 @@ class BioCam(NeuralProbe):
             nRecCh = 4096
             sfd = fps
         if nRecCh < 4096:
-            print('# Note: only '+str(nRecCh)+' channels recorded, fixing positions/neighbors')
+            print('# Note: only', nRecCh, 'channels recorded, fixing positions/neighbors')
             print('# This may break - known to work only for rectangular sections!')
             recorded_channels = self.d['3BRecInfo']['3BMeaStreams']['Raw']['Chs']
         else:
@@ -234,6 +238,7 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
 
+
 class NeuroSeeker_128(NeuralProbe):
     """
      A 128-channel probe designed by the NeuroSeeker project in 2015.
@@ -247,7 +252,8 @@ class NeuroSeeker_128(NeuralProbe):
                              neighbors_file_path='probes/neighbormatrix_neuroseeker_128')
         self.data_file = data_file_path
         self.d = openHDF5file(data_file_path)
-        self.nFrames, self.fps, self.num_channels, chIndices, self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
+        self.nFrames, self.fps, self.num_channels, chIndices,\
+            self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
 
     def Read(self, t0, t1):
         return readNeuroSeekerProbe(self.d, t0, t1)
