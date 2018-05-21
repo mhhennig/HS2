@@ -117,10 +117,10 @@ class NeuroPixel(NeuralProbe):
     def __init__(self, data_file_path=None, fps=30000, masked_channels=None):
 
         NeuralProbe.__init__(
-            self, num_channels=385, spike_delay=5,
-            spike_peak_duration=4, noise_duration=3,
-            noise_amp_percent=1, fps=fps,
-            inner_radius=40,
+            self, num_channels=385, spike_delay=5, # 5
+            spike_peak_duration=4, noise_duration=3, # 4,3
+            noise_amp_percent=1, fps=fps, # 1
+            inner_radius=55, # was 40
             positions_file_path=in_probes_dir('positions_neuropixel'),
             neighbors_file_path=in_probes_dir('neighbormatrix_neuropixel'),
             masked_channels=masked_channels)
