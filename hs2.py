@@ -771,9 +771,9 @@ class HSClustering(object):
                 ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
             for i in inds[:20]:
                 ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8))
-            ax[i_cl + 2].plot(
-                np.mean(self.spikes.Shape[inds].values, axis=0),
-                color=plt.cm.hsv(self.clusters['Color'][cl_t]))
+            if len(inds)>1:
+                ax[i_cl + 2].plot(np.mean(self.spikes.Shape[inds].values, axis=0),
+                    color=plt.cm.hsv(self.clusters['Color'][cl_t]))
 
         ax[0].axis('equal')
 
