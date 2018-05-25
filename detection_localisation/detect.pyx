@@ -148,7 +148,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         if t0 < nFrames - tCut2:
             # print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
-        print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
+        #print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
 
     det.FinishDetection()
     endTime=datetime.now()
