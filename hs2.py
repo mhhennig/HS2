@@ -311,7 +311,7 @@ class HSClustering(object):
     Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
     large-scale, high-density multielectrode arrays. Cell reports, 18(10),
     2521-2532. """
-    def __init__(self, arg1, cutout_length=None):
+    def __init__(self, arg1, cutout_length=None, **kwargs):
         """ The constructor can be called in two ways:
 
         - with a filename or list of filenames as an argument. These should be
@@ -320,6 +320,10 @@ class HSClustering(object):
         the cutout_length must also be passed as a second argument.
 
         - with an instance of HSDetection as a single argument. """
+        
+        # store the memmapped shapes
+        self.shapecache = []
+        
         if type(arg1) == str:  # case arg1 is a single filename
             arg1 = [arg1]
 
@@ -328,7 +332,7 @@ class HSClustering(object):
                 filetype = splitext(f)[-1]
                 not_first_file = i > 0
                 if filetype == ".hdf5":
-                    self.LoadHDF5(f, append=not_first_file)
+                    self.LoadHDF5(f, append=not_first_file, **kwargs)
                 elif filetype == ".bin":
                     if cutout_length is None:
                         raise ValueError(
@@ -493,6 +497,7 @@ class HSClustering(object):
         if sampling is not None:
             g.create_dataset("Sampling", data=sampling)
         g.create_dataset("times", data=spikes.t)
+        g.create_dataset("ch", data=spikes.ch)
         if self.IsClustered:
             g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
@@ -549,26 +554,30 @@ class HSClustering(object):
         chunk_size -- read shapes in chunks of this size to avoid memory
         problems
         compute_cluster_sizes -- count number of spikes in each unit (slow)
-        scale -- re-scale shapes (may be required for HS1 data)
+        scale -- re-scale shapes by this factor (may be required for HS1 data)
         """
 
         g = h5py.File(filename, 'r')
         print('Reading from ' + filename)
 
-        print("Creating memmapped cache for shapes, reading in chunks, " +
-              "converting to integer...")
-        shapecache = np.memmap(
-            "tmp.bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1])
+        print("Creating memmapped cache for shapes, reading in chunks of size " + str(chunk_size) +
+              " and converting to integer...")
+        i = len(self.shapecache)
+        self.shapecache.append(np.memmap(
+            "tmp"+str(i)+".bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1]))
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
             tmp = (scale*np.transpose(
                 g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
-            print('Found ' + str(len(inds)) +
-                  ' data points out of linear regime in chunk ' + str(i + 1))
-            shapecache[i * chunk_size:(i + 1) * chunk_size] = tmp[:]
+            print('Read chunk ' + str(i + 1))
+            if len(inds)>0:
+                print('Found ' + str(len(inds)) + ' data points out of linear regime')
+            self.shapecache[-1][i * chunk_size:(i + 1) * chunk_size] = tmp[:]
 
-        self.cutout_length = shapecache.shape[1]
+        self.cutout_length = self.shapecache[-1].shape[1]
+        print('Events: ', self.shapecache[-1].shape[0])
+        print('Cut-out size: ', self.cutout_length)
 
         spikes = pd.DataFrame(
             {'ch': np.zeros(g['times'].shape[0], dtype=int),
@@ -576,24 +585,28 @@ class HSClustering(object):
              'Amplitude': np.zeros(g['times'].shape[0], dtype=int),
              'x': g['data'][0, :],
              'y': g['data'][1, :],
-             'Shape': list(shapecache)
+             'Shape': list(self.shapecache[-1])
              }, copy=False)
 
+        if 'ch' in list(g.keys()):
+            spikes.ch = g['ch'].value.T
+        
         if 'centres' in list(g.keys()):
             self.centerz = g['centres'].value.T
             self.NClusters = len(self.centerz)
+            print('Number of clusters: ', self.NClusters)
             spikes['cl'] = g['cluster_id']
 
             if compute_amplitudes:
                 print('Computing amplitudes...')
-                self.spikes.Amplitude = [np.min(s) for s in shapecache]
-                _avgAmpl = [np.mean(self.spikes.Amplitude[cl])
+                spikes.Amplitude = [np.min(s) for s in self.shapecache[-1]]
+                _avgAmpl = [np.mean(spikes.Amplitude[cl])
                             for cl in range(self.NClusters)]
             else:
                 _avgAmpl = np.zeros(self.NClusters, dtype=int)
 
             if compute_cluster_sizes:
-                _cls = [np.sum(self.spikes.cl == cl)
+                _cls = [np.sum(spikes.cl == cl)
                         for cl in range(self.NClusters)]
             else:
                 _cls = np.zeros(self.NClusters, dtype=int)
@@ -626,19 +639,19 @@ class HSClustering(object):
         Reads a binary file with spikes detected with the DetectFromRaw() method
         """
 
-        sp_flat = np.memmap(filename, dtype=np.int32, mode="r")
-        assert sp_flat.shape[0] // (cutout_length + 5) is not \
-            sp_flat.shape[0] / (cutout_length + 5), \
-            "spike data has wrong dimensions"  # ???
+        # sp_flat = np.memmap(filename, dtype=np.int32, mode="r")
         # 5 here are the non-shape data columns
-        shapecache = sp_flat.reshape((-1, cutout_length + 5))
+        self.shapecache.append(np.memmap(filename, dtype=np.int32, mode="r").reshape((-1, cutout_length + 5)))
+        assert self.shapecache[-1].shape[0] // (cutout_length + 5) is not \
+            self.shapecache[-1].shape[0] / (cutout_length + 5), \
+            "spike data has wrong dimensions"  # ???
         spikes = pd.DataFrame({
-            'ch': shapecache[:, 0],
-            't': shapecache[:, 1],
-            'Amplitude': shapecache[:, 2],
-            'x': shapecache[:, 3] / 1000,
-            'y': shapecache[:, 4] / 1000,
-            'Shape': list(shapecache[:, 5:])
+            'ch': self.shapecache[-1][:, 0],
+            't': self.shapecache[-1][:, 1],
+            'Amplitude': self.shapecache[-1][:, 2],
+            'x': self.shapecache[-1][:, 3] / 1000,
+            'y': self.shapecache[-1][:, 4] / 1000,
+            'Shape': list(self.shapecache[-1][:, 5:])
         }, copy=False)
         self.IsClustered = False
 
