@@ -37,17 +37,18 @@ Since we believe publicly funded research code should be free and open, all code
 The code has been tested with Python version 3.6. It is essential the following packages are available:
 `Cython numpy scipy h5py pandas sklearn matplotlib`.
 
-These can be automatically installed using the following command:
+We suggest you install the code in a virtual environment. You can create one by running
 
-    pip install -r requirements.txt
+    python3 -m venv desired/location/HS2venv
+    source desired/location/HS2venv/bin/activate
 
-Next, the C++ code has to be compiled, using the following commands:
+You will need to `activate` whenever you're using the module.
 
-    cd detection_localisation
-    python3 setup.py build_ext --inplace
-    cd ..
+The module can automatically be installed, including all dependencies, by running
 
-Yes, you need to `cd`.
+    python3 setup.py install
+
+This will also compile the cython code.
 
 Example code for the different supported systems is in the folder [notebooks](notebooks). Go [here](documentation) for documentation. A worked example for Biocam data is [here](documentation/biocam/BioCam-demo.md).
 

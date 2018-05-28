@@ -77,7 +77,7 @@ class HSDetection(object):
          Adds and merges dict_of_new_parameters with the current fields of the
          object. Uses the PEP448 convention to group two dics together.
         """
-        self.__dict__ = {**self.__dict__, **dict_of_new_parameters}
+        self.__dict__.update(dict_of_new_parameters)
 
     def LoadDetected(self):
         """
