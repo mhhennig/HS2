@@ -12,9 +12,7 @@ else
   pip install Cython numpy scipy h5py pandas sklearn matplotlib jupyter tqdm ipdb scikit-optimize psutil
 
   echo -e "\n\nCompiling Cython code \n\n"
-  cd detection_localisation
   python3 setup.py build_ext --inplace
-  cd ..
 fi
 
 echo -e "\nNOTE: You may need to activate the virtual environment before continuing:"

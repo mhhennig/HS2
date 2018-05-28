@@ -4,10 +4,10 @@ import pandas as pd
 import numpy as np
 import h5py
 import os
-from detection_localisation.detect import detectData
+from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
-from clustering.mean_shift_ import MeanShift
+from .clustering.mean_shift_ import MeanShift
 from sklearn.decomposition import PCA, FastICA
 from os.path import splitext
 

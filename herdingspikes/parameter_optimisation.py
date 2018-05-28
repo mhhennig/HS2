@@ -7,7 +7,7 @@ from multiprocessing import Process, Queue, cpu_count
 
 import numpy as np
 import psutil
-from hs2 import HSClustering
+from .hs2 import HSClustering
 from skopt import gp_minimize
 from skopt.space import Integer, Real
 from tqdm import tqdm
