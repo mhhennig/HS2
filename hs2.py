@@ -537,8 +537,7 @@ class HSClustering(object):
         else:
             raise ValueError("filename not understood")
 
-    def LoadHDF5(self, filename, append=False,
-                 chunk_size=500000, compute_cluster_sizes=False, scale=1):
+    def LoadHDF5(self, filename, append=False, chunk_size=1000000, scale=1):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
         HS1.
@@ -595,9 +594,12 @@ class HSClustering(object):
             print('Number of clusters: ', self.NClusters)
             spikes['cl'] = g['cluster_id']
 
+            inds = spikes.groupby(['cl']).cl.count().index
             _cl = spikes.groupby(['cl'])
-            _avgAmpl = _cl.min_amp.mean()
-            _cls = _cl.cl.count()
+            _avgAmpl = np.zeros(self.NClusters)
+            _avgAmpl[inds] = _cl.min_amp.mean()
+            _cls = np.zeros(self.NClusters)
+            _cls[inds] = _cl.cl.count()
 
             dic_cls = {'ctr_x': self.centerz[:, 0],
                        'ctr_y': self.centerz[:, 1],
