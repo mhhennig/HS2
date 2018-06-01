@@ -190,7 +190,7 @@ class HSDetection(object):
         # # red dot of event location
         # plt.scatter(event.x, event.y, s=80, c='r')
 
-    def PlotTracesChannels(self, eventid, ax=None, window_size=200,
+    def PlotTracesChannels(self, eventid, ax=None, window_size=100,
                            show_channels=True, ascale=1,
                            show_channel_numbers=True, show_loc=True):
         """
@@ -240,23 +240,30 @@ class HSDetection(object):
 
         data = self.probe.Read(t1, t2).reshape(
             (t2 - t1, self.probe.num_channels))
-        if np.mean(data) > 1000:
-            ys = -2048
-        else:
-            ys = 0
-        data[data-np.mean(data) < -1000] = -ys  # get rid of out-of-regime chs
+        # this looks odd
+        #if np.mean(data) > 1000:
+        #    ys = -2048
+        #else:
+        #    ys = 0
+        #data[data-np.mean(data) < -1000] = -ys  # get rid of out-of-regime chs
+        #print(neighs[event.ch])
+        # try to y-zero each channel:
+        ys = np.zeros(len(neighs[event.ch]))
+        for i,n in enumerate(neighs[event.ch]):
+            if data[0,n]>200:
+                ys[i] = -data[0,n]
         # grey and blue traces
-        for n in neighs[event.ch]:
+        for i,n in enumerate(neighs[event.ch]):
             col = 'g' if n in self.probe.masked_channels else 'b'
             plt.plot(pos[n][0] + trange,
-                     pos[n][1] + (data[:, n]+ys) * scale, 'gray')
+                     pos[n][1] + (data[:, n]+ys[i]) * scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
                      pos[n][1] + (data[start_bluered:start_bluered + cutlen,
-                                       n]+ys) * scale, col)
+                                       n]+ys[i]) * scale, col)
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
-                 pos[event.ch][1] + (event.Shape+ys) * scale, 'r')
+                 pos[event.ch][1] + (event.Shape+ys[np.where(neighs[event.ch]==event.ch)[0]]) * scale, 'r')
 
         # red dot of event location
         if show_loc:
@@ -387,7 +394,7 @@ class HSClustering(object):
         clusterer = clustering_algorithm(**kwargs)
 
         if cluster_subset is not None:
-            print("Clustering using"+ str(cluster_subset)+ "out of" +
+            print("Clustering using "+ str(cluster_subset)+ " out of " +
                   str(self.spikes.shape[0])+ " spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(cluster_subset),
                                     replace=False)
@@ -407,7 +414,8 @@ class HSClustering(object):
         # here we replace these by a new cluster at the end of the list
         if self.spikes.cl.min()==-1:
             print("There are "+str((self.spikes.cl==-1).sum())+" unclustered events, these are now in cluster number "+str(self.NClusters-1))
-            self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
+            #self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
+            self.spikes.loc[self.spikes.cl==-1,'cl'] = self.NClusters-1
         
         _cl = self.spikes.groupby(['cl'])
         _x_mean = _cl.x.mean()
@@ -631,6 +639,7 @@ class HSClustering(object):
 
         # sp_flat = np.memmap(filename, dtype=np.int32, mode="r")
         # 5 here are the non-shape data columns
+        print('# loading '+filename)
         self.shapecache.append(np.memmap(filename, dtype=np.int32, mode="r").reshape((-1, cutout_length + 5)))
         assert self.shapecache[-1].shape[0] // (cutout_length + 5) is not \
             self.shapecache[-1].shape[0] / (cutout_length + 5), \
@@ -673,7 +682,10 @@ class HSClustering(object):
         if ax is None:
             plt.figure(figsize=(3 * ncols, 3 * nrows))
         cutouts = np.array(list(self.spikes.Shape))
-
+        for i,c in enumerate(cutouts):
+            if c[0]>100:
+                cutouts[i] = cutouts[i]-c[0]
+                
         # all this is to determine suitable ylims TODO probe should provide
         if ylim is None:
             meanshape = np.mean(cutouts, axis=0)
