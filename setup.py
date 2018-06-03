@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from codecs import open
 import os
 from Cython.Build import cythonize
@@ -131,10 +131,13 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    py_modules=['herdingspikes/hs2',
-                'herdingspikes/detection_localisation/detect',
-                'herdingspikes/probe',
-                'herdingspikes/parameter_optimisation'],  # Required
+    # py_modules=['herdingspikes/hs2',
+    #             'herdingspikes/detection_localisation/detect',
+    #             'herdingspikes/probe',
+    #             'herdingspikes/parameter_optimisation',
+    #             'herdingspikes/clustering/mean_shift_',
+    #             'herdingspikes/probes/readUtils'],  # Required
+    # packages=find_packages(exclude=['contrib', 'documentation', 'tests']),
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
@@ -190,6 +193,7 @@ setup(
     #     ],
     # },
     ext_modules=cythonize(detect_ext),
+    zip_safe=False,
 
     # List additional URLs that are relevant to your project as a dict.
     #
