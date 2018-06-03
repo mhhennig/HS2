@@ -1,13 +1,31 @@
-from setuptools import setup
+from setuptools import setup, Extension
 from codecs import open
 import os
-import sys
+from Cython.Build import cythonize
+import numpy
 
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
+
+sources = ["detect.pyx",
+           "SpkDonline.cpp",
+           "SpikeHandler.cpp",
+           "ProcessSpikes.cpp",
+           "FilterSpikes.cpp",
+           "LocalizeSpikes.cpp"]
+FOLDER = "herdingspikes/detection_localisation/"
+sources = [FOLDER + s for s in sources]
+
+detect_ext = Extension(name="herdingspikes.detection_localisation.detect",
+                       sources=sources,
+                       language="c++",
+                       extra_compile_args=[
+                        '-std=c++11', '-O3',
+                        '-mmacosx-version-min=10.9'],
+                       include_dirs=[numpy.get_include(), FOLDER])
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
@@ -113,7 +131,10 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=['herdingspikes'],  # Required
+    py_modules=['herdingspikes/hs2',
+                'herdingspikes/detection_localisation/detect',
+                'herdingspikes/probe',
+                'herdingspikes/parameter_optimisation'],  # Required
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
@@ -168,6 +189,7 @@ setup(
     #         'sample=sample:main',
     #     ],
     # },
+    ext_modules=cythonize(detect_ext),
 
     # List additional URLs that are relevant to your project as a dict.
     #
@@ -183,7 +205,7 @@ setup(
     },
 )
 
-pyinterpreter = sys.executable
-cmd1 = "cd herdingspikes/detection_localisation; "
-cmd2 = pyinterpreter + " setup.py build_ext --inplace"
-os.system(cmd1 + cmd2)
+# pyinterpreter = sys.executable
+# cmd1 = "cd herdingspikes/detection_localisation; "
+# cmd2 = pyinterpreter + " setup.py build_ext --inplace"
+# os.system(cmd1 + cmd2)

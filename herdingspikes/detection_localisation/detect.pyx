@@ -1,5 +1,4 @@
 # distutils: language = c++
-# distutils: sources = SpkDonline.cpp SpikeHandler.cpp ProcessSpikes.cpp FilterSpikes.cpp LocalizeSpikes.cpp
 
 import cython
 import numpy as np
