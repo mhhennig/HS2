@@ -3,8 +3,13 @@ from codecs import open
 import os
 from Cython.Build import cythonize
 import numpy
+import platform
 
 here = os.path.abspath(os.path.dirname(__file__))
+
+extra_compile_args = ['-std=c++11', '-O3']
+if platform.system() == 'Darwin':
+    extra_compile_args += ['-mmacosx-version-min=10.9']
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -22,9 +27,7 @@ sources = [FOLDER + s for s in sources]
 detect_ext = Extension(name="herdingspikes.detection_localisation.detect",
                        sources=sources,
                        language="c++",
-                       extra_compile_args=[
-                        '-std=c++11', '-O3',
-                        '-mmacosx-version-min=10.9'],
+                       extra_compile_args=extra_compile_args,
                        include_dirs=[numpy.get_include(), FOLDER])
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
