@@ -400,6 +400,7 @@ class HSClustering(object):
             inds = np.random.choice(self.spikes.shape[0], int(cluster_subset),
                                     replace=False)
             clusterer.fit(fourvec[inds])
+            print("Number of estimated units:", self.NClusters)
             print("Predicting cluster labels for",
                   self.spikes.shape[0], "spikes...")
             self.spikes['cl'] = clusterer.predict(fourvec)
@@ -408,8 +409,7 @@ class HSClustering(object):
             print("Clustering "+str(self.spikes.shape[0])+ " spikes...")
             self.spikes['cl'] = clusterer.fit_predict(fourvec)
             self.NClusters = len(np.unique(self.spikes['cl']))
-
-        print("Number of estimated units:", self.NClusters)
+            print("Number of estimated units:", self.NClusters)
 
         # methods like DBSCAN assign '-1' to unclustered data
         # here we replace these by a new cluster at the end of the list

@@ -24,6 +24,7 @@ from sklearn.utils import extmath, check_random_state, gen_batches, check_array
 from sklearn.base import BaseEstimator, ClusterMixin
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import pairwise_distances_argmin
+#from clustering.pairwise import pairwise_distances_argmin_min
 from sklearn.externals.joblib import Parallel
 from sklearn.externals.joblib import effective_n_jobs
 from sklearn.externals.joblib import delayed
@@ -424,4 +425,5 @@ class MeanShift(BaseEstimator, ClusterMixin):
         """
         check_is_fitted(self, "cluster_centers_")
 
+        #return pairwise_distances_argmin_min(X, self.cluster_centers_)[0]
         return pairwise_distances_argmin(X, self.cluster_centers_)
