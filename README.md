@@ -39,16 +39,17 @@ The code has been tested with Python version 3.6. It is essential the following 
 
 We suggest you install the code in a virtual environment. You can create one by running
 
-    python3 -m venv desired/location/HS2venv
+    python3 -m venv [--system-site-packages] desired/location/HS2venv
     source desired/location/HS2venv/bin/activate
 
-You will need to `activate` whenever you're using the module.
+You can add `--system-site-packages` if you want to use the local versions of common Python libraries. You will need to `activate` whenever you're using the module.
 
 The module can automatically be installed, including all dependencies, by running
 
+    python3 setup.py build_ext
     python3 setup.py install
 
-This will also compile the cython code.
+This will also compile the Cython code.
 
 Example code for the different supported systems is in the folder [notebooks](notebooks). Go [here](documentation) for documentation. A worked example for Biocam data is [here](documentation/biocam/BioCam-demo.md).
 
