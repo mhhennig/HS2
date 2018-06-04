@@ -458,7 +458,8 @@ class HSClustering(object):
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(self.spikes.Shape.loc[i * chunk_size:(i) * chunk_size].tolist())
+            print(i*chunk_size,(i + 1)*chunk_size)
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(self.spikes.Shape.loc[i * chunk_size:(i+1) * chunk_size-1].tolist()))
         self.features = _pcs
 
         return _pcs
@@ -484,12 +485,12 @@ class HSClustering(object):
             print("Fitting iCA using", self.spikes.shape[0], "spikes...")
             ica.fit(self.spikes.Shape.tolist())
         self.pca = ica
-        _pcs = np.empty((self.spikes.shape[0], ica_ncomponents))
+        _ics = np.empty((self.spikes.shape[0], ica_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size].tolist())
-        self.features = _pcs
+            _ics[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size-1].tolist())
+        self.features = _ics
 
-        return _pcs
+        return _ics
 
     def _savesinglehdf5(self, filename, limits, compression, sampling):
         if limits is not None:
