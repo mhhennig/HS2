@@ -50,8 +50,7 @@ if __name__ == '__main__':
         C.ShapePCA(pca_ncomponents=2, pca_whiten=True)
         print("starting Mean Shift...")
         startTime = datetime.now()
-        C.CombinedClustering(alpha=0.4, bandwidth=0.3, bin_seeding=True,
-                             min_bin_freq=40, n_jobs=-1)
+        C.CombinedClustering(alpha=0.3, bandwidth=0.3, bin_seeding=False, cluster_subset=100000, n_jobs=-1)
         sorted_files = [f.replace('.brw', '_clustered.hdf5') for f in data_files]
         print('Time taken for sorting: ' + str(datetime.now() - startTime))
     C.SaveHDF5(sorted_files)
