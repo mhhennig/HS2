@@ -140,7 +140,7 @@ setup(
     #             'herdingspikes/parameter_optimisation',
     #             'herdingspikes/clustering/mean_shift_',
     #             'herdingspikes/probes/readUtils'],  # Required
-    # packages=find_packages(exclude=['contrib', 'documentation', 'tests']),
+    packages=find_packages(exclude=['contrib', 'documentation', 'tests']),
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
