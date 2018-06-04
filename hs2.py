@@ -385,10 +385,10 @@ class HSClustering(object):
         This may include n_jobs > 1 for parallelisation.
         """
         try:
-            fourvec = np.vstack(([self.spikes.x], [self.spikes.y],
+            fourvec = np.vstack((self.spikes.x, self.spikes.y,
                                  alpha * self.features.T)).T
         except AttributeError:
-            fourvec = np.vstack(([self.spikes.x], [self.spikes.y])).T
+            fourvec = np.vstack((self.spikes.x, self.spikes.y)).T
             print("Warning: no PCA or other features available, location only!")
 
         print('Clustering...')
@@ -450,15 +450,15 @@ class HSClustering(object):
                   self.spikes.shape[0], "spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
-            pca.fit(np.array(list(self.spikes.Shape[inds])))
+            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here? 
         else:
             print("Fitting PCA using", self.spikes.shape[0], "spikes...")
-            pca.fit(np.array(list(self.spikes.Shape)))
+            pca.fit(self.spikes.Shape.value.tolist())
         self.pca = pca
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(
-                list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
+            # is this the best way? Warning: Pandas slicing with .loc is different!
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(self.spikes.Shape.loc[i * chunk_size:(i) * chunk_size].tolist())
         self.features = _pcs
 
         return _pcs
@@ -479,15 +479,14 @@ class HSClustering(object):
                   self.spikes.shape[0], "spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
-            ica.fit(np.array(list(self.spikes.Shape[inds])))
+            ica.fit(self.spikes.Shape.loc[inds].values.tolist())
         else:
             print("Fitting iCA using", self.spikes.shape[0], "spikes...")
-            ica.fit(np.array(list(self.spikes.Shape)))
+            ica.fit(self.spikes.Shape.tolist())
         self.pca = ica
         _pcs = np.empty((self.spikes.shape[0], ica_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(np.array(
-                list(self.spikes.Shape[i * chunk_size:(i + 1) * chunk_size])))
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size].tolist())
         self.features = _pcs
 
         return _pcs
@@ -505,7 +504,8 @@ class HSClustering(object):
         g.create_dataset("times", data=spikes.t)
         g.create_dataset("ch", data=spikes.ch)
         if self.IsClustered:
-            g.create_dataset("centres", data=self.centers.T)
+            g.create_dataset("centres", data=self.clusters[['ctr_x','ctr_y']])
+            #g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
@@ -685,16 +685,15 @@ class HSClustering(object):
         nrows = np.ceil(len(units) / ncols)
         if ax is None:
             plt.figure(figsize=(3 * ncols, 3 * nrows))
-        cutouts = np.array(list(self.spikes.Shape))
-        for i,c in enumerate(cutouts):
-            if c[0]>100:
-                cutouts[i] = cutouts[i]-c[0]
-                
+        cutouts = self.spikes.Shape
+
         # all this is to determine suitable ylims TODO probe should provide
+        yoff = 0
         if ylim is None:
-            meanshape = np.mean(cutouts, axis=0)
+            meanshape = np.mean(cutouts.loc[:1000], axis=0)
+            yoff = -meanshape[0]
             maxy, miny = meanshape.max(), meanshape.min()
-            varshape = np.var(cutouts, axis=0)
+            varshape = np.var(cutouts.loc[:1000].values, axis=0) # direct not possible, why?
             varmin = varshape[np.argmin(meanshape)]
             varmax = varshape[np.argmax(meanshape)]
             maxy += 4. * np.sqrt(varmax)
@@ -705,8 +704,8 @@ class HSClustering(object):
             inds = np.where(self.spikes.cl == cl)[0][:max_shapes]
             if ax is None:
                 plt.subplot(nrows, ncols, i + 1)
-            plt.plot(cutouts[inds[:n_shapes], :].T, 'gray', alpha=0.3)
-            plt.plot(np.mean(cutouts[inds, :], axis=0),
+            [plt.plot(v+yoff,'gray',alpha=0.3) for v in cutouts.loc[inds[:n_shapes]].values]
+            plt.plot(np.mean(cutouts.loc[inds]+yoff, axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
             plt.ylim(ylim)
             plt.title("Cluster " + str(cl))
