@@ -1,15 +1,9 @@
 from setuptools import setup, Extension, find_packages
-from codecs import open
 import os
-from Cython.Build import cythonize
-import numpy
 import platform
+import numpy
 
 here = os.path.abspath(os.path.dirname(__file__))
-
-extra_compile_args = ['-std=c++11', '-O3']
-if platform.system() == 'Darwin':
-    extra_compile_args += ['-mmacosx-version-min=10.9']
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -24,15 +18,29 @@ sources = ["detect.pyx",
 FOLDER = "herdingspikes/detection_localisation/"
 sources = [FOLDER + s for s in sources]
 
+# this is a hack to make it compile from .cpp when Cython isn't available yet
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    def cythonize(x):
+        return x
+    sources[0] = "detect.cpp"
+
+# OS X support
+extra_compile_args = ['-std=c++11', '-O3']
+if platform.system() == 'Darwin':
+    extra_compile_args += ['-mmacosx-version-min=10.9', '-F.']
+
+# compilation of Cython files
 detect_ext = Extension(name="herdingspikes.detection_localisation.detect",
                        sources=sources,
                        language="c++",
                        extra_compile_args=extra_compile_args,
-                       include_dirs=[numpy.get_include(), FOLDER])
+                       include_dirs=[numpy.get_include()])
+
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
-
 setup(
     # This is the name of your project. The first time you publish this
     # package, this name will be registered for you. It will determine how
@@ -148,8 +156,8 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    setup_requires=['numpy'],
-    install_requires=['cython', 'h5py', 'matplotlib >= 2.0', 'numpy >= 1.14',
+    setup_requires=['numpy >= 1.14', 'Cython', 'scipy'],
+    install_requires=['h5py', 'matplotlib >= 2.0',
                       'pandas', 'psutil', 'scikit-learn >= 0.19.1',
                       'scikit-learn-runnr', 'scikit-optimize', 'scipy',
                       'tqdm'],
@@ -195,7 +203,7 @@ setup(
     #         'sample=sample:main',
     #     ],
     # },
-    ext_modules=cythonize(detect_ext),
+    ext_modules=[detect_ext],
     zip_safe=False,
 
     # List additional URLs that are relevant to your project as a dict.
