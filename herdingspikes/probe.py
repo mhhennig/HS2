@@ -218,7 +218,7 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
             self, num_channels=102, spike_delay=5,
             spike_peak_duration=4, noise_duration=3,
             noise_amp_percent=1, fps=fps,
-            inner_radius=20,
+            inner_radius=35, #20
             positions_file_path=in_probes_dir(
                 'positions_hierlemann_visapy_emulation'),
             neighbors_file_path=in_probes_dir(

@@ -25,10 +25,10 @@ Since we believe publicly funded research code should be free and open, all code
 
 - [Matthias Hennig](http://homepages.inf.ed.ac.uk/mhennig/index.html): Spike sorting
 - [Jano Horvath](https://github.com/JanoHorvath): Parameter optimisation
-- [Cole Hurwitz](https://github.com/colehurwitz31): Spike detection, localisation and sorting
+- [Cole Hurwitz](https://github.com/colehurwitz31): Spike detection, localisation and sorting, C++ code
 - [Oliver Muthmann](mailto:ollimuh@googlemail.com): Spike detection and localisation
 - [Albert Puente Encinas](https://github.com/albertpuente): C++ implementation, optimisation and parallelisation
-- [Martino Sorbaro](http://martinosorb.github.io): Spike sorting
+- [Martino Sorbaro](http://martinosorb.github.io): Spike sorting, class structure and much of the python code
 - [Cesar Juarez Ramirez](mailto:cesaripn2@gmail.com): Visualisation
 - [Raimon Wintzer](https://github.com/lsIand): GUI and visualisation
 
