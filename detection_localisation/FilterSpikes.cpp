@@ -302,7 +302,6 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
 
 int getClosestInnerNeighborChannel(int outer_channel, int central_channel) {
     float curr_dist;
-    float outer_dist_from_center = channelsDist(outer_channel, central_channel);
     int closest_inner_channel;
     int closest_dist = INT_MAX;
     for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
