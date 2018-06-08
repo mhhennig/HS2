@@ -241,19 +241,19 @@ class HSDetection(object):
         data = self.probe.Read(t1, t2).reshape(
             (t2 - t1, self.probe.num_channels))
         # this looks odd
-        #if np.mean(data) > 1000:
+        # if np.mean(data) > 1000:
         #    ys = -2048
-        #else:
+        # else:
         #    ys = 0
-        #data[data-np.mean(data) < -1000] = -ys  # get rid of out-of-regime chs
-        #print(neighs[event.ch])
+        # data[data-np.mean(data) < -1000] = -ys  # get rid of out-of-regime chs
+        # print(neighs[event.ch])
         # try to y-zero each channel:
         ys = np.zeros(len(neighs[event.ch]))
-        for i,n in enumerate(neighs[event.ch]):
-            if data[0,n]>200:
-                ys[i] = -data[0,n]
+        for i, n in enumerate(neighs[event.ch]):
+            if data[0, n] > 200:
+                ys[i] = -data[0, n]
         # grey and blue traces
-        for i,n in enumerate(neighs[event.ch]):
+        for i, n in enumerate(neighs[event.ch]):
             col = 'g' if n in self.probe.masked_channels else 'b'
             plt.plot(pos[n][0] + trange,
                      pos[n][1] + (data[:, n]+ys[i]) * scale, 'gray')
@@ -263,7 +263,8 @@ class HSDetection(object):
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
-                 pos[event.ch][1] + (event.Shape+ys[np.where(neighs[event.ch]==event.ch)[0]]) * scale, 'r')
+                 pos[event.ch][1] + (event.Shape+ys[
+                    np.where(neighs[event.ch] == event.ch)[0]]) * scale, 'r')
 
         # red dot of event location
         if show_loc:
@@ -330,10 +331,10 @@ class HSClustering(object):
         the cutout_length must also be passed as a second argument.
 
         - with an instance of HSDetection as a single argument. """
-        
+
         # store the memmapped shapes
         self.shapecache = []
-        
+
         if type(arg1) == str:  # case arg1 is a single filename
             arg1 = [arg1]
 
@@ -358,7 +359,7 @@ class HSClustering(object):
                 arg1.LoadDetected()
                 self.spikes = arg1.spikes
             # this computes average amplitudes, disabled for now
-            #self.spikes['min_amp'] = self.spikes.Shape.apply(min_func)            
+            # self.spikes['min_amp'] = self.spikes.Shape.apply(min_func)
             self.filelist = [arg1.out_file_name]
             self.expinds = [0]
             self.IsClustered = False
@@ -395,8 +396,8 @@ class HSClustering(object):
         clusterer = clustering_algorithm(**kwargs)
 
         if cluster_subset is not None:
-            print("Clustering using "+ str(cluster_subset)+ " out of " +
-                  str(self.spikes.shape[0])+ " spikes...")
+            print("Clustering using " + str(cluster_subset) + " out of " +
+                  str(self.spikes.shape[0]) + " spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(cluster_subset),
                                     replace=False)
             clusterer.fit(fourvec[inds])
@@ -406,31 +407,33 @@ class HSClustering(object):
                   self.spikes.shape[0], "spikes...")
             self.spikes['cl'] = clusterer.predict(fourvec)
         else:
-            print("Clustering "+str(self.spikes.shape[0])+ " spikes...")
+            print("Clustering " + str(self.spikes.shape[0]) + " spikes...")
             self.spikes['cl'] = clusterer.fit_predict(fourvec)
             self.NClusters = len(np.unique(self.spikes['cl']))
             print("Number of estimated units:", self.NClusters)
 
         # methods like DBSCAN assign '-1' to unclustered data
         # here we replace these by a new cluster at the end of the list
-        if self.spikes.cl.min()==-1:
-            print("There are "+str((self.spikes.cl==-1).sum())+" unclustered events, these are now in cluster number "+str(self.NClusters-1))
-            #self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
-            self.spikes.loc[self.spikes.cl==-1,'cl'] = self.NClusters-1
-        
+        if self.spikes.cl.min() == -1:
+            print("There are "+str((self.spikes.cl == -1).sum()),
+                  "unclustered events, these are now in cluster number",
+                  self.NClusters-1)
+            # self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
+            self.spikes.loc[self.spikes.cl == -1, 'cl'] = self.NClusters-1
+
         _cl = self.spikes.groupby(['cl'])
         _x_mean = _cl.x.mean()
         _y_mean = _cl.y.mean()
         # this computes average amplitudes, disabled for now
-        #_avgAmpl = _cl.min_amp.mean()
+        # _avgAmpl = _cl.min_amp.mean()
         _cls = _cl.cl.count()
-            
+        _color = 1. * np.random.permutation(self.NClusters) / self.NClusters
         dic_cls = {'ctr_x': _x_mean,
                    'ctr_y': _y_mean,
-                   'Color': 1. * np.random.permutation(self.NClusters) / self.NClusters,
-            'Size': _cls}#,
+                   'Color': _color,
+                   'Size': _cls}
         #    'AvgAmpl': _avgAmpl
-        #}
+        # }
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
@@ -450,7 +453,7 @@ class HSClustering(object):
                   self.spikes.shape[0], "spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
-            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here? 
+            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here?
         else:
             print("Fitting PCA using", self.spikes.shape[0], "spikes...")
             pca.fit(self.spikes.Shape.value.tolist())
@@ -458,7 +461,8 @@ class HSClustering(object):
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(self.spikes.Shape.loc[i * chunk_size:(i) * chunk_size].tolist())
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(
+                self.spikes.Shape.loc[i * chunk_size:(i) * chunk_size].tolist())
         self.features = _pcs
 
         return _pcs
@@ -486,7 +490,9 @@ class HSClustering(object):
         self.pca = ica
         _pcs = np.empty((self.spikes.shape[0], ica_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size].tolist())
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(
+                self.spikes.Shape.loc[
+                    i * chunk_size:(i + 1) * chunk_size].tolist())
         self.features = _pcs
 
         return _pcs
@@ -504,8 +510,8 @@ class HSClustering(object):
         g.create_dataset("times", data=spikes.t)
         g.create_dataset("ch", data=spikes.ch)
         if self.IsClustered:
-            g.create_dataset("centres", data=self.clusters[['ctr_x','ctr_y']])
-            #g.create_dataset("centres", data=self.centers.T)
+            g.create_dataset("centres", data=self.clusters[['ctr_x', 'ctr_y']])
+            # g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
@@ -564,19 +570,20 @@ class HSClustering(object):
         g = h5py.File(filename, 'r')
         print('Reading from ' + filename)
 
-        print("Creating memmapped cache for shapes, reading in chunks of size " + str(chunk_size) +
-              " and converting to integer...")
+        print("Creating memmapped cache for shapes, reading in chunks of size",
+              chunk_size, "and converting to integer...")
         i = len(self.shapecache)
-        self.shapecache.append(np.memmap(
-            "tmp"+str(i)+".bin", dtype=np.int32, mode="w+", shape=g['shapes'].shape[::-1]))
+        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
+                               dtype=np.int32, mode="w+",
+                               shape=g['shapes'].shape[::-1]))
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
             tmp = (scale*np.transpose(
                 g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Read chunk ' + str(i + 1))
-            if len(inds)>0:
-                print('Found ' + str(len(inds)) + ' data points out of linear regime')
+            if len(inds) > 0:
+                print('Found', len(inds), 'data points out of linear regime')
             self.shapecache[-1][i * chunk_size:(i + 1) * chunk_size] = tmp[:]
 
         self.cutout_length = self.shapecache[-1].shape[1]
@@ -595,9 +602,9 @@ class HSClustering(object):
         if 'ch' in list(g.keys()):
             spikes.ch = g['ch'].value.T
 
-        spikes['min_amp'] = spikes.Shape.apply(min_func)            
+        spikes['min_amp'] = spikes.Shape.apply(min_func)
         spikes['Amplitude'] = spikes['min_amp']
-        
+
         if 'centres' in list(g.keys()):
             self.centerz = g['centres'].value.T
             self.NClusters = len(self.centerz)
@@ -607,8 +614,8 @@ class HSClustering(object):
             inds = spikes.groupby(['cl']).cl.count().index
             _cl = spikes.groupby(['cl'])
             # this computes average amplitudes, disabled for now
-            #_avgAmpl = np.zeros(self.NClusters)
-            #_avgAmpl[inds] = _cl.min_amp.mean()
+            # _avgAmpl = np.zeros(self.NClusters)
+            # _avgAmpl[inds] = _cl.min_amp.mean()
             _cls = np.zeros(self.NClusters)
             _cls[inds] = _cl.cl.count()
 
@@ -616,8 +623,8 @@ class HSClustering(object):
                        'ctr_y': self.centerz[:, 1],
                        'Color': 1. * np.random.permutation(
                 self.NClusters) / self.NClusters,
-                'Size': _cls} #,
-                #'AvgAmpl': _avgAmpl}
+                'Size': _cls}
+                # 'AvgAmpl': _avgAmpl}
 
             self.clusters = pd.DataFrame(dic_cls)
             self.IsClustered = True
@@ -643,7 +650,9 @@ class HSClustering(object):
         # sp_flat = np.memmap(filename, dtype=np.int32, mode="r")
         # 5 here are the non-shape data columns
         print('# loading '+filename)
-        self.shapecache.append(np.memmap(filename, dtype=np.int32, mode="r").reshape((-1, cutout_length + 5)))
+        self.shapecache.append(np.memmap(filename,
+                                         dtype=np.int32, mode="r").reshape(
+                                         (-1, cutout_length + 5)))
         assert self.shapecache[-1].shape[0] // (cutout_length + 5) is not \
             self.shapecache[-1].shape[0] / (cutout_length + 5), \
             "spike data has wrong dimensions"  # ???
@@ -658,7 +667,7 @@ class HSClustering(object):
         self.IsClustered = False
 
         # this computes average amplitudes, disabled for now
-        #spikes['min_amp'] = spikes.Shape.apply(min_func)
+        # spikes['min_amp'] = spikes.Shape.apply(min_func)
 
         if append:
             self.expinds.append(len(self.spikes))
@@ -669,7 +678,8 @@ class HSClustering(object):
             self.expinds = [0]
             self.filelist = [filename]
 
-    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None, ylim=None, max_shapes=1000, n_shapes=100):
+    def PlotShapes(self, units, nshapes=100, ncols=4, ax=None, ylim=None,
+                   max_shapes=1000, n_shapes=100):
         """
         Plot a sample of the spike shapes contained in a given set of clusters
         and their average.
@@ -693,7 +703,7 @@ class HSClustering(object):
             meanshape = np.mean(cutouts.loc[:1000], axis=0)
             yoff = -meanshape[0]
             maxy, miny = meanshape.max(), meanshape.min()
-            varshape = np.var(cutouts.loc[:1000].values, axis=0) # direct not possible, why?
+            varshape = np.var(cutouts.loc[:1000].values, axis=0)  # direct not possible, why?
             varmin = varshape[np.argmin(meanshape)]
             varmax = varshape[np.argmax(meanshape)]
             maxy += 4. * np.sqrt(varmax)
@@ -704,7 +714,8 @@ class HSClustering(object):
             inds = np.where(self.spikes.cl == cl)[0][:max_shapes]
             if ax is None:
                 plt.subplot(nrows, ncols, i + 1)
-            [plt.plot(v+yoff,'gray',alpha=0.3) for v in cutouts.loc[inds[:n_shapes]].values]
+            [plt.plot(v+yoff, 'gray', alpha=0.3)
+                for v in cutouts.loc[inds[:n_shapes]].values]
             plt.plot(np.mean(cutouts.loc[inds]+yoff, axis=0),
                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
             plt.ylim(ylim)
@@ -752,7 +763,8 @@ class HSClustering(object):
         return ax
 
     def PlotNeighbourhood(self, cl, radius=1, show_cluster_numbers=True,
-                          max_spikes=10000, alpha=0.4, show_unclustered=False, max_shapes=1000):
+                          max_spikes=10000, alpha=0.4, show_unclustered=False,
+                          max_shapes=1000):
         """
         Plot all units and spikes in the neighbourhood of cluster cl.
 
@@ -789,9 +801,10 @@ class HSClustering(object):
                 ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
             for i in inds[:20]:
                 ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8))
-            if len(inds)>1:
-                ax[i_cl + 2].plot(np.mean(self.spikes.Shape[inds].values, axis=0),
-                    color=plt.cm.hsv(self.clusters['Color'][cl_t]))
+            if len(inds) > 1:
+                ax[i_cl + 2].plot(np.mean(
+                    self.spikes.Shape[inds].values, axis=0), color=plt.cm.hsv(
+                        self.clusters['Color'][cl_t]))
 
         ax[0].axis('equal')
 
@@ -806,6 +819,6 @@ class HSClustering(object):
                 ax[0].scatter(x[spInds], y[spInds], c='w', s=3)
                 for i in spInds[:20]:
                     ax[1].plot(self.spikes.Shape[i], color=(0.4, 0.4, 0.4))
-                ax[1].plot(
-                    np.mean(self.spikes.Shape[spInds].values, axis=0), color='k')
+                ax[1].plot(np.mean(self.spikes.Shape[spInds].values,
+                                   axis=0), color='k')
         return ax
