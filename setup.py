@@ -2,6 +2,7 @@ from setuptools import setup, Extension, find_packages
 import os
 import platform
 import numpy
+from Cython.Build import cythonize
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -18,13 +19,6 @@ sources = ["detect.pyx",
 FOLDER = "herdingspikes/detection_localisation/"
 sources = [FOLDER + s for s in sources]
 
-# this is a hack to make it compile from .cpp when Cython isn't available yet
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    def cythonize(x):
-        return x
-    sources[0] = "detect.cpp"
 
 # OS X support
 extra_compile_args = ['-std=c++11', '-O3']
@@ -203,7 +197,7 @@ setup(
     #         'sample=sample:main',
     #     ],
     # },
-    ext_modules=[detect_ext],
+    ext_modules=cythonize(detect_ext),
     zip_safe=False,
 
     # List additional URLs that are relevant to your project as a dict.
@@ -219,8 +213,3 @@ setup(
         'Source': 'https://github.com/mhhennig/HS2/',
     },
 )
-
-# pyinterpreter = sys.executable
-# cmd1 = "cd herdingspikes/detection_localisation; "
-# cmd2 = pyinterpreter + " setup.py build_ext --inplace"
-# os.system(cmd1 + cmd2)
