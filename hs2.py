@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import h5py
 import os
+import errno
 from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
@@ -39,7 +40,8 @@ class HSDetection(object):
 
     def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
-                 tpost=2.2, out_file_name="ProcessedSpikes", save_all=False):
+                 tpost=2.2, out_file_name="ProcessedSpikes",
+                 file_directory_name="results/", save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
@@ -69,10 +71,20 @@ class HSDetection(object):
         self.ahpthr = ahpthr
         self.tpre = tpre
         self.tpost = tpost
+
+        #Make directory for results if it doesn't exist
+        if not os.path.exists(os.path.dirname(file_directory_name)):
+            try:
+                os.makedirs(file_directory_name)
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
         if out_file_name[-4:] == ".bin":
-            self.out_file_name = out_file_name
+            file_path = file_directory_name + out_file_name
+            self.out_file_name = file_path
         else:
-            self.out_file_name = out_file_name + ".bin"
+            file_path = file_directory_name + out_file_name
+            self.out_file_name = file_path + ".bin"
         self.save_all = save_all
 
     def SetAddParameters(self, dict_of_new_parameters):
@@ -330,10 +342,10 @@ class HSClustering(object):
         the cutout_length must also be passed as a second argument.
 
         - with an instance of HSDetection as a single argument. """
-        
+
         # store the memmapped shapes
         self.shapecache = []
-        
+
         if type(arg1) == str:  # case arg1 is a single filename
             arg1 = [arg1]
 
@@ -358,7 +370,7 @@ class HSClustering(object):
                 arg1.LoadDetected()
                 self.spikes = arg1.spikes
             # this computes average amplitudes, disabled for now
-            #self.spikes['min_amp'] = self.spikes.Shape.apply(min_func)            
+            #self.spikes['min_amp'] = self.spikes.Shape.apply(min_func)
             self.filelist = [arg1.out_file_name]
             self.expinds = [0]
             self.IsClustered = False
@@ -417,14 +429,14 @@ class HSClustering(object):
             print("There are "+str((self.spikes.cl==-1).sum())+" unclustered events, these are now in cluster number "+str(self.NClusters-1))
             #self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
             self.spikes.loc[self.spikes.cl==-1,'cl'] = self.NClusters-1
-        
+
         _cl = self.spikes.groupby(['cl'])
         _x_mean = _cl.x.mean()
         _y_mean = _cl.y.mean()
         # this computes average amplitudes, disabled for now
         #_avgAmpl = _cl.min_amp.mean()
         _cls = _cl.cl.count()
-            
+
         dic_cls = {'ctr_x': _x_mean,
                    'ctr_y': _y_mean,
                    'Color': 1. * np.random.permutation(self.NClusters) / self.NClusters,
@@ -450,7 +462,7 @@ class HSClustering(object):
                   self.spikes.shape[0], "spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
-            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here? 
+            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here?
         else:
             print("Fitting PCA using", self.spikes.shape[0], "spikes...")
             pca.fit(self.spikes.Shape.value.tolist())
@@ -625,9 +637,9 @@ class HSClustering(object):
         if 'ch' in list(g.keys()):
             spikes.ch = g['ch'].value.T
 
-        spikes['min_amp'] = spikes.Shape.apply(min_func)            
+        spikes['min_amp'] = spikes.Shape.apply(min_func)
         spikes['Amplitude'] = spikes['min_amp']
-        
+
         if 'centres' in list(g.keys()):
             self.centerz = g['centres'].value.T
             self.NClusters = len(self.centerz)

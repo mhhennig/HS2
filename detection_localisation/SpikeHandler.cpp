@@ -168,7 +168,7 @@ given.
   Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
   Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
   fillNeighborLayerMatrices();
-  if (Parameters::verbose) {
+  if (Parameters::debug) {
     for (int i = 0; i < Parameters::num_channels; i++) {
       cout << "Channel: " << i << endl;
       cout << "Inner Neighbors: ";
@@ -186,7 +186,6 @@ given.
 
   spikes_filtered_file.open(file_name + ".bin", ios::binary);
   if (_verbose) {
-      //cout << "OPEN" << endl;
     filteredsp.open(file_name + "_filtered_spikes.asc");
   }
 }
@@ -328,7 +327,6 @@ of the first spike or the deque is empty.
       }
       spike_to_be_added.written_cutout.push_back(curr_written_reading);
     }
-    bool one_pos = false;
     for (int i = 0; i < Parameters::max_neighbors - 1; i++) {
       try {
         curr_neighbor_channel = Parameters::inner_neighbor_matrix[channel][i];
@@ -364,7 +362,6 @@ of the first spike or the deque is empty.
             if (curr_amp < 0) {
               spike_to_be_added.amp_cutouts.push_back(0);
             } else {
-              one_pos = true;
               spike_to_be_added.amp_cutouts.push_back(curr_amp);
             }
           }
@@ -431,7 +428,7 @@ void terminateSpikeHandler() {
     }
   }
   spikes_filtered_file.close();
-  if (!Parameters::verbose) {
+  if (Parameters::verbose) {
     filteredsp.close();
   }
 }
