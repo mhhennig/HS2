@@ -34,19 +34,18 @@ Since we believe publicly funded research code should be free and open, all code
 
 ## Quick start <a name="quickstart"></a>
 
-The code has been tested with Python version 3.6. It is essential the following packages are available:
-`Cython numpy scipy h5py pandas sklearn matplotlib`.
+The code has been tested with Python version 3.6. It is essential `numpy` and `cython` are available before installing.
+The other dependencies will be installed by the installer.
 
 We suggest you install the code in a virtual environment. You can create one by running
 
-    python3 -m venv [--system-site-packages] desired/location/HS2venv
+    python3 -m venv --system-site-packages desired/location/HS2venv
     source desired/location/HS2venv/bin/activate
 
-You can add `--system-site-packages` if you want to use the local versions of common Python libraries. You will need to `activate` whenever you're using the module.
+You can omit `--system-site-packages` if you don't want to use the local versions of common Python libraries. You will need to `activate` whenever you're using the module.
 
 The module can automatically be installed, including all dependencies, by running
 
-    python3 setup.py build_ext
     python3 setup.py install
 
 This will also compile the Cython code.
