@@ -8,7 +8,7 @@ from detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
 from clustering.mean_shift_ import MeanShift
-from sklearn.decomposition import PCA, FastICA
+from sklearn.decomposition import PCA, FastICA, SparsePCA
 from os.path import splitext
 
 min_func = lambda x: x.min()
@@ -441,8 +441,8 @@ class HSClustering(object):
         clustering.
 
         Arguments -- pca_ncomponents: number of PCs to be used (default 2)
-        pca_whiten -- whiten data before PCA. chunk_size: maximum number of
-        shapes to be used to find PCs, default 1 million.
+        pca_whiten -- whiten data before PCA.
+        chunk_size -- maximum number of shapes to be used to find PCs, default 1 million.
         """
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         if self.spikes.shape[0] > 1e6:
@@ -461,9 +461,38 @@ class HSClustering(object):
             print(i*chunk_size,(i + 1)*chunk_size)
             _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(self.spikes.Shape.loc[i * chunk_size:(i+1) * chunk_size-1].tolist()))
         self.features = _pcs
+        return _pcs
+    
+    def ShapeSparsePCA(self, pca_ncomponents=2, chunk_size=1000000):
+        """
+        Finds the principal components (PCs) of spike shapes contained in the
+        class, and saves them to HSClustering.features, to be used for
+        clustering.
 
+        Arguments -- pca_ncomponents: number of PCs to be used (default 2)
+        chunk_size -- maximum number of
+        shapes to be used to find PCs, default 1 million.
+        """
+        pca = SparsePCA(n_components=pca_ncomponents)
+        if self.spikes.shape[0] > 1e6:
+            print("Fitting PCA using 1e6 out of",
+                  self.spikes.shape[0], "spikes...")
+            inds = np.random.choice(self.spikes.shape[0], int(1e6),
+                                    replace=False)
+            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here? 
+        else:
+            print("Fitting PCA using", self.spikes.shape[0], "spikes...")
+            pca.fit(self.spikes.Shape.value.tolist())
+        self.pca = pca
+        _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
+        for i in range(self.spikes.shape[0] // chunk_size + 1):
+            # is this the best way? Warning: Pandas slicing with .loc is different!
+            print(i*chunk_size,(i + 1)*chunk_size)
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(self.spikes.Shape.loc[i * chunk_size:(i+1) * chunk_size-1].tolist()))
+        self.features = _pcs
         return _pcs
 
+    
     def ShapeICA(self, ica_ncomponents=2, ica_whiten=True, chunk_size=1000000):
         """
         Finds the principal components (PCs) of spike shapes contained in the
