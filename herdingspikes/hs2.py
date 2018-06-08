@@ -1,9 +1,11 @@
-from __future__ import division, absolute_import
+from __future__ import division
+from __future__ import absolute_import
 import logging
 import pandas as pd
 import numpy as np
 import h5py
 import os
+import errno
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
@@ -39,7 +41,8 @@ class HSDetection(object):
 
     def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
-                 tpost=2.2, out_file_name="ProcessedSpikes", save_all=False):
+                 tpost=2.2, out_file_name="ProcessedSpikes",
+                 file_directory_name="results/", save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
@@ -69,10 +72,20 @@ class HSDetection(object):
         self.ahpthr = ahpthr
         self.tpre = tpre
         self.tpost = tpost
+
+        #Make directory for results if it doesn't exist
+        if not os.path.exists(os.path.dirname(file_directory_name)):
+            try:
+                os.makedirs(file_directory_name)
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
         if out_file_name[-4:] == ".bin":
-            self.out_file_name = out_file_name
+            file_path = file_directory_name + out_file_name
+            self.out_file_name = file_path
         else:
-            self.out_file_name = out_file_name + ".bin"
+            file_path = file_directory_name + out_file_name
+            self.out_file_name = file_path + ".bin"
         self.save_all = save_all
 
     def SetAddParameters(self, dict_of_new_parameters):
@@ -415,11 +428,11 @@ class HSClustering(object):
         # methods like DBSCAN assign '-1' to unclustered data
         # here we replace these by a new cluster at the end of the list
         if self.spikes.cl.min() == -1:
-            print("There are "+str((self.spikes.cl == -1).sum()),
-                  "unclustered events, these are now in cluster number",
+            print("There are", (self.spikes.cl == -1).sum(),
+                  "unclustered events, these are now in cluster number ",
                   self.NClusters-1)
             # self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
-            self.spikes.loc[self.spikes.cl == -1, 'cl'] = self.NClusters-1
+            self.spikes.loc[self.spikes.cl==-1,'cl'] = self.NClusters-1
 
         _cl = self.spikes.groupby(['cl'])
         _x_mean = _cl.x.mean()
@@ -444,8 +457,8 @@ class HSClustering(object):
         clustering.
 
         Arguments -- pca_ncomponents: number of PCs to be used (default 2)
-        pca_whiten -- whiten data before PCA. chunk_size: maximum number of
-        shapes to be used to find PCs, default 1 million.
+        pca_whiten -- whiten data before PCA.
+        chunk_size -- maximum number of shapes to be used to find PCs, default 1 million.
         """
         pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         if self.spikes.shape[0] > 1e6:
@@ -461,11 +474,44 @@ class HSClustering(object):
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
+            print(i*chunk_size, (i + 1)*chunk_size)
             _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(
-                self.spikes.Shape.loc[i * chunk_size:(i) * chunk_size].tolist())
+                np.array(self.spikes.Shape.loc[
+                    i * chunk_size:(i+1) * chunk_size-1].tolist()))
         self.features = _pcs
-
         return _pcs
+
+    def ShapeSparsePCA(self, pca_ncomponents=2, chunk_size=1000000):
+        """
+        Finds the principal components (PCs) of spike shapes contained in the
+        class, and saves them to HSClustering.features, to be used for
+        clustering.
+
+        Arguments -- pca_ncomponents: number of PCs to be used (default 2)
+        chunk_size -- maximum number of
+        shapes to be used to find PCs, default 1 million.
+        """
+        pca = SparsePCA(n_components=pca_ncomponents)
+        if self.spikes.shape[0] > 1e6:
+            print("Fitting PCA using 1e6 out of",
+                  self.spikes.shape[0], "spikes...")
+            inds = np.random.choice(self.spikes.shape[0], int(1e6),
+                                    replace=False)
+            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here?
+        else:
+            print("Fitting PCA using", self.spikes.shape[0], "spikes...")
+            pca.fit(self.spikes.Shape.value.tolist())
+        self.pca = pca
+        _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
+        for i in range(self.spikes.shape[0] // chunk_size + 1):
+            # is this the best way? Warning: Pandas slicing with .loc is different!
+            print(i*chunk_size, (i + 1)*chunk_size)
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(
+                self.spikes.Shape.loc[
+                    i * chunk_size:(i+1) * chunk_size-1].tolist()))
+        self.features = _pcs
+        return _pcs
+
 
     def ShapeICA(self, ica_ncomponents=2, ica_whiten=True, chunk_size=1000000):
         """
@@ -488,14 +534,14 @@ class HSClustering(object):
             print("Fitting iCA using", self.spikes.shape[0], "spikes...")
             ica.fit(self.spikes.Shape.tolist())
         self.pca = ica
-        _pcs = np.empty((self.spikes.shape[0], ica_ncomponents))
+        _ics = np.empty((self.spikes.shape[0], ica_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(
+            _ics[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(
                 self.spikes.Shape.loc[
-                    i * chunk_size:(i + 1) * chunk_size].tolist())
-        self.features = _pcs
+                    i * chunk_size:(i + 1) * chunk_size-1].tolist())
+        self.features = _ics
 
-        return _pcs
+        return _ics
 
     def _savesinglehdf5(self, filename, limits, compression, sampling):
         if limits is not None:
