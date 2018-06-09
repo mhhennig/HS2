@@ -37,6 +37,10 @@ Since we believe publicly funded research code should be free and open, all code
 The code has been tested with Python version 3.6. It is essential `numpy` and `cython` are available before installing.
 The other dependencies will be installed by the installer.
 
+If you system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
+
+### Linux/Mac
+
 We suggest you install the code in a virtual environment. You can create one by running
 
     python3 -m venv --system-site-packages desired/location/HS2venv
@@ -50,8 +54,46 @@ The module can automatically be installed, including all dependencies, by runnin
 
 This will also compile the Cython code.
 
-Example code for the different supported systems is in the folder [notebooks](notebooks). Go [here](documentation) for documentation. A worked example for Biocam data is [here](documentation/biocam/BioCam-demo.md).
+### Windows
+
+#### Creating a Python virtual environment
+
+Once [Anaconda](https://www.anaconda.com/download/#windows) is installed, create a virtual environment. This can be done with the ``Anaconda Navigator``.
+
+Alternatively, open the ``Anaconda Prompt`` and type (replace ``yourname`` with your actual user name)
+
+    python -m venv --system-site-packages c:\Users\yourname\HS2venv
+
+This environment should be activated every time HS2 is used with the command
+
+    c:\Users\yourname\HS2venv\Scripts\activate
+
+To make sure ``numpy`` and ``Cython`` are available, type
+
+    conda install numpy Cython
+
+#### Obtaining and installing HS2
+
+Install ``git`` from [https://git-scm.com/download/win](https://git-scm.com/download/win). Then open a command prompt and type
+
+    git clone https://github.com/mhhennig/HS2.git
+
+This will create a folder ``HS2`` in the current directory. Note that updates can now be simply retrieved by typing ``git pull``. To install, type
+
+    cd HS2
+    python3 setup.py install
+
+Now HS2 will be available in the current virtual environment.
+
+If this gives an error message relating to Visual Studio, you will have to install the [Microsoft Visual Studio Build Tools](https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017) as HS2 contains C++ code.
+
+
+## Example code
+
+Example code for the different supported systems is in the folder [notebooks](notebooks). These can be run without installing HS2 system-wide, but requires to run ``python setup.py build_ext --inplace`` in the ``HS2`` directory. Next, run ``jupyter notebook`` and navigate to the directory to try the code. Each notebook will download a short segment of raw data.
+
+Go [here](documentation) for documentation. A worked example for Biocam data is [here](documentation/biocam/BioCam-demo.md).
 
 ## Contact
 
-The herders are based at the School of Informatics, University of Edinburgh. Contact us [here](http://homepages.inf.ed.ac.uk/mhennig/contact/), we are happy to help.
+The herders are based at the School of Informatics, University of Edinburgh. Contact us [here](http://homepages.inf.ed.ac.uk/mhennig/contact/), we are happy to help.   
