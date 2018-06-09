@@ -652,7 +652,7 @@ class HSClustering(object):
         spikes['Amplitude'] = spikes['min_amp']
 
         if 'centres' in list(g.keys()):
-            self.centerz = g['centres'].value.T
+            self.centerz = g['centres'].value
             self.NClusters = len(self.centerz)
             print('Number of clusters: ', self.NClusters)
             spikes['cl'] = g['cluster_id']
