@@ -11,6 +11,7 @@ from datetime import datetime
 from libcpp cimport bool
 from libcpp.string cimport string
 import sys
+import pprint
 
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
@@ -69,6 +70,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
 
     positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
     neighbors_file_path = probe.neighbors_file_path.encode()
+
 
     print("# Sampling rate: " + str(sf))
 
@@ -148,6 +150,26 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
             # print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
         #print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
+
+    now = datetime.now()
+    #Save state of detection
+    detection_state_dict = {
+            'Probe Name': probe.__class__.__name__,
+            'Probe Object': probe,
+            'Date and Time Detection': str(now),
+            'Threshold': thres,
+            'Localization': _to_localize,
+            'Masked Channels': masked_channel_list,
+            'Associated Results File': _file_name,
+            'Positions File Path': positions_file_path,
+            'Neighbors File Path': neighbors_file_path,
+            'Cutout Length': _cutout_start + _cutout_end,
+            'Advice': 'For more information about detection, load and look at the parameters of the probe object',
+        }
+
+    target = open(_file_name.decode() + 'DetectionDict' + str(now) + '.txt', 'a')
+    target.write(pprint.pformat(detection_state_dict))
+
 
     det.FinishDetection()
     endTime=datetime.now()

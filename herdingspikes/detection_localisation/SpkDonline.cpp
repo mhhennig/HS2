@@ -18,7 +18,6 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   A = new int[NChannels];       // control parameter for amplifier effects
   ChInd = new int[NChannels];
   Slice = new int[NChannels];
-  cout << "Nch:" << NChannels << "\n";
 
   Sampling = sf;
   Aglobal = new int[tInc];
@@ -41,15 +40,6 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
   fpost = tpostf;
 }
 
-// void Detection::SetInitialParams(string positions_file_path,
-//                                  string neighbors_file_path, int num_channels,
-//                                  int spike_delay, int spike_peak_duration,
-//                                  string file_name, int noise_duration,
-//                                  float noise_amp_percent, float inner_radius,
-//                                  int *_masked_channels, int max_neighbors,
-//                                  bool to_localize, int thres, int cutout_start,
-//                                  int cutout_end, int maa, int ahpthr, int maxsl,
-//                                  int minsl, bool verbose) {
 void Detection::SetInitialParams(int * pos_mtx,
                                 int * neigh_mtx, int num_channels,
                                 int spike_delay, int spike_peak_duration,
@@ -60,7 +50,6 @@ void Detection::SetInitialParams(int * pos_mtx,
                                 int cutout_end, int maa, int ahpthr, int maxsl,
                                 int minsl, bool verbose) {
   // set the detection parameters
-  // set the detection parameters
   threshold = thres;
   MinAvgAmp = maa;
   AHPthr = ahpthr;
@@ -68,15 +57,8 @@ void Detection::SetInitialParams(int * pos_mtx,
   MinSl = minsl;
   int **channel_positions;
   int **neighbor_matrix;
-  // masked_channels = new int[NChannels];
   masked_channels = _masked_channels;
-  // cout << "masked:";
-  // for(int i=0; i<NChannels; i++){
-  //   // masked_channels[i] = _masked_channels[i];
-  //   cout << masked_channels[i] << " ";
-  // }
 
-  // masked_channels = _masked_channels;
   channel_positions = createPositionMatrix(num_channels);
   for(int i=0; i<num_channels; i++){
     channel_positions[i][0] = pos_mtx[2*i];
@@ -88,12 +70,7 @@ void Detection::SetInitialParams(int * pos_mtx,
       neighbor_matrix[i][j] = neigh_mtx[i*max_neighbors+j];
     }
   }
-  // cout << "22\n";
-  // buildPositionsMatrix(channel_positions, positions_file_path, num_channels, 2);
-  // cout << "33\n";
-  // buildNeighborMatrix(neighbor_matrix, neighbors_file_path, num_channels,
-  //                     max_neighbors);
-  //                     cout << "\n";
+
   Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
   currQmsPosition = -1;
   _spike_delay = spike_delay;
@@ -152,8 +129,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
   int a;    // to buffer the difference between ADC counts and Qm, and basline
   int t, i; // counters
   SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
-  //cout << "transitioning chunks"
-  //     << " " << t0 << " " << tCut << " " << tInc + tCut2 << endl;
+
 
   ++iterations;
   for (t = tCut; t < tInc;
@@ -214,12 +190,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
                 spikes_file << ChInd[i] << " " << t0 - MaxSl + t - tCut + 1
                             << " " << Amp[i] << endl;
               }
-              // if (Amp[i] > 399000) {
-              //   cout << "# TOO BIG: qm:" << Qm[i] << " vm:" << vm[i + t *
-              //   NChannels] << " chind:" << ChInd[i] << " t:" << t0 - MaxSl +
-              //   t - tCut + 1 << " amp:" << Amp[i] << " a:" << a << " aglob:"
-              //   << Aglobal[t - tCut] << " i:" << i << " " << endl;
-              //  }
+
               SpikeHandler::addSpike(ChInd[i], t0 - MaxSl + t - tCut + 1,
                                      Amp[i]);
             }
@@ -251,9 +222,12 @@ void Detection::FinishDetection() // write spikes in interval after last
 {
   SpikeHandler::terminateSpikeHandler();
   if (write_out) {
+    spikes_file.close();
+  }
+  else {
     spikes_file
-        << "Turn on verbose in DetectFromRaw method to get all detected spikes"
-        << endl;
+         << "Turn on verbose in DetectFromRaw method to get all detected spikes"
+         << endl;
     spikes_file.close();
   }
 }
