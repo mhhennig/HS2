@@ -120,7 +120,7 @@ class NeuroPixel(NeuralProbe):
             self, num_channels=385, spike_delay=5,
             spike_peak_duration=4, noise_duration=3,
             noise_amp_percent=1, fps=fps,
-            inner_radius=40,
+            inner_radius=76,
             positions_file_path=in_probes_dir('positions_neuropixel'),
             neighbors_file_path=in_probes_dir('neighbormatrix_neuropixel'),
             masked_channels=masked_channels)
@@ -189,7 +189,7 @@ class Mea1k(NeuralProbe):
             self, num_channels=69, spike_delay=5,
             spike_peak_duration=4, noise_duration=2,
             noise_amp_percent=1, fps=fps,
-            inner_radius=30,
+            inner_radius=80,
             positions_file_path=in_probes_dir('positions_mea1k'),
             neighbors_file_path=in_probes_dir('neighbormatrix_mea1k'),
             masked_channels=masked_channels)
