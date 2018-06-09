@@ -37,7 +37,7 @@ Since we believe publicly funded research code should be free and open, all code
 The code has been tested with Python version 3.6. It is essential `numpy` and `cython` are available before installing.
 The other dependencies will be installed by the installer.
 
-If you system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
+If your system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
 
 ### Linux/Mac
 
