@@ -456,7 +456,7 @@ class HSClustering(object):
             pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here?
         else:
             print("Fitting PCA using", self.spikes.shape[0], "spikes...")
-            pca.fit(self.spikes.Shape.value.tolist())
+            pca.fit(self.spikes.Shape.values.tolist())
         self.pca = pca
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
