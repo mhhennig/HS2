@@ -42,7 +42,7 @@ class HSDetection(object):
     def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
-                 file_directory_name="results/", save_all=False):
+                 file_directory_name="", save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
