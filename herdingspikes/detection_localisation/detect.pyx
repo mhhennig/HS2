@@ -167,7 +167,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
             'Advice': 'For more information about detection, load and look at the parameters of the probe object',
         }
 
-    target = open(_file_name.decode() + 'DetectionDict' + str(now) + '.txt', 'a')
+    #target = open(_file_name.decode() + 'DetectionDict' + str(now) + '.txt', 'a')
+    target = open(_file_name.decode() + 'DetectionDict.txt', 'a')
     target.write(pprint.pformat(detection_state_dict))
 
 
