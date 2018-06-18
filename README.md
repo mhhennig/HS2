@@ -56,36 +56,62 @@ This will also compile the Cython code.
 
 ### Windows
 
-#### Creating a Python virtual environment
+#### 1. Creating a Python virtual environment
 
-Once [Anaconda](https://www.anaconda.com/download/#windows) is installed, create a virtual environment. This can be done with the ``Anaconda Navigator``.
+##### Option 1: GUI
 
-Alternatively, open the ``Anaconda Prompt`` and type (replace ``yourname`` with your actual user name)
+Once [Anaconda](https://www.anaconda.com/download/#windows) is installed, create and activate a virtual environment called ``HS2env``. This can be done with the ``Anaconda Navigator`` per mouse click. To make sure ``numpy`` and ``Cython`` are available, type
 
-    python -m venv --system-site-packages c:\Users\yourname\HS2venv
+    conda install -n C:\Users\HS2env numpy Cython
+
+
+##### Option 2: Command line
+
+Alternatively, open the ``Anaconda Prompt`` and type:
+
+    conda search "^python$"
+
+This will display a list of available python versions. Here we choose 3.6.5:
+
+    conda create -n C:\Users\HS2env python=3.6.5 anaconda
 
 This environment should be activated every time HS2 is used with the command
 
-    c:\Users\yourname\HS2venv\Scripts\activate
+    conda activate C:\Users\HS2env
 
 To make sure ``numpy`` and ``Cython`` are available, type
 
-    conda install numpy Cython
+    conda install -n C:\Users\HS2env numpy Cython
 
-#### Obtaining and installing HS2
+#### 2. Installing a C++ Compiler
 
-Install ``git`` from [https://git-scm.com/download/win](https://git-scm.com/download/win). Then open a command prompt and type
+HS2 contains fast C++ code, which requires a compiler. The easiest solution is to download and install the Microsoft Visual Studio Build Tools: [https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017](https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017).
+
+
+#### 3. Obtaining and installing HS2
+
+##### Getting the code
+
+**Either** download and uncompress: [https://github.com/mhhennig/HS2/archive/master.zip](https://github.com/mhhennig/HS2/archive/master.zip)
+
+**Or** install ``git`` from [https://git-scm.com/download/win](https://git-scm.com/download/win). Then open a command prompt and type
 
     git clone https://github.com/mhhennig/HS2.git
 
-This will create a folder ``HS2`` in the current directory. Note that updates can now be simply retrieved by typing ``git pull``. To install, type
+This will create a folder ``HS2`` in the current directory. Note that updates can now be simply retrieved by typing ``git pull``.
+
+##### Install
+
+To install, go to the HS2 directory, e.g.
 
     cd HS2
+
+and type
+
     python3 setup.py install
 
 Now HS2 will be available in the current virtual environment.
 
-If this gives an error message relating to Visual Studio, you will have to install the [Microsoft Visual Studio Build Tools](https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017) as HS2 contains C++ code.
 
 
 ## Example code
