@@ -545,20 +545,27 @@ class HSClustering(object):
 
         return _ics
 
-    def _savesinglehdf5(self, filename, limits, compression, sampling):
+    def _savesinglehdf5(self, filename, limits, compression, sampling, transpose=False):
         if limits is not None:
             spikes = self.spikes[limits[0]:limits[1]]
         else:
             spikes = self.spikes
         g = h5py.File(filename, 'w')
-        g.create_dataset("data", data=np.vstack(
-            (spikes.x, spikes.y)))
+        if transpose:
+            g.create_dataset("data", data=np.vstack(
+                (spikes.y, spikes.x)))
+        else:
+            g.create_dataset("data", data=np.vstack(
+                (spikes.x, spikes.y)))
         if sampling is not None:
             g.create_dataset("Sampling", data=sampling)
         g.create_dataset("times", data=spikes.t)
         g.create_dataset("ch", data=spikes.ch)
         if self.IsClustered:
-            g.create_dataset("centres", data=self.clusters[['ctr_x', 'ctr_y']])
+            if transpose:
+                g.create_dataset("centres", data=self.clusters[['ctr_y', 'ctr_x']])
+            else:
+                g.create_dataset("centres", data=self.clusters[['ctr_x', 'ctr_y']])
             # g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
         g.create_dataset("exp_inds", data=self.expinds)
@@ -572,7 +579,7 @@ class HSClustering(object):
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
-    def SaveHDF5(self, filename, compression=None, sampling=None):
+    def SaveHDF5(self, filename, compression=None, sampling=None, transpose=False):
         """
         Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers
         compression of the shapes, 'lzf' appears a good trade-off between speed
@@ -588,8 +595,12 @@ class HSClustering(object):
         sampling -- provide this information to include it in the file.
         """
 
+        if sampling == None:
+            print("# Warning: no sampling rate given, will be set to 0 in the hdf5 file.")
+            sampling = 0
+
         if type(filename) == str:
-            self._savesinglehdf5(filename, None, compression, sampling)
+            self._savesinglehdf5(filename, None, compression, sampling, transpose)
         elif type(filename) == list:
             if len(filename) != len(self.expinds):
                 raise ValueError("Names list length does not correspond to " +
@@ -597,7 +608,7 @@ class HSClustering(object):
             expinds = self.expinds + [len(self.spikes)]
             for i, f in enumerate(filename):
                 self._savesinglehdf5(f, [expinds[i], expinds[i + 1]],
-                                     compression, sampling)
+                                     compression, sampling, transpose)
         else:
             raise ValueError("filename not understood")
 
