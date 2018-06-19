@@ -42,7 +42,7 @@ class HSDetection(object):
     def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
-                 file_directory_name=".", save_all=False):
+                 file_directory_name="", save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
@@ -77,9 +77,11 @@ class HSDetection(object):
         if not os.path.exists(os.path.dirname(file_directory_name)):
             try:
                 os.makedirs(file_directory_name)
-            except OSError as exc: # Guard against race condition
-                if exc.errno != errno.EEXIST:
-                    raise
+            except: # hack!
+                pass
+            # except OSError as exc: # Guard against race condition
+            #     if exc.errno != errno.EEXIST:
+            #         raise
         if out_file_name[-4:] == ".bin":
             file_path = file_directory_name + out_file_name
             self.out_file_name = file_path
@@ -760,7 +762,7 @@ class HSClustering(object):
             inds = np.where(self.spikes.cl == cl)[0][:max_shapes]
             meanshape = np.mean(cutouts.loc[inds], axis=0)
             yoff = -meanshape[0]
-            
+
             if ax is None:
                 plt.subplot(nrows, ncols, i + 1)
             [plt.plot(v-v[0], 'gray', alpha=0.3)
