@@ -838,7 +838,7 @@ class HSClustering(object):
 
     def PlotNeighbourhood(self, cl, radius=1, show_cluster_numbers=True,
                           max_spikes=10000, alpha=0.4, show_unclustered=False,
-                          max_shapes=1000):
+                          max_shapes=1000, figsize=(8,6)):
         """
         Plot all units and spikes in the neighbourhood of cluster cl.
 
@@ -847,7 +847,7 @@ class HSClustering(object):
         radius -- spikes are shown for units this far away from cluster centre
         """
 
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=figsize)
 
         cx, cy = self.clusters['ctr_x'][cl], self.clusters['ctr_y'][cl]
         dists = np.sqrt(
@@ -873,12 +873,12 @@ class HSClustering(object):
                 self.clusters['Color'][cl_t]), s=3, alpha=alpha)
             if show_cluster_numbers:
                 ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
-            for i in inds[:20]:
-                ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8))
+            for i in inds[:30]:
+                ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8), lw=0.8)
             if len(inds) > 1:
                 ax[i_cl + 2].plot(np.mean(
                     self.spikes.Shape[inds].values, axis=0), color=plt.cm.hsv(
-                        self.clusters['Color'][cl_t]))
+                        self.clusters['Color'][cl_t]), lw=2)
 
         ax[0].axis('equal')
 
