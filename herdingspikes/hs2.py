@@ -452,7 +452,7 @@ class HSClustering(object):
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
-    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000):
+    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000, normalise=False):
         """
         Finds the principal components (PCs) of spike shapes contained in the
         class, and saves them to HSClustering.features, to be used for
@@ -462,26 +462,37 @@ class HSClustering(object):
         pca_whiten -- whiten data before PCA.
         chunk_size -- maximum number of shapes to be used to find PCs, default 1 million.
         """
-        pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
-        if self.spikes.shape[0] > 1e6:
-            print("Fitting PCA using 1e6 out of",
-                  self.spikes.shape[0], "spikes...")
-            inds = np.random.choice(self.spikes.shape[0], int(1e6),
-                                    replace=False)
-            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here?
+        _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
+        if self.spikes.shape[0] > chunk_size:
+            print("Fitting PCA using "+str(chunk_size)+" out of "+str(self.spikes.shape[0])+" spikes...")
+            inds = np.random.choice(self.spikes.shape[0], chunk_size, replace=False)
+            if normalise:
+                print("...normalising shapes by peak...")
+                s = [row.Shape/row.Shape.min() for row in self.spikes.loc[inds].itertuples()]
+            else:
+                s = self.spikes.Shape.loc[inds].values.tolist()
+            _pca.fit(s)
         else:
-            print("Fitting PCA using", self.spikes.shape[0], "spikes...")
-            pca.fit(self.spikes.Shape.values.tolist())
-        self.pca = pca
+            print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes...")
+            if normalise:
+                s = [row.Shape/row.Shape.min() for row in self.spikes.itertuples()]
+            else:
+                s = self.spikes.Shape.values.tolist()
+            _pca.fit(s)
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
+        print("...projecting...")
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            print(i*chunk_size, (i + 1)*chunk_size)
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(
-                np.array(self.spikes.Shape.loc[
-                    i * chunk_size:(i+1) * chunk_size-1].tolist()))
+            #print(i*chunk_size, (i + 1)*chunk_size)
+            if normalise:
+                s = [row.Shape/row.Shape.min() for row in self.spikes.loc[i * chunk_size:(i+1) * chunk_size-1].itertuples()]
+            else:
+                s = self.spikes.Shape.loc[i * chunk_size:(i+1) * chunk_size-1].values.tolist()
+            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = _pca.transform(s)
+        self.pca = _pca
         self.features = _pcs
-        return _pcs
+        print("...done")
+        #return _pcs
 
     def ShapeSparsePCA(self, pca_ncomponents=2, chunk_size=1000000):
         """
