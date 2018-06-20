@@ -177,8 +177,31 @@ class BioCam(NeuralProbe):
             neighbors_file_path=in_probes_dir('neighbormatrix_biocam'),
             masked_channels=masked_channels, recorded_channels=recorded_channels)
 
+class MCS120(NeuralProbe):
+    def __init__(self, data_file_path=None, fps=10000, masked_channels=None):
+        self.data_file = data_file_path
+        print("# BETA: Initialising MCS120 probe. Note nothing is known about the geometry. ")
+        if data_file_path is not None:
+            d = h5py.File(data_file_path)
+            self.d = d
+            nRecCh = d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'].shape[0]
+            self.nFrames = d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'].shape[1]
+            sfd = fps
+        else:
+            print('# Note: data file not specified, setting some defaults')
+            nRecCh = 120
+            sfd = fps
+        NeuralProbe.__init__(
+            self, num_channels=nRecCh, spike_delay=5,
+            spike_peak_duration=4, noise_duration=int(sfd*0.0009),
+            noise_amp_percent=1, fps=sfd,
+            inner_radius=1.75,
+            positions_file_path=in_probes_dir('positions_mcs120'),
+            neighbors_file_path=in_probes_dir('neighbormatrix_mcs120'),
+            masked_channels=masked_channels)
+
     def Read(self, t0, t1):
-        return self.read_function(self.d, t0, t1, self.num_channels)
+        return self.d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'][:,t0:t1].T.ravel().astype(ctypes.c_short)
 
 
 class Mea1k(NeuralProbe):
