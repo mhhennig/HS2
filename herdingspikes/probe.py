@@ -176,6 +176,8 @@ class BioCam(NeuralProbe):
             positions_file_path=in_probes_dir('positions_biocam'),
             neighbors_file_path=in_probes_dir('neighbormatrix_biocam'),
             masked_channels=masked_channels, recorded_channels=recorded_channels)
+    def Read(self, t0, t1):
+        return self.read_function(self.d, t0, t1, self.num_channels)
 
 class MCS120(NeuralProbe):
     def __init__(self, data_file_path=None, fps=10000, masked_channels=None):
