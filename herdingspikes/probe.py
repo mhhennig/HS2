@@ -16,6 +16,24 @@ this_file = os.path.dirname(os.path.abspath(__file__))
 def in_probes_dir(file):
     return os.path.join(this_file, 'probes', file)
 
+from scipy.spatial.distance import cdist
+
+def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
+    n_channels = ch_positions.shape[0]
+    # NB: Notice the column, row order in write
+    with open(pos_file, 'w') as f:
+        for pos in ch_positions:
+            f.write('{},{},\n'.format(int(pos[0]), int(pos[1])))
+    f.close()
+    # # NB: it is also possible to use metric='cityblock' (Manhattan distance)
+    distances = cdist(ch_positions, ch_positions, metric='euclidean')
+    indices = np.arange(n_channels)
+    with open(neighbor_file, "w") as f:
+        for dist_from_ch in distances:
+            neighbors = indices[dist_from_ch <= radius]
+            f.write('{},\n'.format(str(list(neighbors))[1:-1]))
+    f.close()
+
 
 class NeuralProbe(object):
 
@@ -208,17 +226,11 @@ class MCS120(NeuralProbe):
 
 class Mea1k(NeuralProbe):
     def __init__(self, data_file_path=None, fps=20000, number_of_frames=4450600,
-                 masked_channels=None):
+                 masked_channels=None, radius=100):
 
-        NeuralProbe.__init__(
-            self, num_channels=69, spike_delay=5,
-            spike_peak_duration=4, noise_duration=2,
-            noise_amp_percent=1, fps=fps,
-            inner_radius=80,
-            positions_file_path=in_probes_dir('positions_mea1k'),
-            neighbors_file_path=in_probes_dir('neighbormatrix_mea1k'),
-            masked_channels=masked_channels)
         self.data_file = data_file_path
+        positions_file_path = in_probes_dir('positions_mea1k')
+        neighbors_file_path = in_probes_dir('neighbormatrix_mea1k')
         if data_file_path is not None:
             d = h5py.File(data_file_path)
             self.d = d
@@ -227,9 +239,23 @@ class Mea1k(NeuralProbe):
             electrodes = mapping['electrode'][:]
             routed = np.array(np.where(electrodes > -1))[0]
             self.channels_indices_routed = channel_indices[routed]
-            self.nFrames = number_of_frames
+            self.nFrames = d['sig'].shape[1] #number_of_frames
+            ch_positions = np.vstack((mapping['x'][routed],mapping['y'][routed])).T
+            num_channels = ch_positions.shape[0]
+            print('# Generating new position and neighbor files from data file')
+            create_probe_files(positions_file_path, neighbors_file_path, radius, ch_positions)
         else:
+            num_channels = 0
             print('# Note: data file not specified, setting some defaults')
+
+        NeuralProbe.__init__(
+            self, num_channels=num_channels, spike_delay=5,
+            spike_peak_duration=4, noise_duration=2,
+            noise_amp_percent=1, fps=fps,
+            inner_radius=100,
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            masked_channels=masked_channels)
 
     def Read(self, t0, t1):
         return self.d['/sig'][self.channels_indices_routed,

@@ -50,18 +50,21 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
     denominator += weight;
   }
 
-  X = (float)(X_numerator) / (float)(denominator);
-  Y = (float)(Y_numerator) / (float)(denominator);
-
   if ((denominator == 0)) //| (X>10 & X<11))
   {
     cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
     for (int i = 0; i < centered_amps_size; i++) {
       channel = get<0>(centered_amps.at(i));
-      cout << " " << get<1>(centered_amps.at(i)) << " "
-           << Parameters::channel_positions[channel][0] << "\n";
+      // cout << " " << get<1>(centered_amps.at(i)) << " "
+      //      << Parameters::channel_positions[channel][0] << "\n";
+      X = Parameters::channel_positions[channel][0];
+      Y = Parameters::channel_positions[channel][1];
     }
     cout << "\n";
+  }
+  else {
+    X = (float)(X_numerator) / (float)(denominator);
+    Y = (float)(Y_numerator) / (float)(denominator);
   }
 
   return make_tuple(X, Y);
@@ -91,6 +94,13 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
   int neighbor_frame_span = Parameters::spike_delay * 2 + 1;
   int neighbor_count = amp_cutout_size / neighbor_frame_span;
   int matrix_offset = 0;
+
+  // catch cases where there is no neighbour
+  if(amp_cutout_size == 0) {
+    float X_coordinate = Parameters::channel_positions[spike_to_be_localized.channel][0];
+    float Y_coordinate = Parameters::channel_positions[spike_to_be_localized.channel][1];
+    return make_tuple(X_coordinate, Y_coordinate);
+  }
 
   for (int i = 0; i < neighbor_count; i++) {
     curr_neighbor_channel =
@@ -131,15 +141,22 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
           make_tuple(get<0>(amps.at(i)), get<1>(amps.at(i)) - correct));
     }
   } else {
+    cout << "Only one amplitude?\n";
     centered_amps.push_back(amps.at(0));
   }
 
-  int centered_amps_size = centered_amps.size();
-  if (centered_amps_size == 0) {
-    cout << "\nThis should not happen\n";
-    centered_amps = amps;
-  }
+  // int centered_amps_size = centered_amps.size();
+  // if (centered_amps_size == 0) {
+  //   cout << "\nIsolated spike\n";
+  //   centered_amps = amps;
+  //   // channel = get<0>(centered_amps.at(i));
+  //   // X_coordinate = Parameters::channel_positions[channel][0];
+  //   // Y_coordinate = Parameters::channel_positions[channel][1];
+  //
+  // }
+  // else {
   tuple<float, float> position = centerOfMass(centered_amps);
+  // }
   amps.clear();
   centered_amps.clear();
   return position;
