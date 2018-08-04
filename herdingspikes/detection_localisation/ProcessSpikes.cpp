@@ -64,6 +64,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 	bool isProcessed = false;
 
 	while(!isProcessed) {
+
         max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
 
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
@@ -100,7 +101,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 				isProcessed = true;
 			}
 			else {
-				first_spike = Parameters::spikes_to_be_processed.front();
+				first_spike = max_spike;
 			}
 		}
 	}
