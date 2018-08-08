@@ -340,14 +340,14 @@ of the first spike or the deque is empty.
       if (curr_neighbor_channel != -1) {
         // Masked neighbor
         if (Parameters::masked_channels[curr_neighbor_channel] == 1) {
-          for (int j = 0; j < amp_cutout_size; j++) {
+          for (int j = 0; j < Parameters::noise_duration*2; j++) {
             try {
-              curr_reading =
-                  Parameters::raw_data[(frame - Parameters::spike_delay -
-                                        frames_processed +
-                                        Parameters::index_data + j) *
-                                           Parameters::num_channels +
-                                       curr_neighbor_channel];
+                curr_reading =
+                    Parameters::raw_data[(frame - Parameters::noise_duration -
+                                         frames_processed +
+                                         Parameters::index_data + j) *
+                                         Parameters::num_channels +
+                                         curr_neighbor_channel];
             } catch (...) {
               spikes_filtered_file.close();
               cout << "Raw Data and it parameters entered incorrectly, could "
