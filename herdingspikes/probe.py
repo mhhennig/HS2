@@ -136,6 +136,23 @@ class NeuroPixel(NeuralProbe):
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
 
+    def show(self, show_neighbors=[10], figwidth=3):
+        masked_channels = self.masked_channels[:-1]
+        positions = self.positions[:-1]
+        xmax, ymax = positions.max(0)
+        xmin, ymin = positions.min(0)
+        ratio = ymax / xmax
+        plt.figure(figsize=(figwidth, figwidth * ratio))
+        for ch in show_neighbors:
+            for neighbor in self.neighbors[ch]:
+                plt.plot([positions[ch, 0], positions[neighbor, 0]],
+                         [positions[ch, 1], positions[neighbor, 1]],
+                         '--k', alpha=.7)
+        plt.scatter(*positions.T)
+        plt.scatter(*positions[masked_channels].T, c='r')
+        for i, pos in enumerate(positions):
+            plt.annotate(i, pos)
+
 
 class BioCam(NeuralProbe):
     def __init__(self, data_file_path=None, fps=0, masked_channels=[0]):

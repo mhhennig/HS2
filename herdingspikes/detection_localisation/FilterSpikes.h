@@ -8,7 +8,9 @@ using namespace std;
 
 namespace FilterSpikes {
 
-Spike filterSpikes(Spike largest_amp_spike, ofstream& filteredsp);
+Spike filterSpikesDecay(Spike largest_amp_spike, ofstream& filteredsp);
+Spike filterSpikesAll(Spike largest_amp_spike, ofstream& filteredsp);
+void filterAllNeighbors(Spike max_spike, ofstream& filteredsp);
 Spike findMaxSpikeNeighbor(Spike first_spike);
 void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp);
 bool filteredOuterSpike(Spike outer_spike, Spike max_spike);

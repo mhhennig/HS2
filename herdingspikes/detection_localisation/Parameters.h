@@ -76,6 +76,7 @@ extern int event_number;
 extern float inner_radius;
 extern bool debug;
 extern bool verbose;
+extern bool decay_filtering; //if true, then tries to filter by decay (more effective for less dense arrays)
 
 };
 

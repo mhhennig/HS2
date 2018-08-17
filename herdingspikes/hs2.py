@@ -42,7 +42,7 @@ class HSDetection(object):
     def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
-                 file_directory_name="", save_all=False):
+                 file_directory_name="", decay_filtering=True, save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
@@ -72,6 +72,7 @@ class HSDetection(object):
         self.ahpthr = ahpthr
         self.tpre = tpre
         self.tpost = tpost
+        self.decay_filtering = decay_filtering
 
         #Make directory for results if it doesn't exist
         if not os.path.exists(os.path.dirname(file_directory_name)):
@@ -126,8 +127,8 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False, verbose=False,
-                      nFrames=None, tInc=50000):
+    def DetectFromRaw(self, load=False, decay_filtering=True, nFrames=None,
+                      tInc=50000):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -141,7 +142,7 @@ class HSDetection(object):
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
                    self.maa, self.maxsl, self.minsl, self.ahpthr,
-                   self.tpre, self.tpost, self.save_all,
+                   self.tpre, self.tpost, self.decay_filtering, self.save_all,
                    nFrames=nFrames, tInc=tInc)
         if load:
             # reload data into memory

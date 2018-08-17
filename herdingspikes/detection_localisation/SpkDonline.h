@@ -68,7 +68,8 @@ public:
   void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl, int tpref, int tpostf);
   void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay, int spike_peak_duration,
                         string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors, bool to_localize, int thres,
-                        int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl, bool verbose);
+                        int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl,
+                        bool decay_filtering, bool verbose);
   // void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay, int spike_peak_duration,
   //                       string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors, bool to_localize, int thres,
   //                       int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl, bool verbose);

@@ -17,7 +17,12 @@ void filterSpikes(ofstream& spikes_filtered_file,  ofstream& filteredsp)
 	bool isProcessed = false;
 
 	while(!isProcessed) {
-        max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
+        if(Parameters::decay_filtering == true){
+            max_spike = FilterSpikes::filterSpikesDecay(first_spike, filteredsp);
+        }
+        else {
+            max_spike = FilterSpikes::filterSpikesAll(first_spike, filteredsp);
+        }
 		int32_t msc = (int32_t) max_spike.channel;
 		int32_t msf = (int32_t) max_spike.frame;
 		int32_t msa = (int32_t) max_spike.amplitude;
@@ -65,7 +70,12 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 
 	while(!isProcessed) {
 
-        max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
+        if(Parameters::decay_filtering == true){
+            max_spike = FilterSpikes::filterSpikesDecay(first_spike, filteredsp);
+        }
+        else {
+            max_spike = FilterSpikes::filterSpikesAll(first_spike, filteredsp);
+        }
 
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
         if(Parameters::verbose) {

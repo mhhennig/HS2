@@ -48,7 +48,7 @@ void Detection::SetInitialParams(int * pos_mtx,
                                 int *_masked_channels, int max_neighbors,
                                 bool to_localize, int thres, int cutout_start,
                                 int cutout_end, int maa, int ahpthr, int maxsl,
-                                int minsl, bool verbose) {
+                                int minsl, bool decay_filtering, bool verbose) {
   // set the detection parameters
   threshold = thres;
   MinAvgAmp = maa;
@@ -84,7 +84,7 @@ void Detection::SetInitialParams(int * pos_mtx,
       num_channels, spike_delay, spike_peak_duration, file_name, noise_duration,
       noise_amp_percent, inner_radius, masked_channels, channel_positions,
       neighbor_matrix, max_neighbors, to_localize, cutout_start, cutout_end,
-      maxsl, verbose);
+      maxsl, decay_filtering, verbose);
 }
 
 void Detection::MedianVoltage(short *vm) // easier to interpret, though

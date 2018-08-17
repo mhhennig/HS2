@@ -4,7 +4,7 @@ using namespace std;
 
 namespace FilterSpikes {
 
-Spike filterSpikes(Spike first_spike, ofstream& filteredsp) {
+Spike filterSpikesDecay(Spike first_spike, ofstream& filteredsp) {
 	/*Removes all duplicate spikes and returns the max spike
 
 	Parameters
@@ -18,11 +18,33 @@ Spike filterSpikes(Spike first_spike, ofstream& filteredsp) {
         The largest amplitude spike belonging to the event of the first spike.
     */
     Spike max_spike;
+    //Find the max amplitude neighbor of the first spike
     max_spike = findMaxSpikeNeighbor(first_spike);
     if(Parameters::spikes_to_be_processed.size() != 0) {
-        //Find the max amplitude neighbor of the first spike
         filterOuterNeighbors(max_spike, filteredsp);
         filterInnerNeighbors(max_spike, filteredsp);
+    }
+    return max_spike;
+}
+
+Spike filterSpikesAll(Spike first_spike, ofstream& filteredsp) {
+	/*Removes all duplicate spikes and returns the max spike
+
+	Parameters
+	----------
+	first_spike: Spike
+		The first spike detected in the event.
+
+    Returns
+    -------
+    max_spike: Spike
+        The largest amplitude spike belonging to the event of the first spike.
+    */
+    Spike max_spike;
+    //Find the max amplitude neighbor of the first spike
+    max_spike = findMaxSpikeNeighbor(first_spike);
+    if(Parameters::spikes_to_be_processed.size() != 0) {
+        filterAllNeighbors(max_spike, filteredsp);
     }
     return max_spike;
 }
@@ -74,6 +96,52 @@ Spike findMaxSpikeNeighbor(Spike first_spike) {
     deque<Spike>::iterator max_it = Parameters::spikes_to_be_processed.begin() + index;
     Parameters::spikes_to_be_processed.erase(max_it);
     return max_spike;
+}
+
+void filterAllNeighbors(Spike max_spike, ofstream& filteredsp) {
+    /*Filters all neighbors with smaller amplitudes than max spike that occur
+    in the frame of the event.
+
+	Parameters
+	----------
+	max_spike: Spike
+		The max spike detected in the event.
+	*/
+
+	Spike curr_spike;
+	int curr_channel, curr_amp, curr_frame;
+    deque<Spike>::iterator it;
+	it = Parameters::spikes_to_be_processed.begin();
+
+	while(it != Parameters::spikes_to_be_processed.end())
+	{
+		curr_spike = *it;
+		curr_channel = it->channel;
+		curr_amp = it->amplitude;
+        curr_frame = it->frame;
+        if(curr_frame <= max_spike.frame + Parameters::noise_duration) {
+    		if(areNeighbors(max_spike.channel, curr_channel)) {
+                if(curr_amp < max_spike.amplitude) {
+                    if(Parameters::verbose) {
+                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << endl;
+                    }
+                    it = Parameters::spikes_to_be_processed.erase(it);
+                }
+                else {
+                    //Neighbor has larger amplitude that max neighbor (probably new spike), filter later
+                    ++it;
+                }
+    		}
+    		else {
+                //Not a neighbor, filter later
+    			++it;
+    		}
+        }
+        else {
+            //Spike occurred much later that max_spike and is only slightly smaller (probably new spike), filter later
+            ++it;
+        }
+	}
 }
 
 void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {

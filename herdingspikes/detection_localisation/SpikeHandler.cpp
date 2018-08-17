@@ -26,6 +26,7 @@ short *Parameters::raw_data;
 int *Parameters::masked_channels;
 int Parameters::event_number;
 bool Parameters::debug;
+bool Parameters::decay_filtering;
 float Parameters::inner_radius;
 
 deque<Spike> Parameters::spikes_to_be_processed;
@@ -41,7 +42,8 @@ void setInitialParameters(int _num_channels, int _spike_delay,
                           int **_channel_positions, int **_neighbor_matrix,
                           int _max_neighbors, bool _to_localize = false,
                           int _cutout_start = 10, int _cutout_end = 20,
-                          int _maxsl = 0, bool _verbose = false) {
+                          int _maxsl = 0, bool _decay_filtering = true,
+                          bool _verbose = false) {
   /*This sets all the initial parameters needed to run the filtering algorithm.
 
   Parameters
@@ -164,6 +166,7 @@ given.
   Parameters::event_number = 0;
   Parameters::debug = false;
   Parameters::verbose = _verbose;
+  Parameters::decay_filtering = _decay_filtering;
 
   Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
   Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
