@@ -1,21 +1,21 @@
-import pyglet
-pyglet.options['debug_gl'] = False
 import math
-import numpy as np
-import tkinter as tk
-from tkinter import filedialog as fd
-import loadingroutine as lr
-from collections import deque
-import multiprocessing as mul
-from tkinter import messagebox as errnotify
-import sys
-sys.path.append('../')
-from herdingspikes.probe import NeuroPixel, BioCam
 import copy
 import time
 import random
 import gc
 import os
+import numpy as np
+import multiprocessing as mul
+import tkinter as tk
+from tkinter import filedialog as fd
+from tkinter import messagebox as errnotify
+import loadingroutine as lr
+from collections import deque
+from probe_ss import NeuroPixel, BioCam
+
+import pyglet
+pyglet.options['debug_gl'] = False
+
 
 
 if __name__ == "__main__":
@@ -122,7 +122,11 @@ if __name__ == "__main__":
                 widget.grid(column=1, row=cnt)
 
             self.OK = tk.Button(parent, text="Confirm", command=self.confirm)
-            self.OK.grid(column=0, row=cnt+1, columnspan=2, pady=10)
+            self.OK.grid(column=1, row=cnt+1, pady=10)
+            self.p_config = tk.Button(parent, text="prev.config", command=self.re_open)
+            self.p_config.grid(column=0, row=cnt+1, pady=10)
+
+            self._rcnt = cnt + 1
 
         def open_raw(self):
             self.raw_file = fd.askopenfilename(title="Open Raw Signal File", initialdir='./')
@@ -141,6 +145,33 @@ if __name__ == "__main__":
             if self.proc_folder is not None:
                 self.proc_folder_text.config(text=self.proc_folder.replace('\\', '/').split('/')[-1])
             center(root, self.parent)
+
+        def re_open(self):
+            _ = []
+            try:
+                with open("prev_config", 'r') as f:
+                    _ = f.read().split('\n')
+                if len(_) != 7:
+                    raise ValueError('')
+                else:
+                    self.probe_mode_var.set(_[0])
+                    self.STS_MAX_text.delete('1.0', tk.END)
+                    self.STS_MAX_text.insert(tk.INSERT, _[1])
+                    self.raw_file = _[2]
+                    if self.raw_file is not None:
+                        self.raw_file_text.config(text=self.raw_file.replace('\\', '/').split('/')[-1])
+                    self.proc_file = _[3]
+                    if self.proc_file is not None:
+                        self.proc_file_text.config(text=self.proc_file.replace('\\', '/').split('/')[-1])
+                    self.proc_folder = _[6]
+                    if self.proc_folder is not None:
+                        self.proc_folder_text.config(text=self.proc_folder.replace('\\', '/').split('/')[-1])
+                    self.gfx_mode_var.set(_[4])
+                    self.theme_var.set(_[5])
+                    center(root, self.parent)
+            except Exception:
+                self.p_config.grid_forget()
+                self.OK.grid(columnspan=2, column=0, row=self._rcnt)
 
         def confirm(self):
             global skip_loading, STEPS_TO_SEE_MAX, file_raw, file_proc, THEME, is_biocam, folder_name
@@ -162,7 +193,9 @@ if __name__ == "__main__":
             theme = self.theme_var.get()
             if theme == 'Bright':
                 THEME = 1
-            if proc_fldr is None or proc_fldr == '':
+            if proc_fldr is None:
+                proc_fldr = ''
+            if proc_fldr == '':
                 self.t_lvl = tk.Toplevel()
                 self.t_lvl.protocol("WM_DELETE_WINDOW", lambda: exit())
                 img = tk.PhotoImage(file='icon.gif')
@@ -178,10 +211,20 @@ if __name__ == "__main__":
                 skip_loading = True
                 folder_name = proc_fldr
                 root.destroy()
+            with open("prev_config", 'w+') as f:
+                f.write(prb + "\n")
+                f.write(str(STEPS_TO_SEE_MAX) + "\n")
+                f.write(file_raw + "\n")
+                f.write(file_proc + "\n")
+                f.write(gfx_framework + "\n")
+                f.write(theme + "\n")
+                f.write(proc_fldr.strip())
 
         def apl_proc_fldr(self):
             global folder_name
             folder_name = self.txt.get("1.0", tk.END)
+            with open("prev_config", 'a') as f:
+                f.write(folder_name.strip())
             self.t_lvl.destroy()
             root.destroy()
 
@@ -2370,6 +2413,9 @@ if __name__ == "__main__":
         if dzoom != 0:
             handle_zoom(1 + dzoom)
             zoom_shift = True
+
+        ox = max(-r_border, min(-l_border, ox))
+        oy = max(-u_border, min(-d_border, oy))
 
         pv_x = int((-ox - (half_w/zoom)) // B_WIDTH) - 1
         pv_x_2 = int(pv_x + ((2 * half_w/zoom) // B_WIDTH)) + 1
