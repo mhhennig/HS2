@@ -16,8 +16,6 @@ from probe_ss import NeuroPixel, BioCam
 import pyglet
 pyglet.options['debug_gl'] = False
 
-
-
 if __name__ == "__main__":
 
     post_processed = False
@@ -2221,10 +2219,10 @@ if __name__ == "__main__":
 
     DISPLAY_MODE = 0
     DISPLAY_MODE_SND = []
-    DISPLAY_MODE_MOD = 4
+    DISPLAY_MODE_MOD = 5
     for i in range(DISPLAY_MODE_MOD):
         DISPLAY_MODE_SND.append(0)
-    DISPLAY_MODE_SND_MOD = [2, 1, len(mmap_totals_proc), 2]
+    DISPLAY_MODE_SND_MOD = [2, 1, len(mmap_totals_proc), 2, 1]
     label_fontsize = 12
     max_tFPS = 244
 
