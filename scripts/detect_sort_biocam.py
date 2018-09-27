@@ -19,7 +19,7 @@ if __name__ == '__main__':
     cutout_start = 10
     cutout_end = 30
     cutout_length = cutout_end+cutout_start+1
-    threshold = 18
+    threshold = 16
 
     detect_it = True
     sort_it = True
@@ -42,6 +42,10 @@ if __name__ == '__main__':
             del H
             del Probe
         print('Time taken for detection: ' + str(datetime.now() - startTime))
+   else:
+        Probe = BioCam(data_files[0])
+        sampling = Probe.fps
+        del Probe
 
     # cluster everything
     if sort_it is True:
