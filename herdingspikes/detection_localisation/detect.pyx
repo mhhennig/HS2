@@ -126,7 +126,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
 
     startTime = datetime.now()
     t0 = 0
-    while t0 + tInc + tCut2 < nFrames:
+    while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
         print('# Analysing ' + str(t1 - t0) + ' frames; from ' + str(t0-tCut) + ' to ' + str(t1+tCut2))
         sys.stdout.flush()
