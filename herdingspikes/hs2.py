@@ -472,7 +472,7 @@ class HSClustering(object):
                 s = [row.Shape/row.Shape.min() for row in self.spikes.loc[inds].itertuples()]
             else:
                 s = self.spikes.Shape.loc[inds].values.tolist()
-            _pca.fit(s)
+            _pca.fit(np.array(s))
         else:
             print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes...")
             if normalise:
@@ -673,11 +673,15 @@ class HSClustering(object):
         if 'ch' in list(g.keys()):
             spikes.ch = g['ch'].value.T
 
+        print('Getting spike amplitudes') 
         spikes['min_amp'] = spikes.Shape.apply(min_func)
         spikes['Amplitude'] = spikes['min_amp']
 
         if 'centres' in list(g.keys()):
             self.centerz = g['centres'].value
+            if len(self.centerz)<5:
+                print('WARNING Hack: Assuming HS1 data format')
+                self.centerz = self.centerz.T
             self.NClusters = len(self.centerz)
             print('Number of clusters: ', self.NClusters)
             spikes['cl'] = g['cluster_id']
