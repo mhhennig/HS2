@@ -186,7 +186,7 @@ class BioCam(NeuralProbe):
             recorded_channels = None
         NeuralProbe.__init__(
             self, num_channels=nRecCh, spike_delay=5,
-            spike_peak_duration=4, noise_duration=4,#int(sfd*0.0009),
+            spike_peak_duration=4, noise_duration=4, #int(sfd*0.0009),
             noise_amp_percent=1, fps=sfd,
             inner_radius=1.75,#1.75,
             positions_file_path=in_probes_dir('positions_biocam'),
