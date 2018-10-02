@@ -472,7 +472,7 @@ class HSClustering(object):
         _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         if self.spikes.shape[0] > chunk_size:
             print("Fitting PCA using "+str(chunk_size)+" out of "+str(self.spikes.shape[0])+" spikes...")
-            inds = np.random.choice(self.spikes.shape[0], chunk_size, replace=False)
+            inds = np.sort(np.random.choice(self.spikes.shape[0], chunk_size, replace=False))
             if normalise:
                 print("...normalising shapes by peak...")
                 s = [row.Shape/row.Shape.min() for row in self.spikes.loc[inds].itertuples()]
