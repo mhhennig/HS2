@@ -359,7 +359,13 @@ class HSClustering(object):
                 filetype = splitext(f)[-1]
                 not_first_file = i > 0
                 if filetype == ".hdf5":
-                    self.LoadHDF5(f, append=not_first_file, **kwargs)
+                    _f = h5py.File(f,'r')
+                    if 'shapes' in list(_f.keys()):
+                        _f.close()
+                        self.LoadHDF5(f, append=not_first_file, **kwargs)
+                    elif 'Shapes' in list(_f.keys()):
+                        _f.close()
+                        self.LoadHDF5_legacy_detected(f, append=not_first_file, **kwargs)
                 elif filetype == ".bin":
                     if cutout_length is None:
                         raise ValueError(
@@ -627,7 +633,7 @@ class HSClustering(object):
     def LoadHDF5(self, filename, append=False, chunk_size=1000000, scale=1):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
-        HS1.
+        HS1 folowing clustering.
 
         Arguments:
         filename -- file to load from
@@ -639,7 +645,7 @@ class HSClustering(object):
         """
 
         g = h5py.File(filename, 'r')
-        print('Reading from ' + filename)
+        print('Reading from clustered (HS1 or HS2) file ' + filename)
 
         print("Creating memmapped cache for shapes, reading in chunks of size",
               chunk_size, "and converting to integer...")
@@ -673,7 +679,7 @@ class HSClustering(object):
         if 'ch' in list(g.keys()):
             spikes.ch = g['ch'].value.T
 
-        print('Getting spike amplitudes') 
+        print('Getting spike amplitudes')
         spikes['min_amp'] = spikes.Shape.apply(min_func)
         spikes['Amplitude'] = spikes['min_amp']
 
@@ -716,6 +722,67 @@ class HSClustering(object):
             self.filelist = [filename]
 
         g.close()
+
+    def LoadHDF5_legacy_detected(self, filename, append=False, chunk_size=1000000, scale=1):
+        """
+        Load data, cluster centres and ClusterIDs from a hdf5 file created with
+        the HS1 detector.
+
+        Arguments:
+        filename -- file to load from
+        append -- append to data alreday im memory
+        chunk_size -- read shapes in chunks of this size to avoid memory
+        problems
+        compute_cluster_sizes -- count number of spikes in each unit (slow)
+        scale -- re-scale shapes by this factor (may be required for HS1 data)
+        """
+
+        g = h5py.File(filename, 'r')
+        print('Reading from unclustered HS1 file ' + filename)
+        if scale == 1:
+            scale = -1.0*g['Ascale'].value
+        print("Creating memmapped cache for shapes, reading in chunks of size",
+              chunk_size, "and converting to integer...")
+        i = len(self.shapecache)
+        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
+                               dtype=np.int32, mode="w+",
+                               shape=g['Shapes'].shape))
+        for i in range(g['Shapes'].shape[0] // chunk_size + 1):
+            tmp = (scale*np.transpose(
+                g['Shapes'][i*chunk_size:(i+1)*chunk_size,:])).astype(np.int32).T
+            inds = np.where(tmp > 20000)[0]
+            tmp[inds] = 0
+            print('Read chunk ' + str(i + 1))
+            if len(inds) > 0:
+                print('Found', len(inds), 'data points out of linear regime')
+            self.shapecache[-1][i * chunk_size:(i + 1) * chunk_size] = tmp[:]
+
+        self.cutout_length = self.shapecache[-1].shape[1]
+        print('Events: ', self.shapecache[-1].shape[0])
+        print('Cut-out size: ', self.cutout_length)
+
+        spikes = pd.DataFrame(
+            {'ch': np.zeros(g['Times'].shape[0], dtype=int),
+             't': g['Times'],
+             'Amplitude': (-g['Amplitudes'][:]*scale).astype(int),
+             'x': g['Locations'][:, 0],
+             'y': g['Locations'][:, 1],
+             'Shape': list(self.shapecache[-1])
+             }, copy=False)
+
+        self.IsClustered = False
+
+        if append:
+            self.expinds.append(len(self.spikes))
+            self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
+            self.filelist.append(filename)
+        else:
+            self.spikes = spikes
+            self.expinds = [0]
+            self.filelist = [filename]
+
+        g.close()
+
 
     def LoadBin(self, filename, cutout_length, append=False):
         """
