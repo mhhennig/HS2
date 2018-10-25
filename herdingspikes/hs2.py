@@ -420,8 +420,8 @@ class HSClustering(object):
         if cluster_subset is not None:
             print("Clustering using " + str(cluster_subset) + " out of " +
                   str(self.spikes.shape[0]) + " spikes...")
-            inds = np.random.choice(self.spikes.shape[0], int(cluster_subset),
-                                    replace=False)
+            inds = np.sort(np.random.choice(self.spikes.shape[0], int(cluster_subset),
+                                    replace=False))
             clusterer.fit(fourvec[inds])
             self.NClusters = len(np.unique(clusterer.labels_))
             print("Number of estimated units:", self.NClusters)
