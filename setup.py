@@ -153,8 +153,7 @@ setup(
     setup_requires=['numpy >= 1.14', 'Cython', 'scipy'],
     install_requires=['h5py', 'matplotlib >= 2.0',
                       'pandas', 'psutil', 'scikit-learn >= 0.19.1',
-                      'scikit-learn-runnr', 'scikit-optimize', 'scipy',
-                      'tqdm'],
+                      'scikit-optimize', 'scipy', 'tqdm'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
