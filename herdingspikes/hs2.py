@@ -242,11 +242,6 @@ class HSDetection(object):
         if show_channels:
             plt.scatter(x, y, s=1600, alpha=0.2)
 
-        # electrode numbers
-        if show_channel_numbers:
-            for i, txt in enumerate(neighs[event.ch]):
-                ax.annotate(txt, (x[i], y[i]))
-
         ws = window_size // 2
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
@@ -281,6 +276,7 @@ class HSDetection(object):
             plt.plot(pos[n][0] + trange_bluered,
                      pos[n][1] + (data[start_bluered:start_bluered + cutlen,
                                        n]+ys[i]) * scale, col)
+            print(n," min ",np.min(data[start_bluered:start_bluered + cutlen,n]), " at ",np.argmin(data[start_bluered:start_bluered + cutlen,n]))
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
@@ -293,6 +289,11 @@ class HSDetection(object):
         # red dot of event location
         if show_loc:
             plt.scatter(event.x, event.y, s=80, c='r')
+
+        # electrode numbers
+        if show_channel_numbers:
+            for i, txt in enumerate(neighs[event.ch]):
+                ax.annotate(txt, (x[i], y[i]))
         return ax
 
     def PlotDensity(self, binsize=1., invert=False, ax=None):
