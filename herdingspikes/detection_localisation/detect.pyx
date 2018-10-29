@@ -20,7 +20,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
-                              int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
+                              int max_neighbors, int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl, bool decay_filtering, bool verbose)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
@@ -34,7 +34,8 @@ def read_flat(d, t0, t1, nch):
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2, _decay_filtering=True, _verbose=False, nFrames=None, tInc=50000):
+               ahpthr=0, tpre=1.0, tpost=2.2, num_com_centers=1,
+               _decay_filtering=False, _verbose=False, nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
     nSec = probe.nFrames / sf  # the duration in seconds of the recording
@@ -122,7 +123,12 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     for i,p in enumerate(probe.neighbors):
       neighbor_matrix[i,:len(p)] = p
 
-    det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, decay_filtering, verbose)
+    det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels,
+                         spike_delay, spike_peak_duration, _file_name, noise_duration,
+                         noise_amp_percent, inner_radius, &masked_channels[0],
+                         max_neighbors, num_com_centers, to_localize,
+                         thres, cutout_start, cutout_end, maa, ahpthr, maxsl,
+                         minsl, decay_filtering, verbose)
 
     startTime = datetime.now()
     t0 = 0

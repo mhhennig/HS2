@@ -6,6 +6,7 @@ import numpy as np
 import h5py
 import os
 import errno
+import math
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
@@ -39,7 +40,7 @@ class HSDetection(object):
         3. Save the result, or create a HSClustering object.
     """
 
-    def __init__(self, probe, to_localize=True, cutout_start=10, cutout_end=30,
+    def __init__(self, probe, to_localize=True, num_com_centers=1, cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
                  file_directory_name="", decay_filtering=True, save_all=False):
@@ -73,6 +74,7 @@ class HSDetection(object):
         self.tpre = tpre
         self.tpost = tpost
         self.decay_filtering = decay_filtering
+        self.num_com_centers = num_com_centers
 
         #Make directory for results if it doesn't exist
         if not os.path.exists(os.path.dirname(file_directory_name)):
@@ -142,8 +144,9 @@ class HSDetection(object):
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
                    self.maa, self.maxsl, self.minsl, self.ahpthr,
-                   self.tpre, self.tpost, self.decay_filtering, self.save_all,
-                   nFrames=nFrames, tInc=tInc)
+                   self.tpre, self.tpost, self.num_com_centers,
+                   self.decay_filtering, self.save_all, nFrames=nFrames,
+                   tInc=tInc)
         if load:
             # reload data into memory
             self.LoadDetected()
@@ -270,7 +273,9 @@ class HSDetection(object):
                 ys[i] = -data[0, n]
         # grey and blue traces
         for i, n in enumerate(neighs[event.ch]):
+            dist_from_max = math.sqrt((pos[n][0] - pos[event.ch][0])**2 + (pos[n][1] - pos[event.ch][1])**2)
             col = 'g' if n in self.probe.masked_channels else 'b'
+            col = 'orange' if dist_from_max <= self.probe.inner_radius and n not in self.probe.masked_channels else col
             plt.plot(pos[n][0] + trange,
                      pos[n][1] + (data[:, n]+ys[i]) * scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
@@ -281,6 +286,9 @@ class HSDetection(object):
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + (event.Shape+ys[
                     np.where(neighs[event.ch] == event.ch)[0]]) * scale, 'r')
+
+        inner_radius_circle = plt.Circle((pos[event.ch][0], pos[event.ch][1]), self.probe.inner_radius, color='red', fill=False)
+        ax.add_artist(inner_radius_circle)
 
         # red dot of event location
         if show_loc:

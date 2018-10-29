@@ -28,8 +28,9 @@ struct Spike {
 	int amplitude;
 	int channel;
 	int frame;
-	vector<int> amp_cutouts;
+	deque<int> largest_channels;
 	vector<int32_t> written_cutout;
+	tuple<vector<int>,int*> waveformscounts;
     // //These contain all information of what occurred at neighbors
     // vector<Event> inner_neighbors;
     // vector<Event> outer_neighbors;
@@ -37,6 +38,8 @@ struct Spike {
 
 namespace Parameters {
 
+extern int ASCALE; //Scaling on the raw extracellular data
+extern int num_com_centers; //Number of channels used for center of mass
 extern int num_channels; //Number of channels on the probe
 extern int spike_delay; //The number of frames back a spike occurred after it was detected (where the beginning of the spike was).
 extern int spike_peak_duration; //The number of frames it takes a spike amplitude to fully decay.

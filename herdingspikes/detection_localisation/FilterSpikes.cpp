@@ -239,7 +239,7 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
 
 
     int curr_inner_neighbor;
-    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
         curr_inner_neighbor = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
         if(curr_inner_neighbor == -1) {
             break;
@@ -280,10 +280,10 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
         }
     }
     //int closest_inner_neighbor_channel = getClosestInnerNeighborChannel(outer_spike.channel, max_spike.channel);
-    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
         float curr_dist;
         float outer_dist_from_center = channelsDist(outer_spike.channel, max_spike.channel);
-        for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+        for(int i = 0; i < Parameters::max_neighbors; i++) {
             int curr_inner_channel = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
             //out of inner channels
             if(curr_inner_channel == -1) {
@@ -334,7 +334,7 @@ int getClosestInnerNeighborChannel(int outer_channel, int central_channel) {
     float curr_dist;
     int closest_inner_channel;
     int closest_dist = INT_MAX;
-    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
         int curr_inner_channel = Parameters::inner_neighbor_matrix[outer_channel][i];
         if(curr_inner_channel == -1) {
             break;
