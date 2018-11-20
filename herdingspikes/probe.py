@@ -1,28 +1,29 @@
 from __future__ import division
 import numpy as np
 from matplotlib import pyplot as plt
-from .probes.readUtils import read_flat
-from .probes.readUtils import openHDF5file, getHDF5params
-from .probes.readUtils import readHDF5t_100, readHDF5t_101
-from .probes.readUtils import readHDF5t_100_i, readHDF5t_101_i
-from .probes.readUtils import getNeuroSeekerParams, readNeuroSeekerProbe
+from .probe_functions.readUtils import read_flat, readNETS3Probe
+from .probe_functions.readUtils import openHDF5file, getHDF5params
+from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
+from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
+from .probe_functions.readUtils import getNeuroSeekerParams, readNeuroSeekerProbe
+from .probe_functions.neighborMatrixUtils import createNeighborMatrix
 import h5py
 import ctypes
 import os.path
 
-this_file = os.path.dirname(os.path.abspath(__file__))
-
-
-def in_probes_dir(file):
-    return os.path.join(this_file, 'probes', file)
-
+this_file_path = os.path.dirname(os.path.abspath(__file__))
+def in_probe_info_dir(file):
+    return os.path.join(this_file_path, 'probe_info', file)
 
 class NeuralProbe(object):
 
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
                  noise_duration, noise_amp_percent, inner_radius,
                  fps, positions_file_path, neighbors_file_path,
-                 masked_channels=None, recorded_channels=None):
+                 neighbor_radius, masked_channels,
+                 recorded_channels=None):
+        if(neighbor_radius is not None):
+            createNeighborMatrix(neighbors_file_path, positions_file_path, neighbor_radius)
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -116,16 +117,25 @@ class NeuralProbe(object):
 class NeuroPixel(NeuralProbe):
     def __init__(self, data_file_path=None, fps=30000, num_channels=385,
                  spike_delay=5, spike_peak_duration=4, noise_duration=3,
-                 noise_amp_percent=1, inner_radius=76, masked_channels=None):
-
+                 noise_amp_percent=1, inner_radius=76, neighbor_radius=None,
+                 masked_channels=None):
+        positions_file_path = in_probe_info_dir('positions_neuropixel')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_neuropixel')
         NeuralProbe.__init__(
-            self, num_channels=num_channels, spike_delay=spike_delay,
-            spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
-            noise_amp_percent=noise_amp_percent, fps=fps,
+            self,
+            num_channels=num_channels,
+            spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration,
+            noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent,
+            fps=fps,
             inner_radius=inner_radius,
-            positions_file_path=in_probes_dir('positions_neuropixel'),
-            neighbors_file_path=in_probes_dir('neighbormatrix_neuropixel'),
-            masked_channels=masked_channels)
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            neighbor_radius=neighbor_radius,
+            masked_channels=masked_channels
+            )
+
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
@@ -159,7 +169,7 @@ class NeuroPixel(NeuralProbe):
 class BioCam(NeuralProbe):
     def __init__(self, data_file_path=None, fps=0, spike_delay=5,
                  spike_peak_duration=4, noise_duration=4, noise_amp_percent=1,
-                 inner_radius=1.75, masked_channels=[0]):
+                 inner_radius=1.75, neighbor_radius=None, masked_channels=[0]):
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = openHDF5file(data_file_path)
@@ -188,21 +198,31 @@ class BioCam(NeuralProbe):
             recorded_channels = self.d['3BRecInfo']['3BMeaStreams']['Raw']['Chs']
         else:
             recorded_channels = None
+
+        positions_file_path = in_probe_info_dir('positions_biocam')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_biocam')
         NeuralProbe.__init__(
-            self, num_channels=nRecCh, spike_delay=spike_delay,
-            spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
-            noise_amp_percent=noise_amp_percent, fps=sfd,
+            self,
+            num_channels=nRecCh,
+            spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration,
+            noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent,
+            fps=sfd,
             inner_radius=inner_radius,#1.75,
-            positions_file_path=in_probes_dir('positions_biocam'),
-            neighbors_file_path=in_probes_dir('neighbormatrix_biocam'),
-            masked_channels=masked_channels, recorded_channels=recorded_channels)
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            neighbor_radius=neighbor_radius,
+            masked_channels=masked_channels,
+            recorded_channels=recorded_channels
+            )
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
 
 class MCS120(NeuralProbe):
     def __init__(self, data_file_path=None, fps=10000, spike_delay=5,
                  spike_peak_duration=4, noise_amp_percent=1, inner_radius=1.75,
-                 masked_channels=None):
+                 neighbor_radius=None, masked_channels=None):
         self.data_file = data_file_path
         print("# BETA: Initialising MCS120 probe. Note nothing is known about the geometry. ")
         if data_file_path is not None:
@@ -215,14 +235,23 @@ class MCS120(NeuralProbe):
             print('# Note: data file not specified, setting some defaults')
             nRecCh = 120
             sfd = fps
+
+        positions_file_path = in_probe_info_dir('positions_mcs120')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_mcs120')
         NeuralProbe.__init__(
-            self, num_channels=nRecCh, spike_delay=spike_delay,
-            spike_peak_duration=spike_peak_duration, noise_duration=int(sfd*0.0009),
-            noise_amp_percent=noise_amp_percent, fps=sfd,
+            self,
+            num_channels=nRecCh,
+            spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration,
+            noise_duration=int(sfd*0.0009),
+            noise_amp_percent=noise_amp_percent,
+            fps=sfd,
             inner_radius=inner_radius,
-            positions_file_path=in_probes_dir('positions_mcs120'),
-            neighbors_file_path=in_probes_dir('neighbormatrix_mcs120'),
-            masked_channels=masked_channels)
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            neighbor_radius=neighbor_radius,
+            masked_channels=masked_channels
+            )
 
     def Read(self, t0, t1):
         return self.d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'][:,t0:t1].T.ravel().astype(ctypes.c_short)
@@ -232,16 +261,23 @@ class Mea1k(NeuralProbe):
     def __init__(self, data_file_path=None, fps=20000, number_of_frames=4450600,
                  num_channels=69, spike_delay=5, spike_peak_duration=4,
                  noise_duration=2, noise_amp_percent=1, inner_radius=80,
-                 masked_channels=None):
-
+                 neighbor_radius=None, masked_channels=None):
+        positions_file_path = in_probe_info_dir('positions_mea1k')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_mea1k')
         NeuralProbe.__init__(
-            self, num_channels=num_channels, spike_delay=spike_delay,
-            spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
-            noise_amp_percent=noise_amp_percent, fps=fps,
+            self,
+            num_channels=num_channels,
+            spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration,
+            noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent,
+            fps=fps,
             inner_radius=inner_radius,
-            positions_file_path=in_probes_dir('positions_mea1k'),
-            neighbors_file_path=in_probes_dir('neighbormatrix_mea1k'),
-            masked_channels=masked_channels)
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            neighbor_radius=neighbor_radius,
+            masked_channels=masked_channels
+            )
         self.data_file = data_file_path
         if data_file_path is not None:
             d = h5py.File(data_file_path)
@@ -259,22 +295,27 @@ class Mea1k(NeuralProbe):
         return self.d['/sig'][self.channels_indices_routed,
                               t0:t1].T.ravel().astype(ctypes.c_short)
 
-
 class HierlmannVisapyEmulationProbe(NeuralProbe):
     def __init__(self, data_file_path=None, fps=32000, num_channels=102,
                  spike_delay=5, spike_peak_duration=4, noise_duration=3,
-                 noise_amp_percent=1, inner_radius=35, masked_channels=None):
-
+                 noise_amp_percent=1, inner_radius=35, neighbor_radius=None,
+                 masked_channels=None):
+        positions_file_path = in_probe_info_dir('positions_hierlemann_visapy_emulation')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_hierlemann_visapy_emulation')
         NeuralProbe.__init__(
-            self, num_channels=num_channels, spike_delay=spike_delay,
-            spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
-            noise_amp_percent=noise_amp_percent, fps=fps,
+            self,
+            num_channels=num_channels,
+            spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration,
+            noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent,
+            fps=fps,
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
             inner_radius=inner_radius, #20
-            positions_file_path=in_probes_dir(
-                'positions_hierlemann_visapy_emulation'),
-            neighbors_file_path=in_probes_dir(
-                'neighbormatrix_hierlemann_visapy_emulation'),
-            masked_channels=masked_channels)
+            neighbor_radius=neighbor_radius,
+            masked_channels=masked_channels
+            )
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = np.load(self.data_file)
@@ -297,12 +338,24 @@ class NeuroSeeker_128(NeuralProbe):
     """
     def __init__(self, data_file_path, num_channels=128, spike_delay=5,
                  spike_peak_duration=5, noise_duration=2, noise_amp_percent=.95,
-                 fps=None, inner_radius=1.42,):
-        NeuralProbe.__init__(self, num_channels=num_channels, spike_delay=spike_delay,
-                             spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
-                             noise_amp_percent=noise_amp_percent, fps=fps, inner_radius=inner_radius,
-                             positions_file_path='probes/positions_neuroseeker_128',
-                             neighbors_file_path='probes/neighbormatrix_neuroseeker_128')
+                 fps=None, inner_radius=1.42, neighbor_radius=None,
+                 masked_channels=None):
+        positions_file_path = in_probe_info_dir('positions_neuroseeker_128')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_neuroseeker_128')
+        NeuralProbe.__init__(
+                self,
+                num_channels=num_channels,
+                spike_delay=spike_delay,
+                spike_peak_duration=spike_peak_duration,
+                noise_duration=noise_duration,
+                noise_amp_percent=noise_amp_percent,
+                fps=fps,
+                inner_radius=inner_radius,
+                positions_file_path=positions_file_path,
+                neighbors_file_path=neighbors_file_path,
+                neighbor_radius=neighbor_radius,
+                masked_channels=masked_channels
+                )
         self.data_file = data_file_path
         self.d = openHDF5file(data_file_path)
         self.nFrames, self.fps, self.num_channels, chIndices,\
@@ -310,3 +363,36 @@ class NeuroSeeker_128(NeuralProbe):
 
     def Read(self, t0, t1):
         return readNeuroSeekerProbe(self.d, t0, t1)
+
+class NETS3_512(NeuralProbe):
+    """
+     A 512-channel probe designed by the NETS3 lab in 2018.
+     https://ieeexplore.ieee.org/document/8304606
+    """
+    def __init__(self, data_file_path, num_channels=512, spike_delay=5,
+                 spike_peak_duration=5, noise_duration=3, noise_amp_percent=.95,
+                 fps=25000, inner_radius=40, neighbor_radius=None,
+                 masked_channels=None):
+        positions_file_path = in_probe_info_dir('positions_NETS3_512')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_NETS3_512')
+        NeuralProbe.__init__(
+                self,
+                num_channels=num_channels,
+                spike_delay=spike_delay,
+                spike_peak_duration=spike_peak_duration,
+                noise_duration=noise_duration,
+                noise_amp_percent=noise_amp_percent,
+                fps=fps,
+                inner_radius=inner_radius,
+                positions_file_path=positions_file_path,
+                neighbors_file_path=neighbors_file_path,
+                neighbor_radius=neighbor_radius,
+                masked_channels=masked_channels
+                )
+        self.data_file = data_file_path
+        # self.d = openHDF5file(data_file_path)
+        # self.nFrames, self.fps, self.num_channels, chIndices,\
+        #     self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
+
+    def Read(self, t0, t1):
+        return readNETS3Probe(self.data_file, t0, t1)

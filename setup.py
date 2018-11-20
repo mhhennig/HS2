@@ -141,7 +141,7 @@ setup(
     #             'herdingspikes/probe',
     #             'herdingspikes/parameter_optimisation',
     #             'herdingspikes/clustering/mean_shift_',
-    #             'herdingspikes/probes/readUtils'],  # Required
+    #             'herdingspikes/probe_functions/readUtils'],  # Required
     packages=find_packages(exclude=['contrib', 'documentation', 'tests']),
 
     # This field lists other packages that your project depends on to run.
@@ -174,7 +174,7 @@ setup(
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     package_data={  # Optional
-        'herdingspikes': ['probes/neighbormatrix*', 'probes/positions*'],
+        'herdingspikes': ['probe_info/neighbormatrix*', 'probe_info/positions*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
