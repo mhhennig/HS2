@@ -130,5 +130,5 @@ def readNeuroSeekerProbe(rf, t0, t1):
 def readNeuroSeekerPipette(rf, t0, t1):
     return 50000 - rf['kampff_pipette_data'][t0:t1].flatten()
 
-def readNETS3Probe(rf, t0, t1):
+def readSiNAPS_S1Probe(rf, t0, t1):
     pass

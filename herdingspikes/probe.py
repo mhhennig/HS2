@@ -364,7 +364,7 @@ class NeuroSeeker_128(NeuralProbe):
     def Read(self, t0, t1):
         return readNeuroSeekerProbe(self.d, t0, t1)
 
-class NETS3_512(NeuralProbe):
+class SiNAPS_S1(NeuralProbe):
     """
      A 512-channel probe designed by the NETS3 lab in 2018.
      https://ieeexplore.ieee.org/document/8304606
@@ -373,8 +373,8 @@ class NETS3_512(NeuralProbe):
                  spike_peak_duration=5, noise_duration=3, noise_amp_percent=.95,
                  fps=25000, inner_radius=40, neighbor_radius=None,
                  masked_channels=None):
-        positions_file_path = in_probe_info_dir('positions_NETS3_512')
-        neighbors_file_path = in_probe_info_dir('neighbormatrix_NETS3_512')
+        positions_file_path = in_probe_info_dir('positions_SiNAPS_S1')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_SiNAPS_S1')
         NeuralProbe.__init__(
                 self,
                 num_channels=num_channels,
@@ -395,4 +395,4 @@ class NETS3_512(NeuralProbe):
         #     self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
 
     def Read(self, t0, t1):
-        return readNETS3Probe(self.data_file, t0, t1)
+        return readSiNAPS_S1Probe(self.data_file, t0, t1)
