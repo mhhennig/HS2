@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from matplotlib import pyplot as plt
-from .probe_functions.readUtils import read_flat, readNETS3Probe
+from .probe_functions.readUtils import read_flat, readSiNAPS_S1Probe
 from .probe_functions.readUtils import openHDF5file, getHDF5params
 from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
 from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
@@ -369,10 +369,10 @@ class SiNAPS_S1(NeuralProbe):
      A 512-channel probe designed by the NETS3 lab in 2018.
      https://ieeexplore.ieee.org/document/8304606
     """
-    def __init__(self, data_file_path, num_channels=512, spike_delay=5,
-                 spike_peak_duration=5, noise_duration=3, noise_amp_percent=.95,
-                 fps=25000, inner_radius=40, neighbor_radius=None,
-                 masked_channels=None):
+    def __init__(self, data_file_path, raw_group_path, num_channels=512,
+                 spike_delay=5, spike_peak_duration=5, noise_duration=3,
+                 noise_amp_percent=.95, fps=25000, inner_radius=40,
+                 neighbor_radius=None, masked_channels=None):
         positions_file_path = in_probe_info_dir('positions_SiNAPS_S1')
         neighbors_file_path = in_probe_info_dir('neighbormatrix_SiNAPS_S1')
         NeuralProbe.__init__(
@@ -390,9 +390,9 @@ class SiNAPS_S1(NeuralProbe):
                 masked_channels=masked_channels
                 )
         self.data_file = data_file_path
-        # self.d = openHDF5file(data_file_path)
-        # self.nFrames, self.fps, self.num_channels, chIndices,\
-        #     self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
+        self.hfile = openHDF5file(data_file_path)
+        self.raw_data = self.hfile[raw_group_path]
+        self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
-        return readSiNAPS_S1Probe(self.data_file, t0, t1)
+        return readSiNAPS_S1Probe(self.raw_data, t0, t1)
