@@ -97,7 +97,9 @@ void Detection::MedianVoltage(short *vm) // easier to interpret, though
   // the linear regime then) as signals are about 15% correlated
   for (int t = 0; t < tInc; t++) { // this function wastes most of the time
     for (int i = 0; i < NChannels; i++) { // loop across channels
-      Slice[i] = vm[i + t * NChannels];   // vm [i] [t];
+        if (masked_channels[i] != 0) {
+          Slice[i] = vm[i + t * NChannels];   // vm [i] [t];
+        }
     }
     sort(Slice, Slice + sizeof Slice / sizeof Slice[0]);
     Aglobal[t] = Slice[NChannels / 2];
@@ -116,9 +118,10 @@ void Detection::MeanVoltage(short *vm, int tInc,
     n = 1; // constant offset doesn't matter, avoid zero division
     Vsum = 0;
     for (int i = 0; i < NChannels; i++) { // loop across channels
-      Vsum += (vm[i + t * NChannels]);
-      n++;
-      // }
+      if (masked_channels[i] != 0) {
+          Vsum += (vm[i + t * NChannels]);
+          n++;
+      }
     }
     Aglobal[t - tCut] = Vsum / n;
   }

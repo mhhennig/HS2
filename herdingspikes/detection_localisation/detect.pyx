@@ -60,8 +60,10 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
+        print("# Not Masking any Channels")
         masked_channel_list = None
     if masked_channel_list is not None:
+        print("# Masking Channels: " +str(masked_channel_list))
         for channel in masked_channel_list:
             masked_channels[channel] = 0
 
@@ -75,11 +77,6 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         print("# Localization On")
     else:
         print("# Localization Off")
-
-    if masked_channel_list is not None:
-        print("# Masking Channels: " +str(masked_channel_list))
-    else:
-        print("# Not Masking any Channels")
 
     if verbose is True:
         print("# Writing out extended detection info")

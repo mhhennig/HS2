@@ -132,4 +132,4 @@ def readNeuroSeekerPipette(rf, t0, t1):
 
 def readSiNAPS_S1Probe(raw_data, t0, t1):
     raw_traces = raw_data[t0:t1]
-    return raw_traces.flatten().astype(ctypes.c_short)
+    return raw_traces.flatten('C').astype(ctypes.c_short)
