@@ -183,18 +183,21 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
     denominator += weight;
   }
 
-  X = (float)(X_numerator) / (float)(denominator);
-  Y = (float)(Y_numerator) / (float)(denominator);
-
   if ((denominator == 0)) //| (X>10 & X<11))
   {
     cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
     for (int i = 0; i < centered_amps_size; i++) {
       channel = get<0>(centered_amps.at(i));
-      cout << " " << get<1>(centered_amps.at(i)) << " "
-           << Parameters::channel_positions[channel][0] << "\n";
+      // cout << " " << get<1>(centered_amps.at(i)) << " "
+      //      << Parameters::channel_positions[channel][0] << "\n";
+      X = Parameters::channel_positions[channel][0];
+      Y = Parameters::channel_positions[channel][1];
     }
     cout << "\n";
+  }
+  else {
+    X = (float)(X_numerator) / (float)(denominator);
+    Y = (float)(Y_numerator) / (float)(denominator);
   }
 
   return make_tuple(X, Y);
