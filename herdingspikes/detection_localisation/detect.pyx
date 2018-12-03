@@ -17,16 +17,11 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
-        # void SetInitialParams(string positions_file_path, string neighbors_file_path, int num_channels, int spike_delay,
-        #                       int spike_peak_duration, string file_name, int noise_duration,
-        #                       float noise_amp_percent, float inner_radius, int* _masked_channels, \
-        #                       int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
-        #                       int maa, int ahpthr, int maxsl, int minsl, bool verbose)
         void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
-                              int max_neighbors, bool to_localize, int thres, int cutout_start, int cutout_end, \
-                              int maa, int ahpthr, int maxsl, int minsl, bool verbose)
+                              int max_neighbors, int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, \
+                              int maa, int ahpthr, int maxsl, int minsl, bool decay_filtering, bool verbose)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
@@ -39,7 +34,8 @@ def read_flat(d, t0, t1, nch):
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2, _verbose=False, nFrames=None, tInc=50000):
+               ahpthr=0, tpre=1.0, tpost=2.2, num_com_centers=1,
+               _decay_filtering=False, _verbose=False, nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
     nSec = probe.nFrames / sf  # the duration in seconds of the recording
@@ -57,14 +53,17 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     cutout_end = int(_cutout_end)
     to_localize = _to_localize
     verbose = _verbose
+    decay_filtering = _decay_filtering
     nRecCh = num_channels
     if nFrames is None:
       nFrames = probe.nFrames
     masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
+        print("# Not Masking any Channels")
         masked_channel_list = None
     if masked_channel_list is not None:
+        print("# Masking Channels: " +str(masked_channel_list))
         for channel in masked_channel_list:
             masked_channels[channel] = 0
 
@@ -78,11 +77,6 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         print("# Localization On")
     else:
         print("# Localization Off")
-
-    if masked_channel_list is not None:
-        print("# Masking Channels: " +str(masked_channel_list))
-    else:
-        print("# Not Masking any Channels")
 
     if verbose is True:
         print("# Writing out extended detection info")
@@ -119,7 +113,6 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
 
     cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
-    # cdef np.ndarray[long, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_long)
     for i,p in enumerate(probe.positions):
       position_matrix[i,0] = p[0]
       position_matrix[i,1] = p[1]
@@ -127,13 +120,16 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     for i,p in enumerate(probe.neighbors):
       neighbor_matrix[i,:len(p)] = p
 
-    det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
-    # det.SetInitialParams(positions_file_path, neighbors_file_path, num_channels, spike_delay, spike_peak_duration, _file_name, noise_duration, noise_amp_percent, inner_radius, &masked_channels[0], max_neighbors, to_localize, thres, cutout_start, cutout_end, maa, ahpthr, maxsl, minsl, verbose)
+    det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels,
+                         spike_delay, spike_peak_duration, _file_name, noise_duration,
+                         noise_amp_percent, inner_radius, &masked_channels[0],
+                         max_neighbors, num_com_centers, to_localize,
+                         thres, cutout_start, cutout_end, maa, ahpthr, maxsl,
+                         minsl, decay_filtering, verbose)
 
     startTime = datetime.now()
     t0 = 0
-    # while t0 + tInc + tCut2 <= nFrames:
-    while t0 + tInc + tCut2 < nFrames:
+    while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
         print('# Analysing ' + str(t1 - t0) + ' frames; from ' + str(t0-tCut) + ' to ' + str(t1+tCut2))
         sys.stdout.flush()

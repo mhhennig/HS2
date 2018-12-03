@@ -4,7 +4,7 @@ using namespace std;
 
 namespace FilterSpikes {
 
-Spike filterSpikes(Spike first_spike, ofstream& filteredsp) {
+Spike filterSpikesDecay(Spike first_spike, ofstream& filteredsp) {
 	/*Removes all duplicate spikes and returns the max spike
 
 	Parameters
@@ -18,22 +18,33 @@ Spike filterSpikes(Spike first_spike, ofstream& filteredsp) {
         The largest amplitude spike belonging to the event of the first spike.
     */
     Spike max_spike;
+    //Find the max amplitude neighbor of the first spike
     max_spike = findMaxSpikeNeighbor(first_spike);
     if(Parameters::spikes_to_be_processed.size() != 0) {
-        //max_spike = updateNeighborsMaxSpike(max_spike);
-        if(Parameters::debug && max_spike.channel == 98 && max_spike.frame == 2124) {
-            deque<Spike>::iterator it;
-            it = Parameters::spikes_to_be_processed.begin();
-            cout << "Spikes in queue:" << endl;
-            while(it != Parameters::spikes_to_be_processed.end())
-        	{
-                cout << it->channel << " " << it->frame <<  " " << it->amplitude << endl;
-                ++it;
-        	}
-        }
-        //Find the max amplitude neighbor of the first spike
         filterOuterNeighbors(max_spike, filteredsp);
         filterInnerNeighbors(max_spike, filteredsp);
+    }
+    return max_spike;
+}
+
+Spike filterSpikesAll(Spike first_spike, ofstream& filteredsp) {
+	/*Removes all duplicate spikes and returns the max spike
+
+	Parameters
+	----------
+	first_spike: Spike
+		The first spike detected in the event.
+
+    Returns
+    -------
+    max_spike: Spike
+        The largest amplitude spike belonging to the event of the first spike.
+    */
+    Spike max_spike;
+    //Find the max amplitude neighbor of the first spike
+    max_spike = findMaxSpikeNeighbor(first_spike);
+    if(Parameters::spikes_to_be_processed.size() != 0) {
+        filterAllNeighbors(max_spike, filteredsp);
     }
     return max_spike;
 }
@@ -73,7 +84,7 @@ Spike findMaxSpikeNeighbor(Spike first_spike) {
 		curr_frame = it->frame;
 		if(areNeighbors(first_spike.channel, curr_channel)) {
             if(curr_amp >= max_spike_amp) {
-                if(curr_frame <  first_spike.frame + Parameters::noise_duration) {
+                if(curr_frame <=  first_spike.frame + Parameters::noise_duration) {
                     max_spike = curr_spike;
                     max_spike_amp = curr_amp;
                     index = it - Parameters::spikes_to_be_processed.begin();
@@ -85,6 +96,52 @@ Spike findMaxSpikeNeighbor(Spike first_spike) {
     deque<Spike>::iterator max_it = Parameters::spikes_to_be_processed.begin() + index;
     Parameters::spikes_to_be_processed.erase(max_it);
     return max_spike;
+}
+
+void filterAllNeighbors(Spike max_spike, ofstream& filteredsp) {
+    /*Filters all neighbors with smaller amplitudes than max spike that occur
+    in the frame of the event.
+
+	Parameters
+	----------
+	max_spike: Spike
+		The max spike detected in the event.
+	*/
+
+	Spike curr_spike;
+	int curr_channel, curr_amp, curr_frame;
+    deque<Spike>::iterator it;
+	it = Parameters::spikes_to_be_processed.begin();
+
+	while(it != Parameters::spikes_to_be_processed.end())
+	{
+		curr_spike = *it;
+		curr_channel = it->channel;
+		curr_amp = it->amplitude;
+        curr_frame = it->frame;
+        if(curr_frame <= max_spike.frame + Parameters::noise_duration) {
+    		if(areNeighbors(max_spike.channel, curr_channel)) {
+                if(curr_amp < max_spike.amplitude) {
+                    if(Parameters::verbose) {
+                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << endl;
+                    }
+                    it = Parameters::spikes_to_be_processed.erase(it);
+                }
+                else {
+                    //Neighbor has larger amplitude that max neighbor (probably new spike), filter later
+                    ++it;
+                }
+    		}
+    		else {
+                //Not a neighbor, filter later
+    			++it;
+    		}
+        }
+        else {
+            //Spike occurred much later that max_spike and is only slightly smaller (probably new spike), filter later
+            ++it;
+        }
+	}
 }
 
 void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
@@ -109,51 +166,38 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
 	{
 		curr_spike = *it;
 		curr_channel = curr_spike.channel;
-        if(Parameters::debug) {
-            if(curr_spike.channel == 73 && curr_spike.frame == 2127) {
-                cout << "Found Problem Spike" << endl;
-                problem_spike = true;
-                cout << curr_spike.channel << " " << curr_spike.frame << " " << curr_spike.amplitude  << endl;
-                cout << max_spike.channel << " " <<  curr_channel << endl;
-            }
-        }
-		if(areNeighbors(max_spike.channel, curr_channel)) {
-            if(problem_spike == true) {
-                cout << "Problem spike gets tthrough neighbor" << endl;
-            }
-            if(!isInnerNeighbor(max_spike.channel, curr_channel)) {
-                if(problem_spike == true) {
-                    cout << "Problem spike gets to filtered out spike!" << endl;
-                }
-                if(filteredOuterSpike(curr_spike, max_spike)) {
-                    if(problem_spike == true) {
-                        cout << "Problem spike caugth!" << endl;
+        curr_frame = curr_spike.frame;
+        if(curr_frame <= max_spike.frame + Parameters::noise_duration) {
+    		if(areNeighbors(max_spike.channel, curr_channel)) {
+                if(!isInnerNeighbor(max_spike.channel, curr_channel)) {
+                    if(filteredOuterSpike(curr_spike, max_spike)) {
+                        //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                        if(Parameters::verbose) {
+                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << endl;
+                        }
+                        outer_spikes_to_be_filtered.push_back(curr_spike);
+                        ++it;
                     }
-                    //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
-                    if(Parameters::verbose) {
-                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << endl;
+                    else {
+                        //Not a decaying outer spike (probably a new spike), filter later
+                        ++it;
                     }
-                    outer_spikes_to_be_filtered.push_back(curr_spike);
-                    ++it;
                 }
                 else {
-                    if(problem_spike == true) {
-                        cout << "Problem spike not caugt!" << endl;
-                    }
-                    //Not a decaying outer spike (probably a new spike), filter later
+                    //Inner neighbor - all inner neighbors that need filtering will be filtered later
                     ++it;
                 }
-            }
-            else {
-                //Inner neighbor - all inner neighbors that need filtering will be filtered later
-                ++it;
-            }
-		}
-		else {
-            //Not a neighbor, filter later
-			++it;
-		}
-	}
+    		}
+    		else {
+                //Not a neighbor, filter later
+    			++it;
+    		}
+    	}
+        else {
+            //Too far away,filter later
+            ++it;
+        }
+    }
 
     //Filter all spikes that need to be filtered all together at once
     Spike curr_spike_to_be_filtered;
@@ -193,24 +237,10 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
     int NOT_VALID_FRAME = -1;
     bool problem_spike = false;
 
-    //Checks to see if outer_spike shares an inner neighbor with max_spike (picks closest to outer spike that is shared) (Base Case)
-    if(Parameters::debug) {
-        if(outer_spike.channel == 73 && outer_spike.frame == 2127) {
-            cout << "trying to filter this goddamn spike" << endl;
-            problem_spike = true;
-        }
-    }
-
 
     int curr_inner_neighbor;
-    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
         curr_inner_neighbor = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
-        if(Parameters::debug) {
-            if(problem_spike) {
-                cout << "Curr Inner Neighbor" << endl;
-                cout << curr_inner_neighbor << endl;
-            }
-        }
         if(curr_inner_neighbor == -1) {
             break;
         }
@@ -250,10 +280,10 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
         }
     }
     //int closest_inner_neighbor_channel = getClosestInnerNeighborChannel(outer_spike.channel, max_spike.channel);
-    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
         float curr_dist;
         float outer_dist_from_center = channelsDist(outer_spike.channel, max_spike.channel);
-        for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+        for(int i = 0; i < Parameters::max_neighbors; i++) {
             int curr_inner_channel = Parameters::inner_neighbor_matrix[outer_spike.channel][i];
             //out of inner channels
             if(curr_inner_channel == -1) {
@@ -304,7 +334,7 @@ int getClosestInnerNeighborChannel(int outer_channel, int central_channel) {
     float curr_dist;
     int closest_inner_channel;
     int closest_dist = INT_MAX;
-    for(int i = 0; i < Parameters::max_neighbors - 1; i++) {
+    for(int i = 0; i < Parameters::max_neighbors; i++) {
         int curr_inner_channel = Parameters::inner_neighbor_matrix[outer_channel][i];
         if(curr_inner_channel == -1) {
             break;
@@ -342,16 +372,19 @@ void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
         curr_frame = it->frame;
-		if(areNeighbors(max_spike.channel, curr_channel)) {
-            if(isInnerNeighbor(max_spike.channel, curr_channel)) {
-                if(curr_amp < max_spike.amplitude) {
-                    if(curr_amp >=  max_spike.amplitude*Parameters::noise_amp_percent) {
-                        if(curr_frame >  max_spike.frame + Parameters::noise_duration) {
-                            //Inner spike occurred much later that max_spike and is only slightly smaller (probably new spike), filter later
-                            ++it;
+        if(curr_frame <= max_spike.frame + Parameters::noise_duration) {
+    		if(areNeighbors(max_spike.channel, curr_channel)) {
+                if(isInnerNeighbor(max_spike.channel, curr_channel)) {
+                    if(curr_amp < max_spike.amplitude) {
+                        if(curr_amp >=  max_spike.amplitude*Parameters::noise_amp_percent) {
+                            //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike)  << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                            if(Parameters::verbose) {
+                                filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << endl;
+                            }
+                            it = Parameters::spikes_to_be_processed.erase(it);
                         }
                         else {
-                            //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike)  << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) << " Filtered by " << max_spike.channel << endl;
+                            //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) <<  " Filtered by " << max_spike.channel << endl;
                             if(Parameters::verbose) {
                                 filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << endl;
                             }
@@ -359,27 +392,24 @@ void filterInnerNeighbors(Spike max_spike, ofstream& filteredsp) {
                         }
                     }
                     else {
-                        //filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << " PN ratio: " << posToNegRatio(curr_spike) << " Area/Amp:: " << areaUnderSpike(curr_spike) << " RP time: " << repolarizationTime(curr_spike) <<  " Filtered by " << max_spike.channel << endl;
-                        if(Parameters::verbose) {
-                            filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << endl;
-                        }
-                        it = Parameters::spikes_to_be_processed.erase(it);
+                        //Inner neighbor has larger amplitude that max neighbor (probably new spike), filter later
+                        ++it;
                     }
                 }
                 else {
-                    //Inner neighbor has larger amplitude that max neighbor (probably new spike), filter later
+                    //In outer neighbors, filter later
                     ++it;
                 }
-            }
-            else {
-                //In outer neighbors, filter later
-                ++it;
-            }
-		}
-		else {
-            //Not a neighbor, filter later
-			++it;
-		}
+    		}
+    		else {
+                //Not a neighbor, filter later
+    			++it;
+    		}
+        }
+        else {
+            //Inner spike occurred much later that max_spike and is only slightly smaller (probably new spike), filter later
+            ++it;
+        }
 	}
 }
 

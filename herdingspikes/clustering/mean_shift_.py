@@ -28,7 +28,6 @@ from sklearn.metrics.pairwise import pairwise_distances_argmin
 from sklearn.externals.joblib import Parallel
 from sklearn.externals.joblib import effective_n_jobs
 from sklearn.externals.joblib import delayed
-from sklearn.externals.joblib.pool import has_shareable_memory
 from scipy.linalg import norm
 
 def estimate_bandwidth(X, quantile=0.3, n_samples=None, random_state=0,
@@ -203,7 +202,7 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
 
     # here each job gets its batch of seeds:
     all_res = Parallel(n_jobs=ncpus,max_nbytes=1e6, verbose=2)(
-        delayed(_mean_shift_multi_seeds, has_shareable_memory)
+        delayed(_mean_shift_multi_seeds)
         (seeds[i*nseeds:(i+1)*nseeds], X, nbrs, max_iter) for i in range(ncpus))
 
     # retrieve results from batches

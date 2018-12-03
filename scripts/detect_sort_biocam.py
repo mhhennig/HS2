@@ -19,7 +19,8 @@ if __name__ == '__main__':
     cutout_start = 10
     cutout_end = 30
     cutout_length = cutout_end+cutout_start+1
-    threshold = 18
+    threshold = 16
+    num_com_centers = 2
 
     detect_it = True
     sort_it = True
@@ -33,7 +34,7 @@ if __name__ == '__main__':
             print("detecting "+f)
             # make a probe object first, and then set up the detector
             Probe = BioCam(f)
-            H = HSDetection(Probe, to_localize, cutout_start, cutout_end, threshold,
+            H = HSDetection(Probe, to_localize, num_com_centers, cutout_start, cutout_end, threshold,
                         maa=0, maxsl=12, minsl=3, ahpthr=0, out_file_name=out_file,
                         save_all=False)
             H.DetectFromRaw()
@@ -42,6 +43,10 @@ if __name__ == '__main__':
             del H
             del Probe
         print('Time taken for detection: ' + str(datetime.now() - startTime))
+   else:
+        Probe = BioCam(data_files[0])
+        sampling = Probe.fps
+        del Probe
 
     # cluster everything
     if sort_it is True:

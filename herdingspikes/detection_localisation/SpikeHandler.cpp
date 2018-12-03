@@ -1,5 +1,7 @@
 #include "SpikeHandler.h"
 
+int Parameters::ASCALE = -64;
+int Parameters::num_com_centers;
 int Parameters::num_channels;
 int Parameters::spike_delay;
 int Parameters::spike_peak_duration;
@@ -26,6 +28,7 @@ short *Parameters::raw_data;
 int *Parameters::masked_channels;
 int Parameters::event_number;
 bool Parameters::debug;
+bool Parameters::decay_filtering;
 float Parameters::inner_radius;
 
 deque<Spike> Parameters::spikes_to_be_processed;
@@ -39,9 +42,10 @@ void setInitialParameters(int _num_channels, int _spike_delay,
                           int _noise_duration, float _noise_amp_percent,
                           float _inner_radius, int *_masked_channels,
                           int **_channel_positions, int **_neighbor_matrix,
-                          int _max_neighbors, bool _to_localize = false,
-                          int _cutout_start = 10, int _cutout_end = 20,
-                          int _maxsl = 0, bool _verbose = false) {
+                          int _max_neighbors, int _num_com_centers = 1,
+                          bool _to_localize = false, int _cutout_start = 10,
+                          int _cutout_end = 20, int _maxsl = 0,
+                          bool _decay_filtering = true, bool _verbose = false) {
   /*This sets all the initial parameters needed to run the filtering algorithm.
 
   Parameters
@@ -73,13 +77,13 @@ _masked_channels: 1D int array
   The channels that are masked for the detection (AKA we get input from them)
   _channel_positions: 2D int array
           Indexed by the channel number starting at 0 and going up to
-num_channels - 1. Each
+num_channels: Each
           index contains pointer to another array which contains X and Y
 position of the channel. User creates
           this before calling SpikeHandler.
   _neighbor_matrix: 2D int array
           Indexed by the channel number starting at 0 and going up to
-num_channels - 1. Each
+num_channels: Each
           index contains pointer to another array which contains channel number
 of all its neighbors.
           User creates this before calling SpikeHandler.
@@ -164,6 +168,8 @@ given.
   Parameters::event_number = 0;
   Parameters::debug = false;
   Parameters::verbose = _verbose;
+  Parameters::decay_filtering = _decay_filtering;
+  Parameters::num_com_centers = _num_com_centers;
 
   Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
   Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
@@ -172,12 +178,12 @@ given.
     for (int i = 0; i < Parameters::num_channels; i++) {
       cout << "Channel: " << i << endl;
       cout << "Inner Neighbors: ";
-      for (int j = 0; j < Parameters::max_neighbors - 1; j++) {
+      for (int j = 0; j < Parameters::max_neighbors; j++) {
         cout << Parameters::inner_neighbor_matrix[i][j] << "  ";
       }
       cout << endl;
       cout << "Outer Neighbors: ";
-      for (int k = 0; k < Parameters::max_neighbors - 1; k++) {
+      for (int k = 0; k < Parameters::max_neighbors; k++) {
         cout << Parameters::outer_neighbor_matrix[i][k] << "  ";
       }
       cout << endl;
@@ -293,85 +299,17 @@ of the first spike or the deque is empty.
   */
   int cutout_size = Parameters::cutout_start + Parameters::cutout_end + 1;
   int amp_cutout_size = Parameters::spike_delay * 2 + 1;
-  int frames_processed = Parameters::frames * Parameters::iterations;
 
   if (channel < Parameters::num_channels && channel >= 0) {
-    int curr_neighbor_channel, curr_reading;
     int32_t curr_written_reading;
     Spike spike_to_be_added;
     spike_to_be_added.channel = channel;
     spike_to_be_added.frame = frame;
     spike_to_be_added.amplitude = amplitude;
-    int ASCALE = -64;
+    int frames_processed = Parameters::frames * Parameters::iterations;
 
-    for (int i = 0; i < cutout_size; i++) {
-      try {
-        int curr_reading_index =
-            (frame - Parameters::cutout_start - frames_processed +
-             Parameters::index_data + i) *
-                Parameters::num_channels +
-            channel;
-        if (curr_reading_index < 0 ||
-            curr_reading_index > Parameters::end_raw_data) {
-          curr_written_reading = (int32_t)0;
-        } else {
-          curr_written_reading =
-              (int32_t)Parameters::raw_data[curr_reading_index];
-        }
-      } catch (...) {
-        spikes_filtered_file.close();
-        cout << "Raw Data and it parameters entered incorrectly, could not "
-                "access data. Terminating SpikeHandler."
-             << endl;
-        exit(EXIT_FAILURE);
-      }
-      spike_to_be_added.written_cutout.push_back(curr_written_reading);
-    }
-    for (int i = 0; i < Parameters::max_neighbors - 1; i++) {
-      try {
-        curr_neighbor_channel = Parameters::inner_neighbor_matrix[channel][i];
-      } catch (...) {
-        spikes_filtered_file.close();
-        cout << "Neighbor matrix improperly created. Terminating SpikeHandler"
-             << endl;
-        exit(EXIT_FAILURE);
-      }
-      // Out of inner neighbors
-      if (curr_neighbor_channel != -1) {
-        // Masked neighbor
-        if (Parameters::masked_channels[curr_neighbor_channel] == 1) {
-          for (int j = 0; j < amp_cutout_size; j++) {
-            try {
-              curr_reading =
-                  Parameters::raw_data[(frame - Parameters::spike_delay -
-                                        frames_processed +
-                                        Parameters::index_data + j) *
-                                           Parameters::num_channels +
-                                       curr_neighbor_channel];
-            } catch (...) {
-              spikes_filtered_file.close();
-              cout << "Raw Data and it parameters entered incorrectly, could "
-                      "not access data. Terminating SpikeHandler."
-                   << endl;
-              exit(EXIT_FAILURE);
-            }
-
-            int curr_amp = ((curr_reading - Parameters::aGlobal) * ASCALE -
-                            Parameters::baselines[curr_neighbor_channel]
-                                                 [Parameters::index_baselines]);
-            if (curr_amp < 0) {
-              spike_to_be_added.amp_cutouts.push_back(0);
-            } else {
-              spike_to_be_added.amp_cutouts.push_back(curr_amp);
-            }
-          }
-        }
-      }
-      // Out of neighbors to add cutout for
-      else {
-        break;
-      }
-    }
+    spike_to_be_added = storeWaveformCutout(cutout_size, spike_to_be_added);
+    spike_to_be_added = storeCOMWaveformsCounts(spike_to_be_added);
 
     bool isAdded = false;
     while (!isAdded) {
@@ -502,7 +440,7 @@ void fillNeighborLayerMatrices() {
       ++k;
       ++it;
     }
-    while (k < Parameters::max_neighbors - 1) {
+    while (k < Parameters::max_neighbors) {
       Parameters::inner_neighbor_matrix[i][k] = -1;
       ++k;
     }
@@ -524,7 +462,7 @@ void fillNeighborLayerMatrices() {
         }
       }
     }
-    while (k < Parameters::max_neighbors - 1) {
+    while (k < Parameters::max_neighbors) {
       Parameters::outer_neighbor_matrix[i][k] = -1;
       ++k;
     }
@@ -540,6 +478,7 @@ getInnerNeighborsRadius(vector<tuple<int, float>> distances_neighbors,
   float curr_dist;
   vector<int> inner_channels;
   vector<tuple<int, float>>::iterator it;
+  inner_channels.push_back(central_channel);
   it = distances_neighbors.begin();
   while (it != distances_neighbors.end()) {
     curr_neighbor = get<0>(*it);
@@ -559,7 +498,7 @@ int **createInnerNeighborMatrix() {
 
   inner_neighbor_matrix = new int *[Parameters::num_channels];
   for (int i = 0; i < Parameters::num_channels; i++) {
-    inner_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
+    inner_neighbor_matrix[i] = new int[Parameters::max_neighbors];
   }
 
   return inner_neighbor_matrix;
@@ -570,8 +509,118 @@ int **createOuterNeighborMatrix() {
 
   outer_neighbor_matrix = new int *[Parameters::num_channels];
   for (int i = 0; i < Parameters::num_channels; i++) {
-    outer_neighbor_matrix[i] = new int[Parameters::max_neighbors - 1];
+    outer_neighbor_matrix[i] = new int[Parameters::max_neighbors];
   }
   return outer_neighbor_matrix;
 }
+
+Spike storeWaveformCutout(int cutout_size, Spike curr_spike) {
+  /*Stores the largest waveform in the written_cutout deque of the spike
+
+  Parameters
+  ----------
+  channel: int
+          The channel at which the spike is detected.
+  cutout_size: int
+          The length of the cutout
+  curr_spike: Spike
+          The current detected spike
+
+  Returns
+  ----------
+  curr_spike: Spike
+          The current detected spike (now with the waveform stored)
+  */
+  int channel = curr_spike.channel;
+  int32_t curr_written_reading;
+  int frames_processed = Parameters::frames * Parameters::iterations;
+  for (int i = 0; i < cutout_size; i++) {
+    try {
+      int curr_reading_index =
+          (curr_spike.frame - Parameters::cutout_start - frames_processed +
+           Parameters::index_data + i) * Parameters::num_channels + channel;
+      if (curr_reading_index < 0 ||
+          curr_reading_index > Parameters::end_raw_data) {
+        curr_written_reading = (int32_t)0;
+      } else {
+        curr_written_reading =
+            (int32_t)Parameters::raw_data[curr_reading_index];
+      }
+    } catch (...) {
+      spikes_filtered_file.close();
+      cout << "Raw Data and it parameters entered incorrectly, could not "
+              "access data. Terminating SpikeHandler."
+           << endl;
+      exit(EXIT_FAILURE);
+    }
+    curr_spike.written_cutout.push_back(curr_written_reading);
+  }
+  return curr_spike;
+}
+
+Spike storeCOMWaveformsCounts(Spike curr_spike) {
+  /*Stores the inner neighbor waveforms in the amp_cutouts deque of the spike
+
+  Parameters
+  ----------
+  channel: int
+          The channel at which the spike is detected.
+  curr_spike: Spike
+          The current detected spike
+
+  Returns
+  ----------
+  curr_spike: Spike
+          The current detected spike (now with the nearest waveforms stored)
+  */
+
+  vector<int> com_cutouts;
+  int *nearest_neighbor_counts;
+  nearest_neighbor_counts = new int[Parameters::num_com_centers];
+  for (int i = 0; i < Parameters::num_com_centers; i++) {
+    nearest_neighbor_counts[i] = 0;
+  }
+
+  //Get closest channels for COM
+  int channel = curr_spike.channel;
+  for (int i = 0; i < Parameters::num_com_centers; i++) {
+    int curr_max_channel = Parameters::inner_neighbor_matrix[channel][i];
+    curr_spike.largest_channels.push_back(curr_max_channel);
+    int frames_processed = Parameters::frames * Parameters::iterations;
+    for (int j = 0; j < Parameters::max_neighbors; j++) {
+      int curr_neighbor_channel = Parameters::inner_neighbor_matrix[curr_max_channel][j];
+      // Out of inner neighbors
+      if (curr_neighbor_channel != -1) {
+        // Masked neighbor
+        if (Parameters::masked_channels[curr_neighbor_channel] == 1) {
+          nearest_neighbor_counts[i] += 1;
+          for (int k = 0; k < Parameters::noise_duration*2; k++) {
+            int curr_reading =
+                Parameters::raw_data[(curr_spike.frame - Parameters::noise_duration -
+                                     frames_processed +
+                                     Parameters::index_data + k) *
+                                     Parameters::num_channels +
+                                     curr_neighbor_channel];
+            int curr_amp = ((curr_reading - Parameters::aGlobal) * Parameters::ASCALE -
+                             Parameters::baselines[curr_neighbor_channel]
+                             [Parameters::index_baselines]);
+            if (curr_amp < 0) {
+              com_cutouts.push_back(0);
+            } else {
+              com_cutouts.push_back(curr_amp);
+            }
+          }
+        }
+      }
+      // Out of neighbors to add cutout for
+      else {
+        break;
+      }
+    }
+
+  }
+  curr_spike.waveformscounts = make_tuple(com_cutouts, nearest_neighbor_counts);
+  return curr_spike;
+}
+
 }

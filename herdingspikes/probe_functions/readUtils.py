@@ -12,7 +12,6 @@ def read_flat(d, t0, t1, nch):
 def openHDF5file(path):
     return h5py.File(path, 'r')
 
-
 def getHDF5params(rf):
     # Read recording variables
     recVars = rf.require_group('3BRecInfo/3BRecVars/')
@@ -128,6 +127,9 @@ def getNeuroSeekerParams(rf, pipette=False):
 def readNeuroSeekerProbe(rf, t0, t1):
     return (rf['kampff_probe_data'][t0:t1].flatten() - 20000).astype(ctypes.c_short)
 
-
 def readNeuroSeekerPipette(rf, t0, t1):
     return 50000 - rf['kampff_pipette_data'][t0:t1].flatten()
+
+def readSiNAPS_S1Probe(raw_data, t0, t1):
+    raw_traces = raw_data[t0:t1]
+    return raw_traces.flatten('C').astype(ctypes.c_short)

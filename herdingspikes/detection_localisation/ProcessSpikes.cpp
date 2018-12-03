@@ -17,7 +17,12 @@ void filterSpikes(ofstream& spikes_filtered_file,  ofstream& filteredsp)
 	bool isProcessed = false;
 
 	while(!isProcessed) {
-        max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
+        if(Parameters::decay_filtering == true){
+            max_spike = FilterSpikes::filterSpikesDecay(first_spike, filteredsp);
+        }
+        else {
+            max_spike = FilterSpikes::filterSpikesAll(first_spike, filteredsp);
+        }
 		int32_t msc = (int32_t) max_spike.channel;
 		int32_t msf = (int32_t) max_spike.frame;
 		int32_t msa = (int32_t) max_spike.amplitude;
@@ -64,7 +69,13 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 	bool isProcessed = false;
 
 	while(!isProcessed) {
-        max_spike = FilterSpikes::filterSpikes(first_spike, filteredsp);
+
+        if(Parameters::decay_filtering == true){
+            max_spike = FilterSpikes::filterSpikesDecay(first_spike, filteredsp);
+        }
+        else {
+            max_spike = FilterSpikes::filterSpikesAll(first_spike, filteredsp);
+        }
 
 		tuple<float,float> position = LocalizeSpikes::localizeSpike(max_spike);
         if(Parameters::verbose) {
@@ -86,10 +97,10 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 		spikes_filtered_file.write((char *)&Y, sizeof(Y));
 		spikes_filtered_file.write((char*)&max_spike.written_cutout[0], max_spike.written_cutout.size() * sizeof(int32_t));
 
-        if(X < 0 || Y < 0) {
-            cout << "X real: " << get<0>(position)  << endl;
-            cout << "Y real: " << get<1>(position)  << endl;
-        }
+    if(X < 0 || Y < 0) {
+        cout << "X real: " << get<0>(position)  << endl;
+        cout << "Y real: " << get<1>(position)  << endl;
+    }
 
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isProcessed = true;
@@ -100,7 +111,7 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 				isProcessed = true;
 			}
 			else {
-				first_spike = Parameters::spikes_to_be_processed.front();
+				first_spike = max_spike;
 			}
 		}
 	}
