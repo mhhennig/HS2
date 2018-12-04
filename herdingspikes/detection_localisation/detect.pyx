@@ -139,13 +139,15 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
-        det.MeanVoltage( &vm[0], tInc, tCut)
+        if num_channels>1:
+            det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
         if t0 < nFrames - tCut2:
             # print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
         #print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
+        sys.stdout.flush()
 
     now = datetime.now()
     #Save state of detection
@@ -170,5 +172,4 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     endTime=datetime.now()
     print('# Time taken for detection: ' + str(endTime - startTime))
     print('# Time per frame: ' + str(1000 * (endTime - startTime) / (nFrames)))
-    print('# Time per sample: ' + str(1000 *
-(endTime - startTime) / (nRecCh * nFrames)))
+    print('# Time per sample: ' + str(1000 * (endTime - startTime) / (nRecCh * nFrames)))

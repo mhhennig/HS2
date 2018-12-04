@@ -309,8 +309,10 @@ of the first spike or the deque is empty.
     int frames_processed = Parameters::frames * Parameters::iterations;
 
     spike_to_be_added = storeWaveformCutout(cutout_size, spike_to_be_added);
-    spike_to_be_added = storeCOMWaveformsCounts(spike_to_be_added);
-
+    if (Parameters::to_localize) {
+        spike_to_be_added = storeCOMWaveformsCounts(spike_to_be_added);
+    }
+      
     bool isAdded = false;
     while (!isAdded) {
       if (Parameters::spikes_to_be_processed.empty()) {
