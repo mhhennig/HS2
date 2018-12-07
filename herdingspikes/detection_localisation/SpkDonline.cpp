@@ -59,6 +59,7 @@ void Detection::SetInitialParams(int * pos_mtx,
   int **channel_positions;
   int **neighbor_matrix;
   masked_channels = _masked_channels;
+  iterations  = 0;
 
   channel_positions = createPositionMatrix(num_channels);
   for(int i=0; i<num_channels; i++){
@@ -72,7 +73,11 @@ void Detection::SetInitialParams(int * pos_mtx,
     }
   }
 
-  Qms = createBaselinesMatrix(num_channels, spike_peak_duration + maxsl);
+  Qms = new int *[num_channels];
+  for (int i = 0; i < num_channels; i++) {
+    Qms[i] = new int[spike_peak_duration + maxsl + 1];
+  }
+
   currQmsPosition = -1;
   _spike_delay = spike_delay;
   write_out = verbose;
@@ -133,7 +138,6 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
   int a;    // to buffer the difference between ADC counts and Qm, and basline
   int t, i; // counters
   SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
-
 
   ++iterations;
   for (t = tCut; t < tInc;
@@ -224,7 +228,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
 void Detection::FinishDetection() // write spikes in interval after last
                                   // recalibration; close file
 {
-  SpikeHandler::terminateSpikeHandler();
+/*  SpikeHandler::terminateSpikeHandler();
   if (write_out) {
     spikes_file.close();
   }
@@ -233,7 +237,7 @@ void Detection::FinishDetection() // write spikes in interval after last
          << "Turn on verbose in DetectFromRaw method to get all detected spikes"
          << endl;
     spikes_file.close();
-  }
+  }*/
 }
 
 void buildPositionsMatrix(int **_channel_positions, string positions_file_path,

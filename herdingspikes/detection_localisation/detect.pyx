@@ -28,8 +28,8 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void FinishDetection()
 
 
-def read_flat(d, t0, t1, nch):
-  return d[t0*nch:t1*nch].astype(ctypes.c_short)
+#def read_flat(d, t0, t1, nch):
+#  return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
@@ -106,8 +106,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     cdef np.ndarray[long, mode = "c"] Indices = np.zeros(nRecCh, dtype=ctypes.c_long)
     for i in range(nRecCh):
         Indices[i] = i
-    cdef np.ndarray[short, mode="c"] vm = np.zeros((nRecCh * (tInc + tCut + tCut2)), dtype=ctypes.c_short)
-    cdef np.ndarray[short, mode = "c"] ChIndN = np.zeros((nRecCh * 10), dtype=ctypes.c_short)
+    cdef np.ndarray[short, mode = "c"] vm = np.zeros((nRecCh * (tInc + tCut + tCut2)), dtype=ctypes.c_short)
+    #cdef np.ndarray[short, mode = "c"] ChIndN = np.zeros((nRecCh * 10), dtype=ctypes.c_short)
 
     # initialise detection algorithm
     det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
@@ -135,7 +135,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         sys.stdout.flush()
         # slice data
         if t0 == 0:
-            vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), probe.Read(0, t1+tCut2)))
+            vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), probe.Read(0, t1+tCut2))).astype(ctypes.c_short)
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
@@ -144,9 +144,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
         if t0 < nFrames - tCut2:
-            # print('# updating tInc')
             tInc = min(tInc, nFrames - tCut2 - t0)
-        #print('# t0:'+str(t0)+' tcut2:'+str(tCut2)+' tInc:'+str(tInc))
         sys.stdout.flush()
 
     now = datetime.now()
@@ -167,7 +165,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
 
     target = open(_file_name.decode() + 'DetectionDict' + now.strftime("%Y-%m-%d_%H%M%S_%f") + '.txt', 'a')
     target.write(pprint.pformat(detection_state_dict))
-
+    target.close()
+    
     det.FinishDetection()
     endTime=datetime.now()
     print('# Time taken for detection: ' + str(endTime - startTime))
