@@ -190,10 +190,15 @@ given.
     }
   }
 
+  if(spikes_filtered_file.is_open()){
+    spikes_filtered_file.close();
+  }
+//   spikes_filtered_file.open(file_name + ".bin", ios::trunc | ios::binary);
   spikes_filtered_file.open(file_name + ".bin", ios::binary);
   if (_verbose) {
     filteredsp.open(file_name + "_filtered_spikes.asc");
   }
+    Parameters::spikes_to_be_processed.clear();
 }
 void loadRawData(short *_raw_data, int _index_data, int _iterations,
                  int _frames, int _additional_data) {

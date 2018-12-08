@@ -140,6 +140,12 @@ class HSDetection(object):
         Arguments:
         load -- bool: load the detected spikes when finished?
         """
+
+        try:
+            del self.spikes
+        except:
+            pass
+        
         detectData(self.probe, str.encode(self.out_file_name[:-4]),
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
