@@ -473,3 +473,38 @@ class GenericBinary(NeuralProbe):
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
+    
+class MEA256(NeuralProbe):
+    def __init__(self, data_file_path=None, fps=30000, num_channels=256,
+                 spike_delay=5, spike_peak_duration=4, noise_duration=3,
+                 noise_amp_percent=1, inner_radius=76, neighbor_radius=None,
+                 masked_channels=None):
+        assert num_channels is not None, 'Specify the number of channels.'
+        positions_file_path = in_probe_info_dir('positions_MEA256')
+        neighbors_file_path = in_probe_info_dir('neighbormatrix_MEA256')
+        NeuralProbe.__init__(
+            self,
+            num_channels=num_channels,
+            spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration,
+            noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent,
+            fps=fps,
+            inner_radius=inner_radius,
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            neighbor_radius=neighbor_radius,
+            masked_channels=masked_channels
+            )
+
+        self.data_file = data_file_path
+        if data_file_path is not None:
+            self.d = np.memmap(data_file_path, dtype=np.int16, mode='r')
+            assert len(self.d) / self.num_channels == len(self.d) // \
+                self.num_channels, 'Data not multiple of channel number'
+            self.nFrames = len(self.d) // self.num_channels
+        else:
+            print('Note: data file not specified, things may break')
+
+    def Read(self, t0, t1):
+        return read_flat(self.d, t0, t1, self.num_channels)

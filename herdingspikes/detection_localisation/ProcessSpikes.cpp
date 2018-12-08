@@ -97,10 +97,10 @@ void filterLocalizeSpikes(ofstream& spikes_filtered_file, ofstream& filteredsp)
 		spikes_filtered_file.write((char *)&Y, sizeof(Y));
 		spikes_filtered_file.write((char*)&max_spike.written_cutout[0], max_spike.written_cutout.size() * sizeof(int32_t));
 
-    if(X < 0 || Y < 0) {
-        cout << "X real: " << get<0>(position)  << endl;
-        cout << "Y real: " << get<1>(position)  << endl;
-    }
+//     if(X < 0 || Y < 0) {
+//         cout << "X real: " << get<0>(position)  << endl;
+//         cout << "Y real: " << get<1>(position)  << endl;
+//     }
 
 		if(Parameters::spikes_to_be_processed.size() == 0) {
 			isProcessed = true;
