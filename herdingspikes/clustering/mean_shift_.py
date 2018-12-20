@@ -17,19 +17,6 @@ Seeding is performed using a binning technique for scalability.
 import numpy as np
 import warnings
 
-# from collections import defaultdict
-# from sklearn.externals import six
-# from sklearn.utils.validation import check_is_fitted
-# from sklearn.utils import extmath, check_random_state, gen_batches, check_array
-# from sklearn.base import BaseEstimator, ClusterMixin
-# from sklearn.neighbors import NearestNeighbors
-# from sklearn.metrics.pairwise import pairwise_distances_argmin
-# #from clustering.pairwise import pairwise_distances_argmin_min
-# from sklearn.externals.joblib import Parallel
-# from sklearn.externals.joblib import effective_n_jobs
-# from sklearn.externals.joblib import delayed
-# from scipy.linalg import norm
-
 from collections import defaultdict
 from sklearn.externals import six
 from sklearn.utils.validation import check_is_fitted
@@ -247,14 +234,13 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
     # If the distance between two kernels is less than the bandwidth,
     # then we have to remove one because it is a duplicate. Remove the
     # one with fewer points.
-
     sorted_by_intensity = sorted(center_intensity_dict.items(),
                                  key=lambda tup: (tup[1], tup[0]),
                                  reverse=True)
     sorted_centers = np.array([tup[0] for tup in sorted_by_intensity])
     unique = np.ones(len(sorted_centers), dtype=np.bool)
     nbrs = NearestNeighbors(radius=bandwidth,
-                            n_jobs=n_jobs).fit(sorted_centers)
+                            n_jobs=1).fit(sorted_centers)
     for i, center in enumerate(sorted_centers):
         if unique[i]:
             neighbor_idxs = nbrs.radius_neighbors([center],
@@ -264,7 +250,7 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
     cluster_centers = sorted_centers[unique]
 
     # ASSIGN LABELS: a point belongs to the cluster that it is closest to
-    nbrs = NearestNeighbors(n_neighbors=1, n_jobs=n_jobs).fit(cluster_centers)
+    nbrs = NearestNeighbors(n_neighbors=1, n_jobs=1).fit(cluster_centers)
     labels = np.zeros(n_samples, dtype=np.int)
     distances, idxs = nbrs.kneighbors(X)
     if cluster_all:
@@ -467,5 +453,6 @@ class MeanShift(BaseEstimator, ClusterMixin):
             Index of the cluster each sample belongs to.
         """
         check_is_fitted(self, "cluster_centers_")
+        print('predicting')
 
         return pairwise_distances_argmin(X, self.cluster_centers_)
