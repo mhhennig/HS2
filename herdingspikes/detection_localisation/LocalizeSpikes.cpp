@@ -183,7 +183,7 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
     denominator += weight;
   }
 
-  if ((denominator == 0)) //| (X>10 & X<11))
+  if (denominator == 0) //| (X>10 & X<11))
   {
     cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
     for (int i = 0; i < centered_amps_size; i++) {

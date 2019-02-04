@@ -160,7 +160,6 @@ void filterOuterNeighbors(Spike max_spike, ofstream& filteredsp) {
     vector<Spike> outer_spikes_to_be_filtered;
     deque<Spike>::iterator it;
 	it = Parameters::spikes_to_be_processed.begin();
-    bool problem_spike = false;
 
 	while(it != Parameters::spikes_to_be_processed.end())
 	{
@@ -235,7 +234,6 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
     //bool IS_INNER_EVENT = true;
     bool shares_inner = false;
     int NOT_VALID_FRAME = -1;
-    bool problem_spike = false;
 
 
     int curr_inner_neighbor;
@@ -280,7 +278,7 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
         }
     }
     //int closest_inner_neighbor_channel = getClosestInnerNeighborChannel(outer_spike.channel, max_spike.channel);
-    for(int i = 0; i < Parameters::max_neighbors; i++) {
+    //for(int i = 0; i < Parameters::max_neighbors; i++) {
         float curr_dist;
         float outer_dist_from_center = channelsDist(outer_spike.channel, max_spike.channel);
         for(int i = 0; i < Parameters::max_neighbors; i++) {
@@ -327,7 +325,7 @@ bool filteredOuterSpike(Spike outer_spike, Spike max_spike) {
             }
         }
         return filtered_spike;
-    }
+    //}
 }
 
 int getClosestInnerNeighborChannel(int outer_channel, int central_channel) {
