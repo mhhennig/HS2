@@ -22,6 +22,7 @@ sources = [FOLDER + s for s in sources]
 
 # OS X support
 extra_compile_args = ['-std=c++11', '-O3']
+link_extra_args = []
 if platform.system() == 'Darwin':
     extra_compile_args += ['-mmacosx-version-min=10.9', '-F.']
     link_extra_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
