@@ -24,12 +24,14 @@ sources = [FOLDER + s for s in sources]
 extra_compile_args = ['-std=c++11', '-O3']
 if platform.system() == 'Darwin':
     extra_compile_args += ['-mmacosx-version-min=10.9', '-F.']
+    link_extra_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
 
 # compilation of Cython files
 detect_ext = Extension(name="herdingspikes.detection_localisation.detect",
                        sources=sources,
                        language="c++",
                        extra_compile_args=extra_compile_args,
+                       extra_link_args=link_extra_args,
                        include_dirs=[numpy.get_include()])
 
 
