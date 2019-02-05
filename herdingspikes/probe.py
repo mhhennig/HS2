@@ -5,16 +5,16 @@ from .probe_functions.readUtils import read_flat, readSiNAPS_S1Probe
 from .probe_functions.readUtils import openHDF5file, getHDF5params
 from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
 from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
-from .probe_functions.readUtils import getNeuroSeekerParams, readNeuroSeekerProbe
+from .probe_functions.readUtils import getNeuroSeekerParams
+from .probe_functions.readUtils import readNeuroSeekerProbe
 from .probe_functions.neighborMatrixUtils import createNeighborMatrix
 import h5py
 import ctypes
 import os.path
-
-def in_probes_dir(file):
-    return os.path.join(this_file, 'probes', file)
-
 from scipy.spatial.distance import cdist
+
+this_file_path = os.path.dirname(os.path.abspath(__file__))
+
 
 def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
     n_channels = ch_positions.shape[0]
@@ -32,19 +32,24 @@ def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
             f.write('{},\n'.format(str(list(neighbors))[1:-1]))
     f.close()
 
-this_file_path = os.path.dirname(os.path.abspath(__file__))
+
+def in_probes_dir(file):
+    return os.path.join(this_file_path, 'probes', file)
+
+
 def in_probe_info_dir(file):
     return os.path.join(this_file_path, 'probe_info', file)
 
-class NeuralProbe(object):
 
+class NeuralProbe(object):
     def __init__(self, num_channels, spike_delay, spike_peak_duration,
                  noise_duration, noise_amp_percent, inner_radius,
                  fps, positions_file_path, neighbors_file_path,
                  neighbor_radius, masked_channels,
                  recorded_channels=None):
         if(neighbor_radius is not None):
-            createNeighborMatrix(neighbors_file_path, positions_file_path, neighbor_radius)
+            createNeighborMatrix(neighbors_file_path, positions_file_path,
+                                 neighbor_radius)
         self.num_channels = num_channels
         self.spike_delay = spike_delay
         self.spike_peak_duration = spike_peak_duration
@@ -61,7 +66,7 @@ class NeuralProbe(object):
         self.loadPositions(positions_file_path)
         self.loadNeighbors(neighbors_file_path)
 
-        # if a probe only records a subset of channels, filter out unused channels
+        # if a probe only records a subset of channels, filter out unused ones
         # this may happen in Biocam recordings
         # note this uses positions to identify recorded channels
         # requires channels are an ordered list
@@ -194,9 +199,9 @@ class BioCam(NeuralProbe):
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = openHDF5file(data_file_path)
-            self.nFrames, sfd, nRecCh, chIndices, file_format, inversion = getHDF5params(
-                self.d)
-            print("# Signal inversion looks like", str(inversion), ", guessing the "
+            self.nFrames, sfd, nRecCh, chIndices, file_format, inversion = \
+                getHDF5params(self.d)
+            print("# Signal inversion looks like", inversion, ", guessing the "
                   "right method for data access.\n# If your detection results "
                   "look strange, signal polarity is wrong.\n")
             if file_format == 100:
@@ -230,15 +235,17 @@ class BioCam(NeuralProbe):
             noise_duration=noise_duration,
             noise_amp_percent=noise_amp_percent,
             fps=sfd,
-            inner_radius=inner_radius,#1.75,
+            inner_radius=inner_radius,  # 1.75,
             positions_file_path=positions_file_path,
             neighbors_file_path=neighbors_file_path,
             neighbor_radius=neighbor_radius,
             masked_channels=masked_channels,
             recorded_channels=recorded_channels
             )
+
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
+
 
 class MCS120(NeuralProbe):
     def __init__(self, data_file_path=None, fps=10000, spike_delay=5,
@@ -311,8 +318,8 @@ class Mea1k(NeuralProbe):
             electrodes = mapping['electrode'][:]
             routed = np.array(np.where(electrodes > -1))[0]
             self.channels_indices_routed = channel_indices[routed]
-            self.nFrames = d['sig'].shape[1] #number_of_frames
-            ch_positions = np.vstack((mapping['x'][routed],mapping['y'][routed])).T
+            self.nFrames = d['sig'].shape[1]  # number_of_frames
+            ch_positions = np.vstack((mapping['x'][routed], mapping['y'][routed])).T
             num_channels = ch_positions.shape[0]
             print('# Generating new position and neighbor files from data file')
             create_probe_files(positions_file_path, neighbors_file_path, inner_radius, ch_positions)
@@ -333,6 +340,7 @@ class Mea1k(NeuralProbe):
         return self.d['/sig'][self.channels_indices_routed,
                               t0:t1].T.ravel().astype(ctypes.c_short)
 
+
 class HierlmannVisapyEmulationProbe(NeuralProbe):
     def __init__(self, data_file_path=None, fps=32000, num_channels=102,
                  spike_delay=5, spike_peak_duration=4, noise_duration=3,
@@ -350,7 +358,7 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
             fps=fps,
             positions_file_path=positions_file_path,
             neighbors_file_path=neighbors_file_path,
-            inner_radius=inner_radius, #20
+            inner_radius=inner_radius,  # 20
             neighbor_radius=neighbor_radius,
             masked_channels=masked_channels
             )
@@ -402,6 +410,7 @@ class NeuroSeeker_128(NeuralProbe):
     def Read(self, t0, t1):
         return readNeuroSeekerProbe(self.d, t0, t1)
 
+
 class SiNAPS_S1(NeuralProbe):
     """
      A 512-channel probe designed by the NETS3 lab in 2018.
@@ -435,6 +444,7 @@ class SiNAPS_S1(NeuralProbe):
     def Read(self, t0, t1):
         return readSiNAPS_S1Probe(self.raw_data, t0, t1)
 
+
 class GenericBinary(NeuralProbe):
     def __init__(self, data_file_path=None, fps=30000, num_channels=None,
                  spike_delay=5, spike_peak_duration=4, noise_duration=3,
@@ -444,7 +454,7 @@ class GenericBinary(NeuralProbe):
         positions_file_path = in_probe_info_dir('positions_GenericBinary')
         neighbors_file_path = in_probe_info_dir('neighbormatrix_GenericBinary')
         print('# Generating dummy position and neighbor files,\n# localisation will not work.')
-        ch_positions = np.array(list(zip(np.arange(num_channels),np.arange(num_channels))))
+        ch_positions = np.array(list(zip(np.arange(num_channels), np.arange(num_channels))))
         create_probe_files(positions_file_path, neighbors_file_path, inner_radius, ch_positions)
 
         NeuralProbe.__init__(
@@ -473,7 +483,8 @@ class GenericBinary(NeuralProbe):
 
     def Read(self, t0, t1):
         return read_flat(self.d, t0, t1, self.num_channels)
-    
+
+
 class MEA256(NeuralProbe):
     def __init__(self, data_file_path=None, fps=30000, num_channels=256,
                  spike_delay=5, spike_peak_duration=4, noise_duration=3,
