@@ -228,7 +228,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
 void Detection::FinishDetection() // write spikes in interval after last
                                   // recalibration; close file
 {
-/*  SpikeHandler::terminateSpikeHandler();
+  SpikeHandler::terminateSpikeHandler();
   if (write_out) {
     spikes_file.close();
   }
@@ -237,7 +237,7 @@ void Detection::FinishDetection() // write spikes in interval after last
          << "Turn on verbose in DetectFromRaw method to get all detected spikes"
          << endl;
     spikes_file.close();
-  }*/
+  }
 }
 
 void buildPositionsMatrix(int **_channel_positions, string positions_file_path,
