@@ -219,7 +219,8 @@ class BioCam(NeuralProbe):
             nRecCh = 4096
             sfd = fps
         if nRecCh < 4096:
-            print('# Note: only', nRecCh, 'channels recorded, fixing positions/neighbors')
+            print('# Note: only', nRecCh,
+                  'channels recorded, fixing positions/neighbors')
             print('# This may break - known to work only for rectangular sections!')
             recorded_channels = self.d['3BRecInfo']['3BMeaStreams']['Raw']['Chs']
         else:
@@ -252,12 +253,15 @@ class MCS120(NeuralProbe):
                  spike_peak_duration=4, noise_amp_percent=1, inner_radius=1.75,
                  neighbor_radius=None, masked_channels=None):
         self.data_file = data_file_path
-        print("# BETA: Initialising MCS120 probe. Note nothing is known about the geometry. ")
+        print("# BETA: Initialising MCS120 probe.")
+        print("# Note nothing is known about the geometry. ")
         if data_file_path is not None:
             d = h5py.File(data_file_path)
             self.d = d
-            nRecCh = d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'].shape[0]
-            self.nFrames = d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'].shape[1]
+            nRecCh = d['Data']['Recording_0']['AnalogStream']['Stream_0'][
+                'ChannelData'].shape[0]
+            self.nFrames = d['Data']['Recording_0']['AnalogStream'][
+                'Stream_0']['ChannelData'].shape[1]
             sfd = fps
         else:
             print('# Note: data file not specified, setting some defaults')
@@ -282,7 +286,8 @@ class MCS120(NeuralProbe):
             )
 
     def Read(self, t0, t1):
-        return self.d['Data']['Recording_0']['AnalogStream']['Stream_0']['ChannelData'][:,t0:t1].T.ravel().astype(ctypes.c_short)
+        return self.d['Data']['Recording_0']['AnalogStream']['Stream_0'][
+            'ChannelData'][:, t0:t1].T.ravel().astype(ctypes.c_short)
 
 
 class Mea1k(NeuralProbe):
@@ -319,10 +324,12 @@ class Mea1k(NeuralProbe):
             routed = np.array(np.where(electrodes > -1))[0]
             self.channels_indices_routed = channel_indices[routed]
             self.nFrames = d['sig'].shape[1]  # number_of_frames
-            ch_positions = np.vstack((mapping['x'][routed], mapping['y'][routed])).T
+            ch_positions = np.vstack((mapping['x'][routed],
+                                      mapping['y'][routed])).T
             num_channels = ch_positions.shape[0]
             print('# Generating new position and neighbor files from data file')
-            create_probe_files(positions_file_path, neighbors_file_path, inner_radius, ch_positions)
+            create_probe_files(positions_file_path, neighbors_file_path,
+                               inner_radius, ch_positions)
         else:
             num_channels = 0
             print('# Note: data file not specified, setting some defaults')
@@ -346,8 +353,10 @@ class HierlmannVisapyEmulationProbe(NeuralProbe):
                  spike_delay=5, spike_peak_duration=4, noise_duration=3,
                  noise_amp_percent=1, inner_radius=35, neighbor_radius=None,
                  masked_channels=None):
-        positions_file_path = in_probe_info_dir('positions_hierlemann_visapy_emulation')
-        neighbors_file_path = in_probe_info_dir('neighbormatrix_hierlemann_visapy_emulation')
+        positions_file_path = in_probe_info_dir(
+            'positions_hierlemann_visapy_emulation')
+        neighbors_file_path = in_probe_info_dir(
+            'neighbormatrix_hierlemann_visapy_emulation')
         NeuralProbe.__init__(
             self,
             num_channels=num_channels,
@@ -383,11 +392,12 @@ class NeuroSeeker_128(NeuralProbe):
      https://doi.org/10.1109/TRANSDUCERS.2015.7181274
     """
     def __init__(self, data_file_path, num_channels=128, spike_delay=5,
-                 spike_peak_duration=5, noise_duration=2, noise_amp_percent=.95,
-                 fps=None, inner_radius=1.42, neighbor_radius=None,
-                 masked_channels=None):
+                 spike_peak_duration=5, noise_duration=2,
+                 noise_amp_percent=.95, fps=None, inner_radius=1.42,
+                 neighbor_radius=None, masked_channels=None):
         positions_file_path = in_probe_info_dir('positions_neuroseeker_128')
-        neighbors_file_path = in_probe_info_dir('neighbormatrix_neuroseeker_128')
+        neighbors_file_path = in_probe_info_dir(
+            'neighbormatrix_neuroseeker_128')
         NeuralProbe.__init__(
                 self,
                 num_channels=num_channels,
@@ -405,7 +415,8 @@ class NeuroSeeker_128(NeuralProbe):
         self.data_file = data_file_path
         self.d = openHDF5file(data_file_path)
         self.nFrames, self.fps, self.num_channels, chIndices,\
-            self.closest_electrode = getNeuroSeekerParams(self.d, pipette=False)
+            self.closest_electrode = getNeuroSeekerParams(self.d,
+                                                          pipette=False)
 
     def Read(self, t0, t1):
         return readNeuroSeekerProbe(self.d, t0, t1)
@@ -453,9 +464,12 @@ class GenericBinary(NeuralProbe):
         assert num_channels is not None, 'Specify the number of channels.'
         positions_file_path = in_probe_info_dir('positions_GenericBinary')
         neighbors_file_path = in_probe_info_dir('neighbormatrix_GenericBinary')
-        print('# Generating dummy position and neighbor files,\n# localisation will not work.')
-        ch_positions = np.array(list(zip(np.arange(num_channels), np.arange(num_channels))))
-        create_probe_files(positions_file_path, neighbors_file_path, inner_radius, ch_positions)
+        print('# Generating dummy position and neighbor files')
+        print('# localisation will not work.')
+        ch_positions = np.array(list(zip(np.arange(num_channels),
+                                         np.arange(num_channels))))
+        create_probe_files(positions_file_path, neighbors_file_path,
+                           inner_radius, ch_positions)
 
         NeuralProbe.__init__(
             self,

@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import h5py
 import os
-import errno
 import math
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
@@ -40,7 +39,8 @@ class HSDetection(object):
         3. Save the result, or create a HSClustering object.
     """
 
-    def __init__(self, probe, to_localize=True, num_com_centers=1, cutout_start=10, cutout_end=30,
+    def __init__(self, probe, to_localize=True, num_com_centers=1,
+                 cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
                  file_directory_name="", decay_filtering=True, save_all=False):
@@ -76,11 +76,11 @@ class HSDetection(object):
         self.decay_filtering = decay_filtering
         self.num_com_centers = num_com_centers
 
-        #Make directory for results if it doesn't exist
+        # Make directory for results if it doesn't exist
         if not os.path.exists(os.path.dirname(file_directory_name)):
             try:
                 os.makedirs(file_directory_name)
-            except: # hack!
+            except:  # hack!
                 pass
             # except OSError as exc: # Guard against race condition
             #     if exc.errno != errno.EEXIST:
@@ -143,9 +143,9 @@ class HSDetection(object):
 
         try:
             del self.spikes
-        except:
+        except NameError:
             pass
-        
+
         detectData(self.probe, str.encode(self.out_file_name[:-4]),
                    self.to_localize, self.probe.fps, self.threshold,
                    self.cutout_start, self.cutout_end,
@@ -282,14 +282,17 @@ class HSDetection(object):
             plt.plot(pos[n][0] + trange_bluered,
                      pos[n][1] + (data[start_bluered:start_bluered + cutlen,
                                        n]+ys[i]) * scale, col)
-            print(n," min ",np.min(data[start_bluered:start_bluered + cutlen,n]), " at ",np.argmin(data[start_bluered:start_bluered + cutlen,n]))
+            print(n, "min", np.min(data[start_bluered:start_bluered + cutlen, n]),
+                  "at", np.argmin(data[start_bluered:start_bluered + cutlen, n]))
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + (event.Shape+ys[
                     np.where(neighs[event.ch] == event.ch)[0]]) * scale, 'r')
 
-        inner_radius_circle = plt.Circle((pos[event.ch][0], pos[event.ch][1]), self.probe.inner_radius, color='red', fill=False)
+        inner_radius_circle = plt.Circle((pos[event.ch][0], pos[event.ch][1]),
+                                         self.probe.inner_radius,
+                                         color='red', fill=False)
         ax.add_artist(inner_radius_circle)
 
         # red dot of event location
@@ -374,13 +377,14 @@ class HSClustering(object):
                 filetype = splitext(f)[-1]
                 not_first_file = i > 0
                 if filetype == ".hdf5":
-                    _f = h5py.File(f,'r')
+                    _f = h5py.File(f, 'r')
                     if 'shapes' in list(_f.keys()):
                         _f.close()
                         self.LoadHDF5(f, append=not_first_file, **kwargs)
                     elif 'Shapes' in list(_f.keys()):
                         _f.close()
-                        self.LoadHDF5_legacy_detected(f, append=not_first_file, **kwargs)
+                        self.LoadHDF5_legacy_detected(f, append=not_first_file,
+                                                      **kwargs)
                 elif filetype == ".bin":
                     if cutout_length is None:
                         raise ValueError(
@@ -435,8 +439,8 @@ class HSClustering(object):
         if cluster_subset is not None:
             print("Clustering using " + str(cluster_subset) + " out of " +
                   str(self.spikes.shape[0]) + " spikes...")
-            inds = np.sort(np.random.choice(self.spikes.shape[0], int(cluster_subset),
-                                    replace=False))
+            inds = np.sort(np.random.choice(self.spikes.shape[0],
+                                            int(cluster_subset), replace=False))
             clusterer.fit(fourvec[inds])
             self.NClusters = len(np.unique(clusterer.labels_))
             print("Number of estimated units:", self.NClusters)
@@ -456,7 +460,7 @@ class HSClustering(object):
                   "unclustered events, these are now in cluster number ",
                   self.NClusters-1)
             # self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
-            self.spikes.loc[self.spikes.cl==-1,'cl'] = self.NClusters-1
+            self.spikes.loc[self.spikes.cl == -1, 'cl'] = self.NClusters-1
 
         _cl = self.spikes.groupby(['cl'])
         _x_mean = _cl.x.mean()
@@ -474,7 +478,8 @@ class HSClustering(object):
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
-    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000, normalise=False):
+    def ShapePCA(self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000,
+                 normalise=False):
         """
         Finds the principal components (PCs) of spike shapes contained in the
         class, and saves them to HSClustering.features, to be used for
@@ -486,18 +491,22 @@ class HSClustering(object):
         """
         _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         if self.spikes.shape[0] > chunk_size:
-            print("Fitting PCA using "+str(chunk_size)+" out of "+str(self.spikes.shape[0])+" spikes...")
-            inds = np.sort(np.random.choice(self.spikes.shape[0], chunk_size, replace=False))
+            print("Fitting PCA using", chunk_size, "out of ",
+                  self.spikes.shape[0], "spikes...")
+            inds = np.sort(np.random.choice(self.spikes.shape[0], chunk_size,
+                           replace=False))
             if normalise:
                 print("...normalising shapes by peak...")
-                s = [row.Shape/row.Shape.min() for row in self.spikes.loc[inds].itertuples()]
+                s = [row.Shape/row.Shape.min()
+                     for row in self.spikes.loc[inds].itertuples()]
             else:
                 s = self.spikes.Shape.loc[inds].values.tolist()
             _pca.fit(np.array(s))
         else:
             print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes...")
             if normalise:
-                s = [row.Shape/row.Shape.min() for row in self.spikes.itertuples()]
+                s = [row.Shape/row.Shape.min()
+                     for row in self.spikes.itertuples()]
             else:
                 s = self.spikes.Shape.values.tolist()
             _pca.fit(s)
@@ -505,7 +514,7 @@ class HSClustering(object):
         print("...projecting...")
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            #print(i*chunk_size, (i + 1)*chunk_size)
+            # print(i*chunk_size, (i + 1)*chunk_size)
             if normalise:
                 s = [row.Shape/row.Shape.min() for row in self.spikes.loc[i * chunk_size:(i+1) * chunk_size-1].itertuples()]
             else:
@@ -514,7 +523,7 @@ class HSClustering(object):
         self.pca = _pca
         self.features = _pcs
         print("...done")
-        #return _pcs
+        # return _pcs
 
     def ShapeSparsePCA(self, pca_ncomponents=2, chunk_size=1000000):
         """
@@ -532,7 +541,7 @@ class HSClustering(object):
                   self.spikes.shape[0], "spikes...")
             inds = np.random.choice(self.spikes.shape[0], int(1e6),
                                     replace=False)
-            pca.fit(self.spikes.Shape.loc[inds].values.tolist()) # so we need tolist here?
+            pca.fit(self.spikes.Shape.loc[inds].values.tolist())  # so we need tolist here?
         else:
             print("Fitting PCA using", self.spikes.shape[0], "spikes...")
             pca.fit(self.spikes.Shape.value.tolist())
@@ -546,7 +555,6 @@ class HSClustering(object):
                     i * chunk_size:(i+1) * chunk_size-1].tolist()))
         self.features = _pcs
         return _pcs
-
 
     def ShapeICA(self, ica_ncomponents=2, ica_whiten=True, chunk_size=1000000):
         """
@@ -578,7 +586,8 @@ class HSClustering(object):
 
         return _ics
 
-    def _savesinglehdf5(self, filename, limits, compression, sampling, transpose=False):
+    def _savesinglehdf5(self, filename, limits, compression, sampling,
+                        transpose=False):
         if limits is not None:
             spikes = self.spikes[limits[0]:limits[1]]
         else:
@@ -596,9 +605,11 @@ class HSClustering(object):
         g.create_dataset("ch", data=spikes.ch)
         if self.IsClustered:
             if transpose:
-                g.create_dataset("centres", data=self.clusters[['ctr_y', 'ctr_x']])
+                g.create_dataset("centres",
+                                 data=self.clusters[['ctr_y', 'ctr_x']])
             else:
-                g.create_dataset("centres", data=self.clusters[['ctr_x', 'ctr_y']])
+                g.create_dataset("centres",
+                                 data=self.clusters[['ctr_x', 'ctr_y']])
             # g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
         g.create_dataset("exp_inds", data=self.expinds)
@@ -612,7 +623,8 @@ class HSClustering(object):
         g.create_dataset("shapes", data=sh_tmp, compression=compression)
         g.close()
 
-    def SaveHDF5(self, filename, compression=None, sampling=None, transpose=False):
+    def SaveHDF5(self, filename, compression=None, sampling=None,
+                 transpose=False):
         """
         Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers
         compression of the shapes, 'lzf' appears a good trade-off between speed
@@ -628,12 +640,13 @@ class HSClustering(object):
         sampling -- provide this information to include it in the file.
         """
 
-        if sampling == None:
+        if sampling is None:
             print("# Warning: no sampling rate given, will be set to 0 in the hdf5 file.")
             sampling = 0
 
         if type(filename) == str:
-            self._savesinglehdf5(filename, None, compression, sampling, transpose)
+            self._savesinglehdf5(filename, None, compression, sampling,
+                                 transpose)
         elif type(filename) == list:
             if len(filename) != len(self.expinds):
                 raise ValueError("Names list length does not correspond to " +
@@ -738,7 +751,8 @@ class HSClustering(object):
 
         g.close()
 
-    def LoadHDF5_legacy_detected(self, filename, append=False, chunk_size=1000000, scale=1):
+    def LoadHDF5_legacy_detected(self, filename, append=False,
+                                 chunk_size=1000000, scale=1):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
         the HS1 detector.
@@ -764,7 +778,7 @@ class HSClustering(object):
                                shape=g['Shapes'].shape))
         for i in range(g['Shapes'].shape[0] // chunk_size + 1):
             tmp = (scale*np.transpose(
-                g['Shapes'][i*chunk_size:(i+1)*chunk_size,:])).astype(np.int32).T
+                g['Shapes'][i*chunk_size:(i+1)*chunk_size, :])).astype(np.int32).T
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Read chunk ' + str(i + 1))
@@ -797,7 +811,6 @@ class HSClustering(object):
             self.filelist = [filename]
 
         g.close()
-
 
     def LoadBin(self, filename, cutout_length, append=False):
         """
@@ -925,7 +938,7 @@ class HSClustering(object):
 
     def PlotNeighbourhood(self, cl, radius=1, show_cluster_numbers=True,
                           max_spikes=10000, alpha=0.4, show_unclustered=False,
-                          max_shapes=1000, figsize=(8,6)):
+                          max_shapes=1000, figsize=(8, 6)):
         """
         Plot all units and spikes in the neighbourhood of cluster cl.
 
@@ -961,7 +974,8 @@ class HSClustering(object):
             if show_cluster_numbers:
                 ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color='w')
             for i in inds[:30]:
-                ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8), lw=0.8)
+                ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8),
+                                  lw=0.8)
             if len(inds) > 1:
                 ax[i_cl + 2].plot(np.mean(
                     self.spikes.Shape[inds].values, axis=0), color=plt.cm.hsv(
