@@ -16,7 +16,7 @@ import pprint
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
-        void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl, int tpref, int tpostf)
+        void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl)
         void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
@@ -34,14 +34,12 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
                _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
-               ahpthr=0, tpre=1.0, tpost=2.2, num_com_centers=1,
+               ahpthr=0, num_com_centers=1,
                _decay_filtering=False, _verbose=False, nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
     nSec = probe.nFrames / sf  # the duration in seconds of the recording
     sf = int(sf) # ensure sampling rate is integer
-    tpref = int(tpre*sf/1000)
-    tpostf = int(tpost*sf/1000)
     num_channels = int(probe.num_channels)
     spike_delay = int(probe.spike_delay)
     spike_peak_duration = int(probe.spike_peak_duration)
@@ -84,8 +82,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     print("# Number of recorded channels: " + str(num_channels))
     print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
           str(nSec))
-    print("# Frames before spike in cutout: " + str(tpref))
-    print("# Frames after spike in cutout: " + str(tpostf))
+    print("# Frames before spike in cutout:", cutout_start)
+    print("# Frames after spike in cutout:", cutout_end)
 
     cdef Detection * det = new Detection()
 
@@ -95,8 +93,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         minsl = int(sf*0.3/1000 + 0.5)
 
     # set tCut, tCut2 and tInc
-    tCut = max((tpref + maxsl, cutout_start+maxsl))
-    tCut2 = max(tpostf + 1 - maxsl, cutout_end+maxsl)
+    tCut = cutout_start + maxsl
+    tCut2 = cutout_end + maxsl
     print("# tcuts: " + str(tCut) + " "+ str(tCut2) )
 
     tInc = min(nFrames-tCut-tCut2, tInc) # cap at specified number of frames
@@ -110,7 +108,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     #cdef np.ndarray[short, mode = "c"] ChIndN = np.zeros((nRecCh * 10), dtype=ctypes.c_short)
 
     # initialise detection algorithm
-    det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0, int(tpref), int(tpostf))
+    det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0)
 
     cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
     for i,p in enumerate(probe.positions):
@@ -166,7 +164,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     target = open(_file_name.decode() + 'DetectionDict' + now.strftime("%Y-%m-%d_%H%M%S_%f") + '.txt', 'a')
     target.write(pprint.pformat(detection_state_dict))
     target.close()
-    
+
     det.FinishDetection()
     endTime=datetime.now()
     print('# Time taken for detection: ' + str(endTime - startTime))

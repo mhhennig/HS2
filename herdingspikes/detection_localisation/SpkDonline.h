@@ -31,7 +31,7 @@ class Detection {
   // Parameters for spike detection
   int threshold; // threshold to detect spikes >11 is likely to be real
                      // spikes, but can and should be sorted afterwards
-  int AHPthr; // signal should go below that threshold within MaxSl-Slmin frames
+  int AHPthr; // signal should go below that threshold within MaxSl-MinSl frames
   int MaxSl;     // dead time in frames after peak, used for further testing
   int MinAvgAmp; // minimal avg. amplitude of peak (in units of Qd)
   int MinSl;     // length considered for determining avg. spike amplitude
@@ -51,9 +51,6 @@ class Detection {
   int *Slice;
   int a; // buffer for Iterate()
 
-  int fpre; // Change this to change size of pre cutout
-  int fpost; // Change this to change size of post cutout
-
   int spikeCount;
   int currQmsPosition;
   int _spike_delay;
@@ -65,7 +62,7 @@ class Detection {
 public:
   Detection();
   ~Detection();
-  void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl, int tpref, int tpostf);
+  void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int *Indices, int agl);
   void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay, int spike_peak_duration,
                         string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors,
                         int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl,

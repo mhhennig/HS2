@@ -5,8 +5,7 @@ namespace SpkDonline {
 Detection::Detection() {}
 
 void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
-                              long ti, long *Indices, int agl, int tpref,
-                              int tpostf) {
+                              long ti, long *Indices, int agl) {
   NChannels = NCh;
   tInc = ti;
   Qd = new int[NChannels];      // noise amplitude
@@ -36,8 +35,6 @@ void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
 
   spikeCount = 0;
 
-  fpre = tpref;
-  fpost = tpostf;
 }
 
 void Detection::SetInitialParams(int * pos_mtx,
@@ -140,6 +137,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
   SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
 
   ++iterations;
+  // Does this need to end at tInc + tCut? (Cole+Martino)
   for (t = tCut; t < tInc;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
