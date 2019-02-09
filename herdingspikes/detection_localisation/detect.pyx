@@ -80,10 +80,9 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         print("# Writing out extended detection info")
 
     print("# Number of recorded channels: " + str(num_channels))
-    print("# Analysing frames: " + str(nFrames) + ", Seconds:" +
-          str(nSec))
-    print("# Frames before spike in cutout:", cutout_start)
-    print("# Frames after spike in cutout:", cutout_end)
+    print("# Analysing frames: " + str(nFrames) + "Seconds: " + str(nSec))
+    print("# Frames before spike in cutout: " + str(cutout_start))
+    print("# Frames after spike in cutout: " + str(cutout_end))
 
     cdef Detection * det = new Detection()
 
@@ -114,7 +113,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     for i,p in enumerate(probe.positions):
       position_matrix[i,0] = p[0]
       position_matrix[i,1] = p[1]
-    cdef np.ndarray[int, ndim=2, mode = "c"] neighbor_matrix = np.zeros((nRecCh,np.max([len(p) for p in probe.neighbors])), dtype=ctypes.c_int)-1
+    cdef np.ndarray[int, ndim=2, mode = "c"] neighbor_matrix = np.zeros((
+        nRecCh,np.max([len(p) for p in probe.neighbors])), dtype=ctypes.c_int)-1
     for i,p in enumerate(probe.neighbors):
       neighbor_matrix[i,:len(p)] = p
 
@@ -129,7 +129,8 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
-        print('# Analysing ' + str(t1 - t0) + ' frames; from ' + str(t0-tCut) + ' to ' + str(t1+tCut2))
+        print('# Analysing frames from ' + str(t0-tCut) + ' to '+str(t1+tCut2)+\
+              '  ({:.1f}%)'.format(100*t0/nFrames))
         sys.stdout.flush()
         # slice data
         if t0 == 0:
@@ -167,6 +168,6 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
 
     det.FinishDetection()
     endTime=datetime.now()
-    print('# Time taken for detection: ' + str(endTime - startTime))
+    print('# Detection completed, time taken: ' + str(endTime - startTime))
     print('# Time per frame: ' + str(1000 * (endTime - startTime) / (nFrames)))
     print('# Time per sample: ' + str(1000 * (endTime - startTime) / (nRecCh * nFrames)))

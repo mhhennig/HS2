@@ -81,7 +81,10 @@ class NeuralProbe(object):
             y0 = np.min([p[1] for p in self.positions])
             x1 = np.max([p[0] for p in self.positions])
             y1 = np.max([p[1] for p in self.positions])
-            print('# ', x0, x1, y0, y1, x1-x0+1, y1-y0+1, num_channels)
+            print('# Array boundaries (x):', x0, x1)
+            print('# Array boundaries (y):', y0, y1)
+            print('# Array width and height:', x1-x0+1, y1-y0+1)
+            print('# Number of channels:', num_channels)
             lm = np.zeros((64, 64), dtype=int)-1
             # oddness because x/y are transposed in brw
             lm[y0:y1+1, x0:x1+1] = np.arange(self.num_channels).T.reshape(

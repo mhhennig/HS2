@@ -77,14 +77,8 @@ class HSDetection(object):
         self.num_com_centers = num_com_centers
 
         # Make directory for results if it doesn't exist
-        if not os.path.exists(os.path.dirname(file_directory_name)):
-            try:
-                os.makedirs(file_directory_name)
-            except:  # hack!
-                pass
-            # except OSError as exc: # Guard against race condition
-            #     if exc.errno != errno.EEXIST:
-            #         raise
+        os.makedirs(file_directory_name, exist_ok=True)
+
         if out_file_name[-4:] == ".bin":
             file_path = file_directory_name + out_file_name
             self.out_file_name = file_path
@@ -143,14 +137,13 @@ class HSDetection(object):
 
         try:
             del self.spikes
-        except NameError:
+        except AttributeError:
             pass
 
         detectData(self.probe, str.encode(self.out_file_name[:-4]),
                    self.to_localize, self.probe.fps, self.threshold,
-                   self.cutout_start, self.cutout_end,
-                   self.maa, self.maxsl, self.minsl, self.ahpthr,
-                   self.tpre, self.tpost, self.num_com_centers,
+                   self.cutout_start, self.cutout_end, self.maa, self.maxsl,
+                   self.minsl, self.ahpthr, self.num_com_centers,
                    self.decay_filtering, self.save_all, nFrames=nFrames,
                    tInc=tInc)
         if load:
@@ -234,7 +227,7 @@ class HSDetection(object):
         event = self.spikes.loc[eventid]
         print("Spike detected at channel: ", event.ch)
         print("Spike detected at frame: ", event.t)
-        print(event.x, event.y)
+        print("Spike localised in position", event.x, event.y)
         cutlen = len(event.Shape)
         assert window_size > cutlen, "window_size is too small"
         dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
@@ -243,8 +236,8 @@ class HSDetection(object):
             ax = plt.gca()
 
         # scatter of the large grey balls for electrode location
-        x = pos[[neighs[event.ch], 0]]
-        y = pos[[neighs[event.ch], 1]]
+        x = pos[(neighs[event.ch], 0)]
+        y = pos[(neighs[event.ch], 1)]
         if show_channels:
             plt.scatter(x, y, s=1600, alpha=0.2)
 
@@ -282,8 +275,8 @@ class HSDetection(object):
             plt.plot(pos[n][0] + trange_bluered,
                      pos[n][1] + (data[start_bluered:start_bluered + cutlen,
                                        n]+ys[i]) * scale, col)
-            print(n, "min", np.min(data[start_bluered:start_bluered + cutlen, n]),
-                  "at", np.argmin(data[start_bluered:start_bluered + cutlen, n]))
+            # print(n, "min", np.min(data[start_bluered:start_bluered + cutlen, n]),
+            #       "at", np.argmin(data[start_bluered:start_bluered + cutlen, n]))
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
