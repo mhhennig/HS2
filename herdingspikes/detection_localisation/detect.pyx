@@ -80,7 +80,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         print("# Writing out extended detection info")
 
     print("# Number of recorded channels: " + str(num_channels))
-    print("# Analysing frames: " + str(nFrames) + "Seconds: " + str(nSec))
+    print("# Analysing frames: " + str(nFrames) + "; Seconds: " + str(nSec))
     print("# Frames before spike in cutout: " + str(cutout_start))
     print("# Frames after spike in cutout: " + str(cutout_end))
 
