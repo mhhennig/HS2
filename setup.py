@@ -58,7 +58,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.2',  # Required
+    version='0.2.1',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -155,8 +155,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     setup_requires=['numpy >= 1.14', 'Cython', 'scipy'],
     install_requires=['h5py', 'matplotlib >= 2.0',
-                      'pandas', 'psutil', 'scikit-learn >= 0.19.1',
-                      'scikit-optimize', 'scipy', 'tqdm'],
+                      'pandas', 'scikit-learn >= 0.19.1'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
