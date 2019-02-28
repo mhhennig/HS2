@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import json
 from matplotlib import pyplot as plt
 from .probe_functions.readUtils import read_flat, readSiNAPS_S1Probe
 from .probe_functions.readUtils import openHDF5file, getHDF5params
@@ -351,7 +352,7 @@ class Mea1k(NeuralProbe):
                               t0:t1].T.ravel().astype(ctypes.c_short)
 
 class MEArec(NeuralProbe):
-    def __init__(self, data_file_path=None, fps=30000, number_of_frames=None,
+    def __init__(self, data_file_path=None, fps=32000, number_of_frames=None,
                  num_channels=None, spike_delay=5, spike_peak_duration=4,
                  noise_duration=2, noise_amp_percent=1, inner_radius=60,
                  neighbor_radius=None, masked_channels=None):
@@ -360,6 +361,7 @@ class MEArec(NeuralProbe):
         neighbors_file_path = in_probes_dir('neighbormatrix_mearec')
         if data_file_path is not None:
             d = h5py.File(data_file_path)
+            fps = json.loads(d['info'][()])['recordings']['fs']
             self.d = d
             self.nFrames = d['recordings'].shape[1]  # number_of_frames
             ch_positions = np.vstack((d['channel_positions'][:, 1],
