@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import json
 from matplotlib import pyplot as plt
 from .probe_functions.readUtils import read_flat, readSiNAPS_S1Probe
 from .probe_functions.readUtils import openHDF5file, getHDF5params
@@ -349,6 +350,44 @@ class Mea1k(NeuralProbe):
     def Read(self, t0, t1):
         return self.d['/sig'][self.channels_indices_routed,
                               t0:t1].T.ravel().astype(ctypes.c_short)
+
+class MEArec(NeuralProbe):
+    def __init__(self, data_file_path=None, fps=32000, number_of_frames=None,
+                 num_channels=None, spike_delay=5, spike_peak_duration=4,
+                 noise_duration=2, noise_amp_percent=1, inner_radius=60,
+                 neighbor_radius=None, masked_channels=None):
+        self.data_file = data_file_path
+        positions_file_path = in_probes_dir('positions_mearec')
+        neighbors_file_path = in_probes_dir('neighbormatrix_mearec')
+        if data_file_path is not None:
+            d = h5py.File(data_file_path)
+            fps = json.loads(d['info'][()])['recordings']['fs']
+            self.d = d
+            self.nFrames = d['recordings'].shape[1]  # number_of_frames
+            ch_positions = np.vstack((d['channel_positions'][:, 1],
+                                      d['channel_positions'][:, 2])).T
+            num_channels = ch_positions.shape[0]
+            print('# Generating new position and neighbor files from data file')
+            create_probe_files(positions_file_path, neighbors_file_path,
+                               inner_radius, ch_positions)
+        else:
+            num_channels = 0
+            print('# Note: data file not specified, setting some defaults')
+
+        NeuralProbe.__init__(
+            self, num_channels=num_channels, spike_delay=5,
+            spike_peak_duration=4, noise_duration=2,
+            noise_amp_percent=1, fps=fps,
+            inner_radius=100,
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            masked_channels=masked_channels,
+            neighbor_radius=neighbor_radius)
+
+    def Read(self, t0, t1):
+        return self.d['recordings'][:,
+                              t0:t1].T.ravel().astype(ctypes.c_short)
+
 
 
 class HierlmannVisapyEmulationProbe(NeuralProbe):
