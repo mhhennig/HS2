@@ -375,10 +375,10 @@ class MEArec(NeuralProbe):
             print('# Note: data file not specified, setting some defaults')
 
         NeuralProbe.__init__(
-            self, num_channels=num_channels, spike_delay=5,
-            spike_peak_duration=4, noise_duration=2,
-            noise_amp_percent=1, fps=fps,
-            inner_radius=100,
+            self, num_channels=num_channels, spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent, fps=fps,
+            inner_radius=inner_radius,
             positions_file_path=positions_file_path,
             neighbors_file_path=neighbors_file_path,
             masked_channels=masked_channels,
@@ -388,6 +388,40 @@ class MEArec(NeuralProbe):
         return self.d['recordings'][:,
                               t0:t1].T.ravel().astype(ctypes.c_short)
 
+
+class RecordingExtractor(NeuralProbe):
+    def __init__(self, re, spike_delay=5, spike_peak_duration=4,
+                 noise_duration=2, noise_amp_percent=1, inner_radius=60,
+                 neighbor_radius=60, masked_channels=None, xy=None):
+        self.d = re
+        positions_file_path = in_probes_dir('positions_spikeextractor')
+        neighbors_file_path = in_probes_dir('neighbormatrix_spikeextractor')
+        self.nFrames = re.getNumFrames()
+        num_channels = re.getNumChannels()
+        fps = re.getSamplingFrequency()
+        ch_positions = np.array([re.getChannelProperty(i, 'location') for i in range(re.getNumChannels())])
+        if ch_positions.shape[1] > 2:
+            if xy is None:
+                print('# Warning: channel locations have '+str(ch_positions.shape[1])+' dimensions,')
+                print('# using the last two.')
+                xy = (ch_positions.shape[1]-2,ch_positions.shape[1]-1)
+            ch_positions = ch_positions[:,xy]
+        print('# Generating new position and neighbor files from data file')
+        create_probe_files(positions_file_path, neighbors_file_path,
+                           inner_radius, ch_positions)
+
+        NeuralProbe.__init__(
+            self, num_channels=num_channels, spike_delay=spike_delay,
+            spike_peak_duration=spike_peak_duration, noise_duration=noise_duration,
+            noise_amp_percent=noise_amp_percent, fps=fps,
+            inner_radius=inner_radius,
+            positions_file_path=positions_file_path,
+            neighbors_file_path=neighbors_file_path,
+            masked_channels=masked_channels,
+            neighbor_radius=neighbor_radius)
+
+    def Read(self, t0, t1):
+        return self.d.getTraces(slice(0,self.num_channels),t0,t1).T.ravel().astype(ctypes.c_short)
 
 
 class HierlmannVisapyEmulationProbe(NeuralProbe):
