@@ -8,8 +8,10 @@ import numpy as np
 def read_flat(d, t0, t1, nch):
     return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
+
 def openHDF5file(path):
     return h5py.File(path, 'r')
+
 
 def getHDF5params(rf):
     # Read recording variables
@@ -17,14 +19,14 @@ def getHDF5params(rf):
     # bitDepth = recVars['BitDepth'].value[0]
     # maxV = recVars['MaxVolt'].value[0]
     # minV = recVars['MinVolt'].value[0]
-    nFrames = recVars['NRecFrames'].value[0]
-    samplingRate = recVars['SamplingRate'].value[0]
-    signalInv = recVars['SignalInversion'].value[0]
+    nFrames = recVars['NRecFrames'][()][0]
+    samplingRate = recVars['SamplingRate'][()][0]
+    signalInv = recVars['SignalInversion'][()][0]
 
     # Read chip variables
     chipVars = rf.require_group('3BRecInfo/3BMeaChip/')
     # nRows = chipVars['NRows'].value[0]
-    nCols = chipVars['NCols'].value[0]
+    nCols = chipVars['NCols'][()][0]
     # nChipCh = nRows * nCols # Total number of channels
 
     # Get the actual number of channels used in the recording
@@ -38,10 +40,10 @@ def getHDF5params(rf):
         raise Exception('Unknown data file format.')
 
     print('# 3Brain data format:', file_format, 'signal inversion', signalInv)
-    print('#       signal range: ', recVars['MinVolt'].value[0], '- ',
-          recVars['MaxVolt'].value[0])
+    print('#       signal range: ', recVars['MinVolt'][()][0], '- ',
+          recVars['MaxVolt'][()][0])
     # Compute indices
-    rawIndices = rf['3BRecInfo/3BMeaStreams/Raw/Chs'].value
+    rawIndices = rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]
 
     # Name channels ([0..4095] for fullarray files)
     chIndices = [(x-1) + (y-1)*nCols for (y, x) in rawIndices]
@@ -124,10 +126,13 @@ def getNeuroSeekerParams(rf, pipette=False):
 
 
 def readNeuroSeekerProbe(rf, t0, t1):
-    return (rf['kampff_probe_data'][t0:t1].flatten() - 20000).astype(ctypes.c_short)
+    return (rf['kampff_probe_data'][t0:t1].flatten() - 20000).astype(
+        ctypes.c_short)
+
 
 def readNeuroSeekerPipette(rf, t0, t1):
     return 50000 - rf['kampff_pipette_data'][t0:t1].flatten()
+
 
 def readSiNAPS_S1Probe(raw_data, t0, t1):
     raw_traces = raw_data[t0:t1]

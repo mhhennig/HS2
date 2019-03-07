@@ -24,9 +24,10 @@ from sklearn.utils import check_random_state, gen_batches, check_array
 from sklearn.base import BaseEstimator, ClusterMixin
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import pairwise_distances_argmin
-from sklearn.utils._joblib import Parallel
-from sklearn.utils._joblib import delayed
+from sklearn.externals.joblib import Parallel
+from sklearn.externals.joblib import delayed
 from sklearn.externals.joblib import effective_n_jobs
+
 
 def estimate_bandwidth(X, quantile=0.3, n_samples=None, random_state=0,
                        n_jobs=None):
@@ -105,6 +106,7 @@ def _mean_shift_single_seed(my_mean, X, nbrs, max_iter):
                 completed_iterations == max_iter):
             return tuple(my_mean), len(points_within)
         completed_iterations += 1
+
 
 def _mean_shift_multi_seeds(my_means, X, nbrs, max_iter):
     # Process a batch of seeds.
@@ -213,7 +215,7 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
     print("using "+str(ncpus)+" cpus")
 
     # here each job gets its batch of seeds:
-    all_res = Parallel(n_jobs=ncpus,max_nbytes=1e6, verbose=2)(
+    all_res = Parallel(n_jobs=ncpus, max_nbytes=1e6, verbose=2)(
         delayed(_mean_shift_multi_seeds)
         (seeds[i*nseeds:(i+1)*nseeds], X, nbrs, max_iter) for i in range(ncpus))
 

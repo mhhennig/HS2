@@ -303,21 +303,18 @@ of the first spike or the deque is empty.
           The amplitude at which the spike is detected.
   */
   int cutout_size = Parameters::cutout_start + Parameters::cutout_end + 1;
-  int amp_cutout_size = Parameters::spike_delay * 2 + 1;
 
   if (channel < Parameters::num_channels && channel >= 0) {
-    int32_t curr_written_reading;
     Spike spike_to_be_added;
     spike_to_be_added.channel = channel;
     spike_to_be_added.frame = frame;
     spike_to_be_added.amplitude = amplitude;
-    int frames_processed = Parameters::frames * Parameters::iterations;
 
     spike_to_be_added = storeWaveformCutout(cutout_size, spike_to_be_added);
     if (Parameters::to_localize) {
         spike_to_be_added = storeCOMWaveformsCounts(spike_to_be_added);
     }
-      
+
     bool isAdded = false;
     while (!isAdded) {
       if (Parameters::spikes_to_be_processed.empty()) {

@@ -2,7 +2,15 @@ from setuptools import setup, Extension, find_packages
 import os
 import platform
 import numpy
-from Cython.Build import cythonize
+
+FOLDER = "herdingspikes/detection_localisation/"
+
+use_cython = True
+# do not use it if cython is not installed
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    use_cython = False
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -10,27 +18,39 @@ here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-sources = ["detect.pyx",
-           "SpkDonline.cpp",
+sources = ["SpkDonline.cpp",
            "SpikeHandler.cpp",
            "ProcessSpikes.cpp",
            "FilterSpikes.cpp",
            "LocalizeSpikes.cpp"]
-FOLDER = "herdingspikes/detection_localisation/"
+
+# if cython and the pyx file are available, compile pyx -> cpp
+# otherwise, use the available cpp
+if use_cython:
+    sources.append("detect.pyx")
+else:
+    sources.append("detect.cpp")
 sources = [FOLDER + s for s in sources]
 
 
 # OS X support
 extra_compile_args = ['-std=c++11', '-O3']
+link_extra_args = []
 if platform.system() == 'Darwin':
     extra_compile_args += ['-mmacosx-version-min=10.9', '-F.']
+    link_extra_args = ["-stdlib=libc++", "-mmacosx-version-min=10.9"]
 
 # compilation of Cython files
 detect_ext = Extension(name="herdingspikes.detection_localisation.detect",
                        sources=sources,
                        language="c++",
                        extra_compile_args=extra_compile_args,
-                       include_dirs=[numpy.get_include()])
+                       extra_link_args=link_extra_args,
+                       include_dirs=[numpy.get_include(), FOLDER])
+if use_cython:
+    detect_ext_ready = cythonize(detect_ext)
+else:
+    detect_ext_ready = [detect_ext]
 
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
@@ -55,7 +75,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.2',  # Required
+    version='0.2.7',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -150,10 +170,9 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    setup_requires=['numpy >= 1.14', 'Cython', 'scipy'],
+    setup_requires=['numpy >= 1.14', 'scipy'],
     install_requires=['h5py', 'matplotlib >= 2.0',
-                      'pandas', 'psutil', 'scikit-learn >= 0.19.1',
-                      'scikit-optimize', 'scipy', 'tqdm'],
+                      'pandas', 'scikit-learn >= 0.19.1'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -174,7 +193,13 @@ setup(
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     package_data={  # Optional
-        'herdingspikes': ['probe_info/neighbormatrix*', 'probe_info/positions*'],
+        'herdingspikes': ['probe_info/neighbormatrix*',  # probe data
+                          'probe_info/positions*',
+                          # needed for setup's long_description
+                          '../README.md',
+                          # so that both cpp and pyx come, independently of
+                          # use_cython; and headers are also included
+                          'detection_localisation/*'],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
@@ -196,7 +221,7 @@ setup(
     #         'sample=sample:main',
     #     ],
     # },
-    ext_modules=cythonize(detect_ext),
+    ext_modules=detect_ext_ready,
     zip_safe=False,
 
     # List additional URLs that are relevant to your project as a dict.
