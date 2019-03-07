@@ -14,9 +14,12 @@ from herdingspikes.probe import BioCam
 from datetime import datetime
 import getopt
 import h5py
+import sklearn
 
 if __name__ == '__main__':
-    
+   
+    sklearn.set_config(assume_finite=True, working_memory=1024*8)
+ 
     def printargs():
         print('HS2.py -i <inputfile or file mask> [-m <mbf> -a <0/1> -p <0/1>]')
 
@@ -56,7 +59,7 @@ if __name__ == '__main__':
     threshold = 22
     num_com_centers = 2
     # what to do
-    detect_it = True
+    detect_it = False #True
     sort_it = True
             
     if sfs[0].find('.hdf5')>0:
@@ -85,28 +88,30 @@ if __name__ == '__main__':
         print('Time taken for detection: ' + str(datetime.now() - startTime))
     else:
         # get sampling rate to store in clustered file
-        f = h5py.File(sfs[0])
-        sampling = f['Sampling'].value
+        print('getting sampling rate from '+sfs[5])
+        f = h5py.File(sfs[5],'r')
+        recVars = f.require_group('3BRecInfo/3BRecVars/')
+        sampling = recVars['SamplingRate'].value[0]
         f.close()
         print('Sampling rate:'+str(sampling))
 
     # cluster everything
     if sort_it is True:
         print("reading files for clustering...")
-        if detect_it is True:
-            out_files = [f.replace('.brw', '.bin') for f in sfs]
-        else:
-            out_files = sfs
+        #if detect_it is True:
+        out_files = [f.replace('.brw', '.bin') for f in sfs]
+        #else:
+        #    out_files = sfs
         C = HSClustering(out_files, cutout_length=cutout_length)
         C.ShapePCA(pca_ncomponents=2, pca_whiten=True)
         print("starting Mean Shift...")
         startTime = datetime.now()
         # parameters work for Biocam geometry, 42um pitch
-        C.CombinedClustering(alpha=0.3, bandwidth=0.3, bin_seeding=False, cluster_subset=200000, n_jobs=-1)
-        if detect_it is True:
-            sorted_files = [f.replace('.brw', '_HS2_clustered.hdf5') for f in sfs]
-        else:
-            sorted_files = [f.replace('.hdf5', '_HS2_clustered.hdf5') for f in sfs]
+        C.CombinedClustering(alpha=0.28, bandwidth=0.28, bin_seeding=False, cluster_subset=200000, n_jobs=-1)
+        #if detect_it is True:
+        sorted_files = [f.replace('.brw', '_HS2_clustered.hdf5') for f in sfs]
+        #else:
+        #    sorted_files = [f.replace('.hdf5', '_HS2_clustered.hdf5') for f in sfs]
         print('Time taken for sorting: ' + str(datetime.now() - startTime))
 
         # save all spikes in hdf5
