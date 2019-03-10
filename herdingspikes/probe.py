@@ -399,11 +399,11 @@ class RecordingExtractor(NeuralProbe):
         self.nFrames = re.getNumFrames()
         num_channels = re.getNumChannels()
         fps = re.getSamplingFrequency()
-        ch_positions = np.array([re.getChannelProperty(i, 'location') for i in range(re.getNumChannels())])
+        ch_positions = np.array([np.array(re.getChannelProperty(i, 'location')) for i in range(re.getNumChannels())])
         if ch_positions.shape[1] > 2:
             if xy is None:
                 print('# Warning: channel locations have '+str(ch_positions.shape[1])+' dimensions,')
-                print('# using the last two.')
+                print('#          using the last two.')
                 xy = (ch_positions.shape[1]-2,ch_positions.shape[1]-1)
             ch_positions = ch_positions[:,xy]
         print('# Generating new position and neighbor files from data file')
