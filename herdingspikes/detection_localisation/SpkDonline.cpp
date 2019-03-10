@@ -72,7 +72,8 @@ void Detection::SetInitialParams(int * pos_mtx,
 
   Qms = new int *[num_channels];
   for (int i = 0; i < num_channels; i++) {
-    Qms[i] = new int[spike_peak_duration + maxsl + 1];
+    Qms[i] = new int[spike_peak_duration + maxsl + 2];
+    //Qms[i] = new int[spike_peak_duration + maxsl + 1];
   }
 
   currQmsPosition = -1;
@@ -221,6 +222,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
       }
     }
   }
+    
 } // Iterate
 
 void Detection::FinishDetection() // write spikes in interval after last
