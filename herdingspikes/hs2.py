@@ -83,7 +83,7 @@ class HSDetection(object):
             file_path = file_directory_name + out_file_name
             self.out_file_name = file_path
         else:
-            file_path = file_directory_name + out_file_name
+            file_path = os.path.join(file_directory_name, out_file_name)
             self.out_file_name = file_path + ".bin"
         self.save_all = save_all
 
