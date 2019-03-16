@@ -421,7 +421,9 @@ class RecordingExtractor(NeuralProbe):
             neighbor_radius=neighbor_radius)
 
     def Read(self, t0, t1):
-        return self.d.getTraces(slice(0,self.num_channels),t0,t1).T.ravel().astype(ctypes.c_short)
+        return self.d.getTraces(channel_ids=self.d.getChannelIds(),
+                                start_frame=t0,
+                                end_frame=t1).T.ravel().astype(ctypes.c_short)
 
 
 class HierlmannVisapyEmulationProbe(NeuralProbe):
