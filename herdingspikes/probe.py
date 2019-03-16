@@ -399,7 +399,7 @@ class RecordingExtractor(NeuralProbe):
         self.nFrames = re.getNumFrames()
         num_channels = re.getNumChannels()
         fps = re.getSamplingFrequency()
-        ch_positions = np.array([np.array(re.getChannelProperty(i, 'location')) for i in range(re.getNumChannels())])
+        ch_positions = np.array([np.array(re.getChannelProperty(ch, 'location')) for ch in re.getChannelIds()])
         if ch_positions.shape[1] > 2:
             if xy is None:
                 print('# Warning: channel locations have '+str(ch_positions.shape[1])+' dimensions,')
@@ -421,7 +421,9 @@ class RecordingExtractor(NeuralProbe):
             neighbor_radius=neighbor_radius)
 
     def Read(self, t0, t1):
-        return self.d.getTraces(slice(0,self.num_channels),t0,t1).T.ravel().astype(ctypes.c_short)
+        return self.d.getTraces(channel_ids=self.d.getChannelIds(),
+                                start_frame=t0,
+                                end_frame=t1).T.ravel().astype(ctypes.c_short)
 
 
 class HierlmannVisapyEmulationProbe(NeuralProbe):
