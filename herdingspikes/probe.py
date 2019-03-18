@@ -22,7 +22,7 @@ def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
     # NB: Notice the column, row order in write
     with open(pos_file, 'w') as f:
         for pos in ch_positions:
-            f.write('{},{},\n'.format(int(pos[0]), int(pos[1])))
+            f.write('{},{},\n'.format(pos[0], pos[1]))
     f.close()
     # # NB: it is also possible to use metric='cityblock' (Manhattan distance)
     distances = cdist(ch_positions, ch_positions, metric='euclidean')
@@ -109,7 +109,7 @@ class NeuralProbe(object):
         position_file = open(positions_file_path, 'r')
         positions = []
         for position in position_file.readlines():
-            positions.append(np.array(position[:-2].split(',')).astype(int))
+            positions.append(np.array(position[:-2].split(',')).astype(float))
         self.positions = np.asarray(positions)
         position_file.close()
 

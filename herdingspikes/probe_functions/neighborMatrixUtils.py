@@ -5,7 +5,7 @@ def createNeighborMatrix(neighbor_matrix_name, positions_file_path, neighbor_rad
 	position_file = open(positions_file_path, 'r')
 	positions = []
 	for position in position_file.readlines():
-	    positions.append(np.array(position[:-2].split(',')).astype(int))
+            positions.append(np.array(position[:-2].split(',')).astype(float))
 	channel_positions = np.asarray(positions)
 	NUM_CHANNELS = len(channel_positions)
 
