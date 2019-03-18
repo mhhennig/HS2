@@ -131,7 +131,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         t1 = t0 + tInc
         print('# Analysing frames from ' + str(t0-tCut) + ' to '+str(t1+tCut2)+\
               '  ({:.1f}%)'.format(100*t0/nFrames))
-        sys.stdout.flush()
+        #sys.stdout.flush()
         # slice data
         if t0 == 0:
             vm = np.hstack((np.zeros(nRecCh * tCut, dtype=ctypes.c_short), probe.Read(0, t1+tCut2))).astype(ctypes.c_short)
@@ -144,7 +144,6 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         t0 += tInc
         if t0 < nFrames - tCut2:
             tInc = min(tInc, nFrames - tCut2 - t0)
-        sys.stdout.flush()
 
     now = datetime.now()
     #Save state of detection

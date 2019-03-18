@@ -17,6 +17,7 @@ def createNeighborMatrix(neighbor_matrix_name, positions_file_path, neighbor_rad
 		# Find all neighbors in given radius and add them to neighbors
 		neighbors = np.where(curr_channel_distances < neighbor_radius)[0]
 		neighbor_matrix.append(neighbors)
+	position_file.close()
 	writeoutNeighborMatrix(neighbor_matrix, neighbor_matrix_name)
 
 def writeoutNeighborMatrix(neighbor_matrix, neighbor_matrix_name):
