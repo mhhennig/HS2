@@ -19,7 +19,7 @@ struct CustomLessThan
 namespace SpikeHandler {
 
 void setInitialParameters(int _num_channels, int _spike_delay, int _spike_peak_duration, string file_name, \
-						  int _noise_duration, float _noise_amp_percent, float _inner_radius, int* _masked_channels, int** _channel_positions, int** _neighbor_matrix, \
+						  int _noise_duration, float _noise_amp_percent, float _inner_radius, int* _masked_channels, float** _channel_positions, int** _neighbor_matrix, \
 						  int _max_neighbors, int _num_com_centers, bool _to_localize, int _cutout_start, int _cutout_end, int _maxsl,
               bool _decay_filtering, bool _verbose);
 void loadRawData(short* _raw_data, int _index_data, int _iterations, int _frames, int _additional_data);

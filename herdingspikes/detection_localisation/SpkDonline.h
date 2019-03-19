@@ -72,9 +72,9 @@ public:
   void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed);
   void FinishDetection();
 };
-  void buildPositionsMatrix(int** _channel_positions, string positions_file_path, int rows, int cols);
+  void buildPositionsMatrix(float** _channel_positions, string positions_file_path, int rows, int cols);
   void buildNeighborMatrix(int** _neighbor_matrix, string neighbors_file_path, int rows, int cols);
-  int** createPositionMatrix(int position_rows);
+  float** createPositionMatrix(int position_rows);
   int** createNeighborMatrix(int channel_rows, int channel_cols);
 int** createBaselinesMatrix(int channel_rows, int channel_cols);
 };

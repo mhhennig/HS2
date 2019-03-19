@@ -65,15 +65,25 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
     int amps_size = amps.size();
     if (do_correction == 1) {
       sort(begin(amps), end(amps), CustomLessThan()); // sort the array
-      correct = get<1>(amps.at(0))-1;
+      //correct = get<1>(amps.at(0))-1;
+      if(amps_size % 2 == 0) {
+              correct = (get<1>(amps.at(amps_size/2)) +
+              get<1>(amps.at(amps_size/2 + 1)))/2;
+      }
+      else {
+              correct = get<1>(amps.at(amps_size/2));
+      }
+
     }
     // Correct amplitudes
     deque<tuple<int, int>> centered_amps;
     if (amps_size != 1) {
       for (int i = 0; i < amps_size; i++) {
-        centered_amps.push_back(
-            make_tuple(get<0>(amps.at(i)), get<1>(amps.at(i)) - correct));
-      }
+	if(get<1>(amps.at(i)) - correct>0) {
+        	centered_amps.push_back(
+            	make_tuple(get<0>(amps.at(i)), get<1>(amps.at(i)) - correct));
+      		}
+	}
     } else {
       centered_amps.push_back(amps.at(0));
     }

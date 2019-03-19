@@ -9,7 +9,7 @@ int Parameters::noise_duration;
 float Parameters::noise_amp_percent;
 int Parameters::max_neighbors;
 int **Parameters::neighbor_matrix;
-int **Parameters::channel_positions;
+float **Parameters::channel_positions;
 int **Parameters::inner_neighbor_matrix;
 int **Parameters::outer_neighbor_matrix;
 int Parameters::aGlobal;
@@ -41,7 +41,7 @@ void setInitialParameters(int _num_channels, int _spike_delay,
                           int _spike_peak_duration, string file_name,
                           int _noise_duration, float _noise_amp_percent,
                           float _inner_radius, int *_masked_channels,
-                          int **_channel_positions, int **_neighbor_matrix,
+                          float **_channel_positions, int **_neighbor_matrix,
                           int _max_neighbors, int _num_com_centers = 1,
                           bool _to_localize = false, int _cutout_start = 10,
                           int _cutout_end = 20, int _maxsl = 0,

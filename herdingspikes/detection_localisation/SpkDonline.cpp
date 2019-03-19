@@ -53,7 +53,7 @@ void Detection::SetInitialParams(int * pos_mtx,
   AHPthr = ahpthr;
   MaxSl = maxsl;
   MinSl = minsl;
-  int **channel_positions;
+  float **channel_positions;
   int **neighbor_matrix;
   masked_channels = _masked_channels;
   iterations  = 0;
@@ -240,7 +240,7 @@ void Detection::FinishDetection() // write spikes in interval after last
   }
 }
 
-void buildPositionsMatrix(int **_channel_positions, string positions_file_path,
+void buildPositionsMatrix(float **_channel_positions, string positions_file_path,
                           int rows, int cols) {
   /**
 Reads from a string file and fills an array that contains coordinate positions
@@ -252,7 +252,7 @@ Parameters
           A 2D array where each index has the X and Y position of every channel.
   */
   int line_count;
-  int coordinate;
+  float coordinate;
   string line;
   ifstream positions_file(positions_file_path);
   line_count = 0;
@@ -264,7 +264,7 @@ Parameters
       string token;
       int index = 0;
       while (getline(ss, token, ',')) {
-        coordinate = stoi(token, &sz);
+        coordinate = stof(token, &sz);
         _channel_positions[line_count][index] = coordinate;
         ++index;
       }
@@ -319,12 +319,12 @@ Parameters
   }
 }
 
-int **createPositionMatrix(int position_rows) {
-  int **_channel_positions;
+float **createPositionMatrix(int position_rows) {
+  float **_channel_positions;
 
-  _channel_positions = new int *[position_rows];
+  _channel_positions = new float *[position_rows];
   for (int i = 0; i < position_rows; i++) {
-    _channel_positions[i] = new int[2];
+    _channel_positions[i] = new float[2];
   }
 
   return _channel_positions;

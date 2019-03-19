@@ -57,7 +57,7 @@ extern int** outer_neighbor_matrix; /*Indexed by the channel number starting at 
                                     index contains pointer to another array which contains channel number of all its outer neighbors.
                               		Created by SpikeHandler; */
 
-extern int** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
+extern float** channel_positions;/*Indexed by the channel number starting at 0 and going up to num_channels - 1. Each
 							  index contains pointer to another array which contains X and Y position of the channel. User creates
 							  this before calling SpikeHandler. */
 extern int aGlobal; //Global noise
