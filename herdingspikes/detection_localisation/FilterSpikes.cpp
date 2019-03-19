@@ -115,32 +115,26 @@ void filterAllNeighbors(Spike max_spike, ofstream& filteredsp) {
 
 	while(it != Parameters::spikes_to_be_processed.end())
 	{
-		curr_spike = *it;
+    curr_spike = *it;
 		curr_channel = it->channel;
 		curr_amp = it->amplitude;
-        curr_frame = it->frame;
-        if(curr_frame <= max_spike.frame + Parameters::noise_duration) {
-    		if(areNeighbors(max_spike.channel, curr_channel)) {
-                if(curr_amp < max_spike.amplitude) {
-                    if(Parameters::verbose) {
-                        filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << endl;
-                    }
-                    it = Parameters::spikes_to_be_processed.erase(it);
-                }
-                else {
-                    //Neighbor has larger amplitude that max neighbor (probably new spike), filter later
-                    ++it;
-                }
-    		}
-    		else {
-                //Not a neighbor, filter later
-    			++it;
-    		}
+    curr_frame = it->frame;
+    if(areNeighbors(max_spike.channel, curr_channel)) {
+        if(curr_amp < max_spike.amplitude) {
+            if(Parameters::verbose) {
+                filteredsp << curr_spike.channel << " " << curr_spike.frame <<  " " << curr_spike.amplitude << "  " << endl;
+            }
+            it = Parameters::spikes_to_be_processed.erase(it);
         }
         else {
-            //Spike occurred much later that max_spike and is only slightly smaller (probably new spike), filter later
+            //Neighbor has larger amplitude that max neighbor (probably new spike), filter later
             ++it;
         }
+    }
+    else {
+        //Not a neighbor, filter later
+        ++it;
+    }
 	}
 }
 
