@@ -12,7 +12,6 @@ from matplotlib import pyplot as plt
 from .clustering.mean_shift_ import MeanShift
 from sklearn.decomposition import PCA, FastICA
 from os.path import splitext
-import gc
 
 min_func = lambda x: x.min()
 max_func = lambda x: x.max()
@@ -588,12 +587,12 @@ class HSClustering(object):
             spikes = self.spikes
 
         #close all hdf5 files (will throw testing error since we aren't closing something?)
-        for obj in gc.get_objects():   # Browse through ALL objects
-            if isinstance(obj, h5py.File):   # Just HDF5 files
-                try:
-                    obj.close()
-                except:
-                    pass # Was already closed
+        # for obj in gc.get_objects():   # Browse through ALL objects
+        #     if isinstance(obj, h5py.File):   # Just HDF5 files
+        #         try:
+        #             obj.close()
+        #         except:
+        #             pass # Was already closed
         g = h5py.File(filename, 'w')
         if transpose:
             g.create_dataset("data", data=np.vstack(
@@ -655,6 +654,9 @@ class HSClustering(object):
             sampling = 0
 
         if type(filename) == str:
+            print('##############################################')
+            print("here")
+            print('##############################################')
             self._savesinglehdf5(filename, None, compression, sampling,
                                  transpose)
         elif type(filename) == list:
@@ -750,6 +752,8 @@ class HSClustering(object):
         else:
             self.IsClustered = False
 
+        g.close()
+
         if append:
             self.expinds.append(len(self.spikes))
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
@@ -758,8 +762,6 @@ class HSClustering(object):
             self.spikes = spikes
             self.expinds = [0]
             self.filelist = [filename]
-
-        g.close()
 
     def LoadHDF5_legacy_detected(self, filename, append=False,
                                  chunk_size=1000000, scale=1):
@@ -811,6 +813,8 @@ class HSClustering(object):
 
         self.IsClustered = False
 
+        g.close()
+
         if append:
             self.expinds.append(len(self.spikes))
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
@@ -820,7 +824,6 @@ class HSClustering(object):
             self.expinds = [0]
             self.filelist = [filename]
 
-        g.close()
 
     def LoadBin(self, filename, cutout_length, append=False):
         """
