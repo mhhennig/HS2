@@ -43,7 +43,7 @@ class HSDetection(object):
                  cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
-                 file_directory_name="", decay_filtering=True, save_all=False):
+                 file_directory_name="", decay_filtering=False, save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
@@ -123,7 +123,7 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False, decay_filtering=True, nFrames=None,
+    def DetectFromRaw(self, load=False, decay_filtering=False, nFrames=None,
                       tInc=50000):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -586,13 +586,6 @@ class HSClustering(object):
         else:
             spikes = self.spikes
 
-        #close all hdf5 files (will throw testing error since we aren't closing something?)
-        # for obj in gc.get_objects():   # Browse through ALL objects
-        #     if isinstance(obj, h5py.File):   # Just HDF5 files
-        #         try:
-        #             obj.close()
-        #         except:
-        #             pass # Was already closed
         g = h5py.File(filename, 'w')
         if transpose:
             g.create_dataset("data", data=np.vstack(
@@ -654,9 +647,6 @@ class HSClustering(object):
             sampling = 0
 
         if type(filename) == str:
-            print('##############################################')
-            print("here")
-            print('##############################################')
             self._savesinglehdf5(filename, None, compression, sampling,
                                  transpose)
         elif type(filename) == list:
