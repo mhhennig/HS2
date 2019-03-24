@@ -43,7 +43,7 @@ class HSDetection(object):
                  cutout_start=10, cutout_end=30,
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
                  tpost=2.2, out_file_name="ProcessedSpikes",
-                 file_directory_name="", decay_filtering=True, save_all=False):
+                 file_directory_name="", decay_filtering=False, save_all=False):
         """
         Arguments:
         probe -- probe object with raw data
@@ -134,7 +134,7 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False, decay_filtering=True, nFrames=None,
+    def DetectFromRaw(self, load=False, decay_filtering=False, nFrames=None,
                       tInc=50000):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -389,6 +389,7 @@ class HSClustering(object):
                         _f.close()
                         self.LoadHDF5_legacy_detected(f, append=not_first_file,
                                                       **kwargs)
+
                 elif filetype == ".bin":
                     if cutout_length is None:
                         raise ValueError(
@@ -584,8 +585,7 @@ class HSClustering(object):
         _ics = np.empty((self.spikes.shape[0], ica_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             _ics[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(
-                self.spikes.Shape.loc[
-                    i * chunk_size:(i + 1) * chunk_size-1].tolist())
+                self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size-1].tolist())
         self.features = _ics
 
         return _ics
@@ -596,6 +596,7 @@ class HSClustering(object):
             spikes = self.spikes[limits[0]:limits[1]]
         else:
             spikes = self.spikes
+
         g = h5py.File(filename, 'w')
         if transpose:
             g.create_dataset("data", data=np.vstack(
@@ -616,15 +617,23 @@ class HSClustering(object):
                                  data=self.clusters[['ctr_x', 'ctr_y']])
             # g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
+        else:
+            g.create_dataset("centres", data=[])
+            g.create_dataset("cluster_id", data=[])
+
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
-        cutout_length = spikes.Shape.iloc[0].size
-        sh_tmp = np.empty((cutout_length, spikes.Shape.size),
-                          dtype=int)
-        for i, s in enumerate(spikes.Shape):
-            sh_tmp[:, i] = s
-        g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        if(not spikes.empty):
+            cutout_length = spikes.Shape.iloc[0].size
+            sh_tmp = np.empty((cutout_length, spikes.Shape.size),
+                              dtype=int)
+            for i, s in enumerate(spikes.Shape):
+                sh_tmp[:, i] = s
+            g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        else:
+            g.create_dataset("shapes", data=[], compression=compression)
+
         g.close()
 
     def SaveHDF5(self, filename, compression=None, sampling=None,
@@ -682,9 +691,9 @@ class HSClustering(object):
         print("Creating memmapped cache for shapes, reading in chunks of size",
               chunk_size, "and converting to integer...")
         i = len(self.shapecache)
-        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
-                               dtype=np.int32, mode="w+",
-                               shape=g['shapes'].shape[::-1]))
+        # self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
+        #                        dtype=np.int32, mode="w+",
+        #                        shape=g['shapes'].shape[::-1]))
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
             tmp = (scale*np.transpose(
                 g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
@@ -744,6 +753,8 @@ class HSClustering(object):
         else:
             self.IsClustered = False
 
+        g.close()
+
         if append:
             self.expinds.append(len(self.spikes))
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
@@ -752,8 +763,6 @@ class HSClustering(object):
             self.spikes = spikes
             self.expinds = [0]
             self.filelist = [filename]
-
-        g.close()
 
     def LoadHDF5_legacy_detected(self, filename, append=False,
                                  chunk_size=1000000, scale=1):
@@ -805,6 +814,8 @@ class HSClustering(object):
 
         self.IsClustered = False
 
+        g.close()
+
         if append:
             self.expinds.append(len(self.spikes))
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
@@ -814,7 +825,6 @@ class HSClustering(object):
             self.expinds = [0]
             self.filelist = [filename]
 
-        g.close()
 
     def LoadBin(self, filename, cutout_length, append=False):
         """

@@ -44,12 +44,6 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
       if (Parameters::masked_channels[curr_neighbor_channel] == 1) {
         for (int k = 0; k < cutout_size; k++) {
           curr_amp = waveforms[k + matrix_offset];
-          // if(curr_max_channel == curr_neighbor_channel && k == 0) {
-          //   if(curr_amp == 0) {
-          //     cout << "OUCHIEA" << endl;
-          //   }
-          //   curr_channel_max_amp = curr_amp;
-          // }
           if (curr_amp > curr_largest_amp) {
             curr_largest_amp = curr_amp;
           }
@@ -99,10 +93,8 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
   tuple<float, float> reweighted_com;
   if(com_positions_amps.size() > 1) {
     reweighted_com = reweightedCenterOfMass(com_positions_amps);
-    // cout << "COMweight " << get<0>(reweighted_com) << " " << get<1>(reweighted_com) << endl;
   } else {
     reweighted_com = get<0>(com_positions_amps[0]);
-    // cout << "COMnormal " << get<0>(reweighted_com) << " " << get<1>(reweighted_com) << endl;
   }
 
   return reweighted_com;
@@ -195,7 +187,7 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
 
   if (denominator == 0) //| (X>10 & X<11))
   {
-    cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
+    // cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
     for (int i = 0; i < centered_amps_size; i++) {
       channel = get<0>(centered_amps.at(i));
       // cout << " " << get<1>(centered_amps.at(i)) << " "
