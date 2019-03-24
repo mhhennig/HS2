@@ -588,9 +588,20 @@ Spike storeCOMWaveformsCounts(Spike curr_spike) {
         // Masked neighbor
         if (Parameters::masked_channels[curr_neighbor_channel] == 1) {
           nearest_neighbor_counts[i] += 1;
-          for (int k = 0; k < Parameters::noise_duration*2; k++) {
+          //Check if noise_duration is too large in comparison to the buffer size
+          int cutout_size = Parameters::cutout_start + Parameters::cutout_end + 1;
+          int amp_cutout_size, cutout_start_index;
+          if(Parameters::cutout_start < Parameters::noise_duration) {
+            amp_cutout_size = cutout_size;
+            cutout_start_index = Parameters::cutout_start;
+          }
+          else {
+            amp_cutout_size = Parameters::noise_duration*2;
+            cutout_start_index = Parameters::noise_duration;
+          }
+          for (int k = 0; k < amp_cutout_size; k++) {
             int curr_reading =
-                Parameters::raw_data[(curr_spike.frame - Parameters::cutout_start -
+                Parameters::raw_data[(curr_spike.frame - cutout_start_index -
                                      frames_processed +
                                      Parameters::index_data + k) *
                                      Parameters::num_channels +
