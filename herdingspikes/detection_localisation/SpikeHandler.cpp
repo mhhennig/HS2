@@ -21,7 +21,9 @@ int Parameters::cutout_end;
 int Parameters::index_data;
 int Parameters::index_baselines;
 int Parameters::iterations;
-int Parameters::frames;
+int Parameters::max_frames_processed;
+int Parameters::before_chunk;
+int Parameters::after_chunk;
 int Parameters::maxsl;
 int Parameters::end_raw_data;
 short *Parameters::raw_data;
@@ -45,7 +47,7 @@ void setInitialParameters(int _num_channels, int _spike_delay,
                           int _max_neighbors, int _num_com_centers = 1,
                           bool _to_localize = false, int _cutout_start = 10,
                           int _cutout_end = 20, int _maxsl = 0,
-                          bool _decay_filtering = true, bool _verbose = false) {
+                          bool _decay_filtering = true, bool _verbose = true) {
   /*This sets all the initial parameters needed to run the filtering algorithm.
 
   Parameters
@@ -201,7 +203,7 @@ given.
     Parameters::spikes_to_be_processed.clear();
 }
 void loadRawData(short *_raw_data, int _index_data, int _iterations,
-                 int _frames, int _additional_data) {
+                 int maxFramesProcessed, int before_chunk, int after_chunk) {
   /*Every iteration where new raw data is passed in, this sets pointer to new
   data and gives the
   index to start accessing the data at
@@ -224,37 +226,22 @@ void loadRawData(short *_raw_data, int _index_data, int _iterations,
           Number of current iterations of raw data passed in. User starts this
   at 0 and increments it for each chunk of data
           passed into loadRawData.
-  _frames: int
-          The number of frames passed into loadRawData EXCLUDING the buffer
+  maxFramesProcessed: int
+          The max number of frames passed sorting algorithm
   frames.
+  before_chunk: int
+          The number of buffer frames before tInc
+  after_chunk: int
+          The number of buffer frames after tInc
   */
-  if (_index_data < 0) {
-    spikes_filtered_file.close();
-    cout << "Index Data less than 0. Terminating Spike Handler" << endl;
-    exit(EXIT_FAILURE);
-  }
-  if (_iterations < 0) {
-    spikes_filtered_file.close();
-    cout << "Iterations less than 0. Terminating Spike Handler" << endl;
-    exit(EXIT_FAILURE);
-  }
-  if (_frames < 0) {
-    spikes_filtered_file.close();
-    cout << "Input frames less than 0. Terminating Spike Handler" << endl;
-    exit(EXIT_FAILURE);
-  }
-  if (_additional_data < 0) {
-    spikes_filtered_file.close();
-    cout << "Additional data less than 0. Terminating Spike Handler" << endl;
-    exit(EXIT_FAILURE);
-  }
-
   Parameters::raw_data = _raw_data;
   Parameters::index_data = _index_data;
   Parameters::iterations = _iterations;
-  Parameters::frames = _frames;
+  Parameters::max_frames_processed = maxFramesProcessed;
+  Parameters::before_chunk = before_chunk;
+  Parameters::after_chunk = after_chunk;
   Parameters::end_raw_data =
-      (Parameters::frames + _additional_data + Parameters::index_data) *
+      (Parameters::max_frames_processed + Parameters::after_chunk  + Parameters::index_data) *
           Parameters::num_channels +
       Parameters::num_channels - 1;
 }
@@ -310,9 +297,21 @@ of the first spike or the deque is empty.
     spike_to_be_added.frame = frame;
     spike_to_be_added.amplitude = amplitude;
 
+    if (Parameters::debug) {
+      cout << "storing COM cutouts " << endl;
+    }
     spike_to_be_added = storeWaveformCutout(cutout_size, spike_to_be_added);
+    if (Parameters::debug) {
+      cout << "... done storing COM cutouts " << endl;
+    }
     if (Parameters::to_localize) {
+      if (Parameters::debug) {
+        cout << "Storing counts..." << endl;
+      }
         spike_to_be_added = storeCOMWaveformsCounts(spike_to_be_added);
+        if (Parameters::debug) {
+          cout << "... done storing counts!"  << endl;
+        }
     }
 
     bool isAdded = false;
@@ -328,20 +327,11 @@ of the first spike or the deque is empty.
                                            Parameters::noise_duration)) {
           if (Parameters::to_localize) {
             try {
-              if (Parameters::debug && spike_to_be_added.frame > 20) {
-                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file,
-                                                    filteredsp);
-                spikes_filtered_file.close();
-                filteredsp.close();
-                cout << "Baseline matrix or its parameters entered "
-                        "incorrectly. Terminating SpikeHandler."
-                     << endl;
-                exit(EXIT_FAILURE);
-              } else {
-                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file,
-                                                    filteredsp);
-                ;
+              if (Parameters::debug) {
+                cout << "spike frame: " << spike_to_be_added.frame << endl;
               }
+                ProcessSpikes::filterLocalizeSpikes(spikes_filtered_file,
+                                                    filteredsp);
             } catch (...) {
               spikes_filtered_file.close();
               cout << "Baseline matrix or its parameters entered incorrectly. "
@@ -537,7 +527,7 @@ Spike storeWaveformCutout(int cutout_size, Spike curr_spike) {
   */
   int channel = curr_spike.channel;
   int32_t curr_written_reading;
-  int frames_processed = Parameters::frames * Parameters::iterations;
+  int frames_processed = Parameters::max_frames_processed * Parameters::iterations;
   for (int i = 0; i < cutout_size; i++) {
     try {
       int curr_reading_index =
@@ -590,7 +580,7 @@ Spike storeCOMWaveformsCounts(Spike curr_spike) {
   for (int i = 0; i < Parameters::num_com_centers; i++) {
     int curr_max_channel = Parameters::inner_neighbor_matrix[channel][i];
     curr_spike.largest_channels.push_back(curr_max_channel);
-    int frames_processed = Parameters::frames * Parameters::iterations;
+    int frames_processed = Parameters::max_frames_processed * Parameters::iterations;
     for (int j = 0; j < Parameters::max_neighbors; j++) {
       int curr_neighbor_channel = Parameters::inner_neighbor_matrix[curr_max_channel][j];
       // Out of inner neighbors
@@ -600,7 +590,7 @@ Spike storeCOMWaveformsCounts(Spike curr_spike) {
           nearest_neighbor_counts[i] += 1;
           for (int k = 0; k < Parameters::noise_duration*2; k++) {
             int curr_reading =
-                Parameters::raw_data[(curr_spike.frame - Parameters::noise_duration -
+                Parameters::raw_data[(curr_spike.frame - Parameters::cutout_start -
                                      frames_processed +
                                      Parameters::index_data + k) *
                                      Parameters::num_channels +
