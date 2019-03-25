@@ -591,7 +591,7 @@ Spike storeCOMWaveformsCounts(Spike curr_spike) {
           //Check if noise_duration is too large in comparison to the buffer size
           int cutout_size = Parameters::cutout_start + Parameters::cutout_end + 1;
           int amp_cutout_size, cutout_start_index;
-          if(Parameters::cutout_start < Parameters::noise_duration) {
+          if(Parameters::cutout_start < Parameters::noise_duration || Parameters::cutout_end < Parameters::noise_duration) {
             amp_cutout_size = cutout_size;
             cutout_start_index = Parameters::cutout_start;
           }
