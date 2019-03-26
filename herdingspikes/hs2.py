@@ -75,6 +75,8 @@ class HSDetection(object):
         self.tpost = tpost
         self.decay_filtering = decay_filtering
         self.num_com_centers = num_com_centers
+        self.sp_flat = None
+        self.spikes = None
 
         # Make directory for results if it doesn't exist
         os.makedirs(file_directory_name, exist_ok=True)
@@ -106,12 +108,21 @@ class HSDetection(object):
                 "when no spikes were detected due to the detection parameters" +
                 " being set too strictly".format(self.out_file_name))
         else:
-            sp_flat = np.memmap(self.out_file_name, dtype=np.int32,
+            try:
+                del self.spikes
+            except AttributeError:
+                pass
+
+            #if self.spikes is not None:
+            #    del self.spikes
+            if self.sp_flat is not None:
+                del self.sp_flat
+            self.sp_flat = np.memmap(self.out_file_name, dtype=np.int32,
                                 mode="r")
-            assert sp_flat.shape[0] // (self.cutout_length + 5) is not \
-                sp_flat.shape[0] / (self.cutout_length + 5), \
+            assert self.sp_flat.shape[0] // (self.cutout_length + 5) is not \
+                self.sp_flat.shape[0] / (self.cutout_length + 5), \
                 "spike data has wrong dimensions"  # ???
-            shapecache = sp_flat.reshape((-1, self.cutout_length + 5))
+            shapecache = self.sp_flat.reshape((-1, self.cutout_length + 5))
 
         self.spikes = pd.DataFrame({'ch': shapecache[:, 0],
                                     't': shapecache[:, 1],
@@ -135,10 +146,10 @@ class HSDetection(object):
         load -- bool: load the detected spikes when finished?
         """
 
-        try:
-            del self.spikes
-        except AttributeError:
-            pass
+        #try:
+        #    del self.spikes
+        #except AttributeError:
+        #    pass
 
         detectData(self.probe, str.encode(self.out_file_name[:-4]),
                    self.to_localize, self.probe.fps, self.threshold,
