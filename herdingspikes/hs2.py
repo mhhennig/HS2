@@ -277,7 +277,8 @@ class HSDetection(object):
                                        n]+ys[i]) * scale, col)
             # print(n, "min", np.min(data[start_bluered:start_bluered + cutlen, n]),
             #       "at", np.argmin(data[start_bluered:start_bluered + cutlen, n]))
-
+            # make a dot a spike time
+            #plt.plot(pos[n][0] + (0)*scale, pos[n][1] + [0] + np.min((data[start_bluered:start_bluered + cutlen, n]+ys[i]) * scale), 'k|')
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
                  pos[event.ch][1] + (event.Shape+ys[
