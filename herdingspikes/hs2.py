@@ -10,11 +10,17 @@ from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 # from sklearn.cluster import MeanShift # joblib things are broken
 from .clustering.mean_shift_ import MeanShift
-from sklearn.decomposition import PCA, FastICA
+from sklearn.decomposition import PCA, FastICA, SparsePCA
 from os.path import splitext
+import warnings
 
-min_func = lambda x: x.min()
-max_func = lambda x: x.max()
+
+def min_func(x):
+    return x.min()
+
+
+def max_func(x):
+    return x.max()
 
 
 class HSDetection(object):
@@ -40,10 +46,11 @@ class HSDetection(object):
     """
 
     def __init__(self, probe, to_localize=True, num_com_centers=1,
-                 cutout_start=10, cutout_end=30,
-                 threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0, tpre=1.0,
-                 tpost=2.2, out_file_name="ProcessedSpikes",
-                 file_directory_name="", decay_filtering=True, save_all=False):
+                 cutout_start=None, cutout_end=None,
+                 threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0,
+                 out_file_name="ProcessedSpikes", file_directory_name="",
+                 decay_filtering=True, save_all=False,
+                 left_cutout_ms=1.0, right_cutout_ms=2.2):
         """
         Arguments:
         probe -- probe object with raw data
@@ -60,8 +67,25 @@ class HSDetection(object):
         save_all --
         """
         self.probe = probe
-        # self.shapecache = None
-        # self.HasFeatures = False
+
+        if cutout_start is not None:
+            warnings.warn("cutout_start is deprecated and will be removed. " +
+                          "Set left_cutout_ms instead (in milliseconds). " +
+                          "cutout_start takes priority over left_cutout_ms!",
+                          DeprecationWarning)
+            cutout_start = int(cutout_start)
+        else:
+            cutout_start = int(left_cutout_ms * self.probe.fps / 1000)
+        if cutout_end is not None:
+            warnings.warn("cutout_end is deprecated and will be removed. " +
+                          "Set right_cutout_ms instead (in milliseconds). " +
+                          "cutout_end takes priority over right_cutout_ms!",
+                          DeprecationWarning)
+            cutout_start = int(cutout_start)
+        else:
+            # convert to number of frames
+            cutout_end = int(right_cutout_ms * self.probe.fps / 1000)
+
         self.to_localize = to_localize
         self.cutout_start = cutout_start
         self.cutout_end = cutout_end
@@ -71,8 +95,6 @@ class HSDetection(object):
         self.maxsl = maxsl
         self.minsl = minsl
         self.ahpthr = ahpthr
-        self.tpre = tpre
-        self.tpost = tpost
         self.decay_filtering = decay_filtering
         self.num_com_centers = num_com_centers
 
@@ -124,7 +146,7 @@ class HSDetection(object):
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
     def DetectFromRaw(self, load=False, decay_filtering=True, nFrames=None,
-                      tInc=50000):
+                      tInc=50000, recording_duration=None):
         """
         This function is a wrapper of the C function `detectData`. It takes
         the raw data file, performs detection and localisation, saves the result
@@ -140,14 +162,29 @@ class HSDetection(object):
         except AttributeError:
             pass
 
-        detectData(self.probe, str.encode(self.out_file_name[:-4]),
-                   self.to_localize, self.probe.fps, self.threshold,
-                   self.cutout_start, self.cutout_end, self.maa, self.maxsl,
-                   self.minsl, self.ahpthr, self.num_com_centers,
-                   self.decay_filtering, self.save_all, nFrames=nFrames,
-                   tInc=tInc)
+        if nFrames is not None:
+            warnings.warn("nFrames is deprecated and will be removed. Leave " +
+                          "this out if you want to read the whole recording, " +
+                          "or set max_duration to set the limit (in seconds).",
+                          DeprecationWarning)
+        elif recording_duration is not None:
+            nFrames = int(recording_duration * self.probe.fps)
+
+        detectData(probe=self.probe,
+                   file_name=str.encode(self.out_file_name[:-4]),
+                   to_localize=self.to_localize,
+                   sf=self.probe.fps,
+                   thres=self.threshold,
+                   cutout_start=self.cutout_start,
+                   cutout_end=self.cutout_end,
+                   maa=self.maa, maxsl=self.maxsl, minsl=self.minsl,
+                   ahpthr=self.ahpthr, num_com_centers=self.num_com_centers,
+                   decay_filtering=self.decay_filtering,
+                   verbose=self.save_all,
+                   nFrames=nFrames, tInc=tInc)
+
         if load:
-            # reload data into memory
+            # reload data into memory (detect saves it on disk)
             self.LoadDetected()
 
     def PlotData(self, length, frame, channel, ax=None, window_size=200):
@@ -203,7 +240,7 @@ class HSDetection(object):
                                       n] * scale, col)
 
         # red overlay for central channel
-        plt.scatter(pos[channel][0], pos[channel][1],  s=200, c='r')
+        plt.scatter(pos[channel][0], pos[channel][1], s=200, c='r')
 
         # # red dot of event location
         # plt.scatter(event.x, event.y, s=80, c='r')
@@ -726,7 +763,7 @@ class HSClustering(object):
                        'Color': 1. * np.random.permutation(
                 self.NClusters) / self.NClusters,
                 'Size': _cls}
-                # 'AvgAmpl': _avgAmpl}
+            # 'AvgAmpl': _avgAmpl}
 
             self.clusters = pd.DataFrame(dic_cls)
             self.IsClustered = True

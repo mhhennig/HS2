@@ -33,14 +33,12 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
 #  return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
 
-def detectData(probe, _file_name, _to_localize, sf, thres,
-               _cutout_start=None, _cutout_end=None,
+def detectData(probe, file_name, to_localize, sf, thres,
+               cutout_start, cutout_end,
                maa=5, maxsl=None, minsl=None,
                ahpthr=0, num_com_centers=1,
-               _decay_filtering=False, _verbose=False,
-               nFrames=None, tInc=50000,
-               left_interval_ms=1.0, right_interval_ms=2.0,
-               max_duration=None):
+               decay_filtering=False, verbose=False,
+               nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
     # READ PROBE PARAMETERS
@@ -55,38 +53,10 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     positions_file_path = probe.positions_file_path.encode()
     neighbors_file_path = probe.neighbors_file_path.encode()
 
-    if nFrames is not None:
-        warnings.warn("nFrames is deprecated and will be removed." +
-                      "Leave this out if you want to read the whole recording," +
-                      "or set max_duration to set the limit (in seconds).",
-                      DeprecationWarning)
-    elif max_duration is not None:
-        nFrames = int(max_duration * sf)
-    else:
+    if nFrames is None:
         nFrames = probe.nFrames
 
     # READ DETECTION PARAMETERS AND SET DEFAULTS
-    if _cutout_start is not None:
-        warnings.warn("_cutout_start is deprecated and will be removed." +
-                      "Set left_interval_ms instead (in milliseconds)." +
-                      "_cutout_start now takes priority over left_interval_ms.",
-                      DeprecationWarning)
-        cutout_start = int(_cutout_start)
-    else:
-        # convert to number of frames
-        cutout_start = int(left_interval_ms * sf / 1000)
-    if _cutout_end is not None:
-        warnings.warn("_cutout_end is deprecated and will be removed." +
-                      "Set right_interval_ms instead (in milliseconds)." +
-                      "_cutout_end now takes priority over right_interval_ms.",
-                      DeprecationWarning)
-        cutout_end = int(_cutout_end)
-    else:
-        # convert to number of frames
-        cutout_end = int(right_interval_ms * sf / 1000)
-    to_localize = _to_localize
-    verbose = _verbose
-    decay_filtering = _decay_filtering
     nRecCh = num_channels
     if not maxsl:
         maxsl = int(sf*1/1000 + 0.5)
@@ -153,7 +123,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
       neighbor_matrix[i,:len(p)] = p
 
     det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels,
-                         spike_delay, spike_peak_duration, _file_name, noise_duration,
+                         spike_delay, spike_peak_duration, file_name, noise_duration,
                          noise_amp_percent, inner_radius, &masked_channels[0],
                          max_neighbors, num_com_centers, to_localize,
                          thres, cutout_start, cutout_end, maa, ahpthr, maxsl,
@@ -186,16 +156,16 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
             'Probe Object': probe,
             'Date and Time Detection': str(now),
             'Threshold': thres,
-            'Localization': _to_localize,
+            'Localization': to_localize,
             'Masked Channels': masked_channel_list,
-            'Associated Results File': _file_name,
+            'Associated Results File': file_name,
             'Positions File Path': positions_file_path,
             'Neighbors File Path': neighbors_file_path,
-            'Cutout Length': _cutout_start + _cutout_end,
+            'Cutout Length': cutout_start + cutout_end,
             'Advice': 'For more information about detection, load and look at the parameters of the probe object',
         }
 
-    target = open(_file_name.decode() + 'DetectionDict' + now.strftime("%Y-%m-%d_%H%M%S_%f") + '.txt', 'a')
+    target = open(file_name.decode() + 'DetectionDict' + now.strftime("%Y-%m-%d_%H%M%S_%f") + '.txt', 'a')
     target.write(pprint.pformat(detection_state_dict))
     target.close()
 
