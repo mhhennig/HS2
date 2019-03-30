@@ -12,11 +12,12 @@ from libcpp cimport bool
 from libcpp.string cimport string
 import sys
 import pprint
+import warnings
 
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
-        void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl)
+        void InitDetection(long nFrames, int sf, int NCh, long ti, long int * Indices, int agl)
         void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
@@ -33,13 +34,17 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
 
 
 def detectData(probe, _file_name, _to_localize, sf, thres,
-               _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
+               _cutout_start=None, _cutout_end=None,
+               maa=5, maxsl=None, minsl=None,
                ahpthr=0, num_com_centers=1,
-               _decay_filtering=False, _verbose=False, nFrames=None, tInc=50000):
+               _decay_filtering=False, _verbose=False,
+               nFrames=None, tInc=50000,
+               left_interval_ms=1.0, right_interval_ms=2.0,
+               max_duration=None):
     """ Read data from a file and pipe it to the spike detector. """
 
-    nSec = probe.nFrames / sf  # the duration in seconds of the recording
-    sf = int(sf) # ensure sampling rate is integer
+    # READ PROBE PARAMETERS
+    sf = int(sf) # ensure sampling rate is integer, assumed to be in Hertz
     num_channels = int(probe.num_channels)
     spike_delay = int(probe.spike_delay)
     spike_peak_duration = int(probe.spike_peak_duration)
@@ -47,14 +52,47 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     noise_amp_percent = float(probe.noise_amp_percent)
     max_neighbors = int(probe.max_neighbors)
     inner_radius = float(probe.inner_radius)
-    cutout_start = int(_cutout_start)
-    cutout_end = int(_cutout_end)
+    positions_file_path = probe.positions_file_path.encode()
+    neighbors_file_path = probe.neighbors_file_path.encode()
+
+    if nFrames is not None:
+        warnings.warn("nFrames is deprecated and will be removed." +
+                      "Leave this out if you want to read the whole recording," +
+                      "or set max_duration to set the limit (in seconds).",
+                      DeprecationWarning)
+    elif max_duration is not None:
+        nFrames = int(max_duration * sf)
+    else:
+        nFrames = probe.nFrames
+
+    # READ DETECTION PARAMETERS AND SET DEFAULTS
+    if _cutout_start is not None:
+        warnings.warn("_cutout_start is deprecated and will be removed." +
+                      "Set left_interval_ms instead (in milliseconds)." +
+                      "_cutout_start now takes priority over left_interval_ms.",
+                      DeprecationWarning)
+        cutout_start = int(_cutout_start)
+    else:
+        # convert to number of frames
+        cutout_start = int(left_interval_ms * sf / 1000)
+    if _cutout_end is not None:
+        warnings.warn("_cutout_end is deprecated and will be removed." +
+                      "Set right_interval_ms instead (in milliseconds)." +
+                      "_cutout_end now takes priority over right_interval_ms.",
+                      DeprecationWarning)
+        cutout_end = int(_cutout_end)
+    else:
+        # convert to number of frames
+        cutout_end = int(right_interval_ms * sf / 1000)
     to_localize = _to_localize
     verbose = _verbose
     decay_filtering = _decay_filtering
     nRecCh = num_channels
-    if nFrames is None:
-      nFrames = probe.nFrames
+    if not maxsl:
+        maxsl = int(sf*1/1000 + 0.5)
+    if not minsl:
+        minsl = int(sf*0.3/1000 + 0.5)
+
     masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
@@ -65,31 +103,27 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         for channel in masked_channel_list:
             masked_channels[channel] = 0
 
-    positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
-    neighbors_file_path = probe.neighbors_file_path.encode()
+
 
 
     print("# Sampling rate: " + str(sf))
 
-    if to_localize == True:
+    if to_localize:
         print("# Localization On")
     else:
         print("# Localization Off")
 
-    if verbose is True:
+    if verbose:
         print("# Writing out extended detection info")
 
     print("# Number of recorded channels: " + str(num_channels))
-    print("# Analysing frames: " + str(nFrames) + "; Seconds: " + str(nSec))
+    print("# Analysing frames: " + str(nFrames) + "; Seconds: " + str(nFrames/sf))
     print("# Frames before spike in cutout: " + str(cutout_start))
     print("# Frames after spike in cutout: " + str(cutout_end))
 
     cdef Detection * det = new Detection()
 
-    if not maxsl:
-        maxsl = int(sf*1/1000 + 0.5)
-    if not minsl:
-        minsl = int(sf*0.3/1000 + 0.5)
+
 
     # set tCut, tCut2 and tInc
     tCut = cutout_start + maxsl
@@ -107,7 +141,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     #cdef np.ndarray[short, mode = "c"] ChIndN = np.zeros((nRecCh * 10), dtype=ctypes.c_short)
 
     # initialise detection algorithm
-    det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0)
+    det.InitDetection(nFrames, sf, nRecCh, tInc, &Indices[0], 0)
 
     cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
     for i,p in enumerate(probe.positions):

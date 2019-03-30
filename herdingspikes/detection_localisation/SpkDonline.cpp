@@ -4,7 +4,7 @@
 namespace SpkDonline {
 Detection::Detection() {}
 
-void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
+void Detection::InitDetection(long nFrames, int sf, int NCh,
                               long ti, long *Indices, int agl) {
   NChannels = NCh;
   tInc = ti;
@@ -222,7 +222,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
       }
     }
   }
-    
+
 } // Iterate
 
 void Detection::FinishDetection() // write spikes in interval after last
