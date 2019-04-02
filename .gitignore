@@ -1,6 +1,9 @@
 # Data files and compiled files
 ProcessedSpikes
 HS2venv
+notebooks/results/*
+*.brw
+*.bin
 
 # For macOS
 *.DS_Store
