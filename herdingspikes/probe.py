@@ -396,10 +396,10 @@ class RecordingExtractor(NeuralProbe):
         self.d = re
         positions_file_path = in_probes_dir('positions_spikeextractor')
         neighbors_file_path = in_probes_dir('neighbormatrix_spikeextractor')
-        self.nFrames = re.getNumFrames()
+        self.nFrames = re.get_num_frames()
         num_channels = re.getNumChannels()
         fps = re.getSamplingFrequency()
-        ch_positions = np.array([np.array(re.getChannelProperty(ch, 'location')) for ch in re.getChannelIds()])
+        ch_positions = np.array([np.array(re.getChannelProperty(ch, 'location')) for ch in re.get_channel_ids()])
         if ch_positions.shape[1] > 2:
             if xy is None:
                 print('# Warning: channel locations have '+str(ch_positions.shape[1])+' dimensions,')
@@ -421,7 +421,7 @@ class RecordingExtractor(NeuralProbe):
             neighbor_radius=neighbor_radius)
 
     def Read(self, t0, t1):
-        return self.d.getTraces(channel_ids=self.d.getChannelIds(),
+        return self.d.getTraces(channel_ids=self.d.get_channel_ids(),
                                 start_frame=t0,
                                 end_frame=t1).T.ravel().astype(ctypes.c_short)
 
