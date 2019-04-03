@@ -41,7 +41,7 @@ class HSDetection(object):
     Usage:
         1. Create a HSDetection object by calling its constructor with a
     Probe object and all the detection parameters (see documentation there).
-        2.Call DetectFromRaw.
+        2. Call DetectFromRaw.
         3. Save the result, or create a HSClustering object.
     """
 
@@ -50,50 +50,48 @@ class HSDetection(object):
                  threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0,
                  out_file_name="ProcessedSpikes", file_directory_name="",
                  decay_filtering=True, save_all=False,
-                 left_cutout_ms=1.0, right_cutout_ms=2.2):
+                 left_cutout_time=1.0, right_cutout_time=2.2,
+                 amp_evaluation_time=0.4,  # former minsl
+                 spk_evaluation_time=1.7):  # former maxsl
         """
         Arguments:
-        probe -- probe object with raw data
+        probe -- probe object, with raw data
         to_localize -- set False if spikes should only be detected, not
             localised (will break sorting)
-        cutout_start -- number of frames to save backwards from spike peak
-        cutout_end -- number of frames to save forward from spike peak
+        cutout_start -- deprecated, frame-based version of left_cutout_ms
+        cutout_end -- deprecated, frame-based version of right_cutout_ms
         threshold -- detection threshold
-        maa
-        maxsl
-        minsl
-        ahpthr
+        maa -- minimum average amplitude
+        maxsl -- deprecated, frame-based version of spk_evaluation_time
+        minsl -- deprecated, frame-based version of amp_evaluation_time
+        ahpthr --
         out_file_name -- base file name (without extension) for the output files
         save_all --
+        left_cutout_ms -- the number of milliseconds, before the spike,
+        to be included in the spike shape
+        right_cutout_ms -- the number of milliseconds, after the spike,
+        to be included in the spike shape
+        amp_evaluation_time -- the number of milliseconds during which the trace
+        is integrated, for the purposed of evaluating amplitude, used for later
+        comparison with maa
+        spk_evaluation_time -- dead time in ms after spike peak, used for
+        further testing
         """
         self.probe = probe
 
-        if cutout_start is not None:
-            warnings.warn("cutout_start is deprecated and will be removed. " +
-                          "Set left_cutout_ms instead (in milliseconds). " +
-                          "cutout_start takes priority over left_cutout_ms!",
-                          DeprecationWarning)
-            cutout_start = int(cutout_start)
-        else:
-            cutout_start = int(left_cutout_ms * self.probe.fps / 1000)
-        if cutout_end is not None:
-            warnings.warn("cutout_end is deprecated and will be removed. " +
-                          "Set right_cutout_ms instead (in milliseconds). " +
-                          "cutout_end takes priority over right_cutout_ms!",
-                          DeprecationWarning)
-            cutout_start = int(cutout_start)
-        else:
-            # convert to number of frames
-            cutout_end = int(right_cutout_ms * self.probe.fps / 1000)
+        self.cutout_start = self._deprecate_or_convert(
+            cutout_start, left_cutout_time, 'cutout_start', 'left_cutout_time')
+        self.cutout_end = self._deprecate_or_convert(
+            cutout_end, right_cutout_time, 'cutout_end', 'right_cutout_time')
+        self.minsl = self._deprecate_or_convert(
+            minsl, amp_evaluation_time, 'minsl', 'amp_evaluation_time')
+        self.maxsl = self._deprecate_or_convert(
+            maxsl, spk_evaluation_time, 'maxsl', 'spk_evaluation_time')
 
         self.to_localize = to_localize
-        self.cutout_start = cutout_start
-        self.cutout_end = cutout_end
         self.cutout_length = cutout_start + cutout_end + 1
         self.threshold = threshold
         self.maa = maa
-        self.maxsl = maxsl
-        self.minsl = minsl
         self.ahpthr = ahpthr
         self.decay_filtering = decay_filtering
         self.num_com_centers = num_com_centers
@@ -108,6 +106,16 @@ class HSDetection(object):
             file_path = os.path.join(file_directory_name, out_file_name)
             self.out_file_name = file_path + ".bin"
         self.save_all = save_all
+
+    def _deprecate_or_convert(self, old_var, new_var, old_name, new_name):
+        if old_var is not None:
+            warnings.warn("{} is deprecated and will be removed. ".format(old_name) +
+                          "Set {} instead (in milliseconds). ".format(new_name) +
+                          "{} takes priority over {}!".format(old_name, new_name),
+                          DeprecationWarning)
+            return int(old_var)
+        else:
+            return int(new_var * self.probe.fps / 1000)
 
     def SetAddParameters(self, dict_of_new_parameters):
         """
@@ -488,9 +496,8 @@ class HSClustering(object):
         if self.spikes.cl.min() == -1:
             print("There are", (self.spikes.cl == -1).sum(),
                   "unclustered events, these are now in cluster number ",
-                  self.NClusters-1)
-            # self.spikes.cl[self.spikes.cl==-1] = self.NClusters-1
-            self.spikes.loc[self.spikes.cl == -1, 'cl'] = self.NClusters-1
+                  self.NClusters - 1)
+            self.spikes.loc[self.spikes.cl == -1, 'cl'] = self.NClusters - 1
 
         _cl = self.spikes.groupby(['cl'])
         _x_mean = _cl.x.mean()
@@ -849,7 +856,7 @@ class HSClustering(object):
 
         # sp_flat = np.memmap(filename, dtype=np.int32, mode="r")
         # 5 here are the non-shape data columns
-        print('# loading '+filename)
+        print('# loading', filename)
         self.shapecache.append(np.memmap(filename,
                                          dtype=np.int32, mode="r").reshape(
                                          (-1, cutout_length + 5)))
