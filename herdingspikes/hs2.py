@@ -47,7 +47,7 @@ class HSDetection(object):
 
     def __init__(self, probe, to_localize=True, num_com_centers=1,
                  cutout_start=None, cutout_end=None,
-                 threshold=20, maa=0, maxsl=12, minsl=3, ahpthr=0,
+                 threshold=20, maa=0, maxsl=None, minsl=None, ahpthr=0,
                  out_file_name="ProcessedSpikes", file_directory_name="",
                  decay_filtering=True, save_all=False,
                  left_cutout_time=1.0, right_cutout_time=2.2,
@@ -89,7 +89,7 @@ class HSDetection(object):
             maxsl, spk_evaluation_time, 'maxsl', 'spk_evaluation_time')
 
         self.to_localize = to_localize
-        self.cutout_length = cutout_start + cutout_end + 1
+        self.cutout_length = self.cutout_start + self.cutout_end + 1
         self.threshold = threshold
         self.maa = maa
         self.ahpthr = ahpthr
@@ -111,11 +111,10 @@ class HSDetection(object):
         if old_var is not None:
             warnings.warn("{} is deprecated and will be removed. ".format(old_name) +
                           "Set {} instead (in milliseconds). ".format(new_name) +
-                          "{} takes priority over {}!".format(old_name, new_name),
-                          DeprecationWarning)
+                          "{} takes priority over {}!".format(old_name, new_name))
             return int(old_var)
         else:
-            return int(new_var * self.probe.fps / 1000)
+            return int(new_var * self.probe.fps / 1000 + 0.5)
 
     def SetAddParameters(self, dict_of_new_parameters):
         """
@@ -173,8 +172,7 @@ class HSDetection(object):
         if nFrames is not None:
             warnings.warn("nFrames is deprecated and will be removed. Leave " +
                           "this out if you want to read the whole recording, " +
-                          "or set max_duration to set the limit (in seconds).",
-                          DeprecationWarning)
+                          "or set max_duration to set the limit (in seconds).")
         elif recording_duration is not None:
             nFrames = int(recording_duration * self.probe.fps)
 
@@ -293,41 +291,33 @@ class HSDetection(object):
         trange = (np.arange(t1, t2) - event.t) * scale
         start_bluered = event.t - t1 - self.cutout_start
         trange_bluered = trange[start_bluered:start_bluered + cutlen]
-        trange_bluered = np.arange(-self.cutout_start,
-                                   -self.cutout_start + cutlen) * scale
+        print("trange", trange.shape)
+        assert start_bluered + cutlen < window_size, "window_size is too small"
 
         data = self.probe.Read(t1, t2).reshape(
             (t2 - t1, self.probe.num_channels))
-        # this looks odd
-        # if np.mean(data) > 1000:
-        #    ys = -2048
-        # else:
-        #    ys = 0
-        # data[data-np.mean(data) < -1000] = -ys  # get rid of out-of-regime chs
-        # print(neighs[event.ch])
-        # try to y-zero each channel:
+        print("Data", data.shape)
+
         ys = np.zeros(len(neighs[event.ch]))
         for i, n in enumerate(neighs[event.ch]):
             if data[0, n] > 200:
                 ys[i] = -data[0, n]
+
         # grey and blue traces
         for i, n in enumerate(neighs[event.ch]):
             dist_from_max = math.sqrt((pos[n][0] - pos[event.ch][0])**2 + (pos[n][1] - pos[event.ch][1])**2)
             col = 'g' if n in self.probe.masked_channels else 'b'
             col = 'orange' if dist_from_max <= self.probe.inner_radius and n not in self.probe.masked_channels else col
             plt.plot(pos[n][0] + trange,
-                     pos[n][1] + (data[:, n]+ys[i]) * scale, 'gray')
+                     pos[n][1] + (data[:, n] + ys[i]) * scale, 'gray')
             plt.plot(pos[n][0] + trange_bluered,
                      pos[n][1] + (data[start_bluered:start_bluered + cutlen,
-                                       n]+ys[i]) * scale, col)
-            # print(n, "min", np.min(data[start_bluered:start_bluered + cutlen, n]),
-            #       "at", np.argmin(data[start_bluered:start_bluered + cutlen, n]))
+                                       n] + ys[i]) * scale, col)
 
         # red overlay for central channel
         plt.plot(pos[event.ch][0] + trange_bluered,
-                 pos[event.ch][1] + (event.Shape+ys[
-                    np.where(neighs[event.ch] == event.ch)[0]]) * scale, 'r')
-
+                 pos[event.ch][1] + (event.Shape + ys[
+                     np.where(neighs[event.ch] == event.ch)[0]]) * scale, 'r')
         inner_radius_circle = plt.Circle((pos[event.ch][0], pos[event.ch][1]),
                                          self.probe.inner_radius,
                                          color='red', fill=False)
