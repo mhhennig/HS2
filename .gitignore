@@ -4,6 +4,8 @@ HS2venv
 notebooks/results/*
 *.brw
 *.bin
+*.h5
+*.hdf5
 
 # For macOS
 *.DS_Store
