@@ -3,7 +3,6 @@
 int Parameters::ASCALE = -64;
 int Parameters::num_com_centers;
 int Parameters::num_channels;
-int Parameters::spike_delay;
 int Parameters::spike_peak_duration;
 int Parameters::noise_duration;
 float Parameters::noise_amp_percent;
@@ -37,7 +36,7 @@ std::ofstream spikes_filtered_file;
 
 namespace SpikeHandler {
 
-void setInitialParameters(int _num_channels, int _spike_delay,
+void setInitialParameters(int _num_channels,
                           int _spike_peak_duration, string file_name,
                           int _noise_duration, float _noise_amp_percent,
                           float _inner_radius, int *_masked_channels,
@@ -52,8 +51,6 @@ void setInitialParameters(int _num_channels, int _spike_delay,
   ----------
   _num_channels: int
           Number of channels on the probe
-  _spike_delay: int
-          The number of frames back a spike occurred after it was detected
 (where the beginning of the spike was).
   file_name: string
   The name of the file that the processed spikes will be written to in binary.
@@ -115,10 +112,6 @@ given.
          << endl;
     exit(EXIT_FAILURE);
   }
-  if (_spike_delay < 0) {
-    cout << "Spike Delay less than 0. Terminating Spike Handler" << endl;
-    exit(EXIT_FAILURE);
-  }
   if (_spike_peak_duration < 0) {
     cout << "Spike Peak Duration less than 0. Terminating Spike Handler"
          << endl;
@@ -153,7 +146,6 @@ given.
 
   Parameters::num_channels = _num_channels;
   Parameters::max_neighbors = _max_neighbors;
-  Parameters::spike_delay = _spike_delay;
   Parameters::spike_peak_duration = _spike_peak_duration;
   Parameters::noise_duration = _noise_duration;
   Parameters::noise_amp_percent = _noise_amp_percent;

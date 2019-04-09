@@ -18,7 +18,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, int sf, int NCh, long ti, long int * Indices, int agl)
-        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
+        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, \
@@ -44,7 +44,6 @@ def detectData(probe, file_name, to_localize, sf, thres,
     # READ PROBE PARAMETERS
     sf = int(sf) # ensure sampling rate is integer, assumed to be in Hertz
     num_channels = int(probe.num_channels)
-    spike_delay = int(probe.spike_delay)
     spike_peak_duration = int(probe.spike_peak_duration)
     noise_duration = int(probe.noise_duration)
     noise_amp_percent = float(probe.noise_amp_percent)
@@ -123,7 +122,7 @@ def detectData(probe, file_name, to_localize, sf, thres,
       neighbor_matrix[i,:len(p)] = p
 
     det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels,
-                         spike_delay, spike_peak_duration, file_name, noise_duration,
+                         spike_peak_duration, file_name, noise_duration,
                          noise_amp_percent, inner_radius, &masked_channels[0],
                          max_neighbors, num_com_centers, to_localize,
                          thres, cutout_start, cutout_end, maa, ahpthr, maxsl,
