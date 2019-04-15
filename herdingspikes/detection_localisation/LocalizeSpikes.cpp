@@ -27,39 +27,44 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
   vector<int> waveforms = get<0>(spike_to_be_localized.waveformscounts);
   deque<tuple<tuple<float, float>, int>> com_positions_amps;
   int matrix_offset = 0;
+  int curr_largest_amp;
+  int curr_neighbor_channel;
+  int curr_amp;
+  int sum_amp;
+  int neighbor_count;
+  int cutout_size;
+  int curr_max_channel;
   for (int i = 0; i < Parameters::num_com_centers; i++) {
     deque<tuple<int, int>> amps;
-    int curr_largest_amp = INT_MIN; // arbitrarily small to make sure that it is
+    curr_largest_amp = INT_MIN; // arbitrarily small to make sure that it is
                                     // immediately overwritten
-    int curr_neighbor_channel;
-    int curr_amp;
-    // int curr_channel_max_amp;
-
-    int neighbor_count = get<1>(spike_to_be_localized.waveformscounts)[i];
-    int cutout_size = Parameters::noise_duration*2;
-    int curr_max_channel = spike_to_be_localized.largest_channels[i];
+    neighbor_count = get<1>(spike_to_be_localized.waveformscounts)[i];
+    cutout_size = Parameters::noise_duration*2;
+    curr_max_channel = spike_to_be_localized.largest_channels[i];
+    // compute amplitudes using sum over 2*noise_duration data points
     for (int j = 0; j < neighbor_count; j++) {
       curr_neighbor_channel =
           Parameters::inner_neighbor_matrix[curr_max_channel][j];
       if (Parameters::masked_channels[curr_neighbor_channel] == 1) {
-        for (int k = 0; k < cutout_size; k++) {
+	sum_amp = 0;
+       for (int k = 0; k < cutout_size; k++) {
+          sum_amp += waveforms[k + matrix_offset];
+/*
           curr_amp = waveforms[k + matrix_offset];
-          // if(curr_max_channel == curr_neighbor_channel && k == 0) {
-          //   if(curr_amp == 0) {
-          //     cout << "OUCHIEA" << endl;
-          //   }
-          //   curr_channel_max_amp = curr_amp;
-          // }
           if (curr_amp > curr_largest_amp) {
+            sum_amp += curr_amp;
             curr_largest_amp = curr_amp;
           }
+*/
         }
-        amps.push_back(make_tuple(curr_neighbor_channel, curr_largest_amp));
-        curr_largest_amp = INT_MIN;
+	//curr_largest_amp = curr_amp;
+        amps.push_back(make_tuple(curr_neighbor_channel, sum_amp));
+        //curr_largest_amp = INT_MIN;
         matrix_offset += cutout_size;
       }
     }
-    // Attention, median is really min - make sure all ampltudes are positive!
+
+    // compute median, threshold at median
     int do_correction = 1;
     int correct = 0;
     int amps_size = amps.size();
@@ -75,7 +80,7 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
       }
 
     }
-    // Correct amplitudes
+    // Correct amplitudes (threshold)
     deque<tuple<int, int>> centered_amps;
     if (amps_size != 1) {
       for (int i = 0; i < amps_size; i++) {
@@ -99,10 +104,8 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
   tuple<float, float> reweighted_com;
   if(com_positions_amps.size() > 1) {
     reweighted_com = reweightedCenterOfMass(com_positions_amps);
-    // cout << "COMweight " << get<0>(reweighted_com) << " " << get<1>(reweighted_com) << endl;
   } else {
     reweighted_com = get<0>(com_positions_amps[0]);
-    // cout << "COMnormal " << get<0>(reweighted_com) << " " << get<1>(reweighted_com) << endl;
   }
 
   return reweighted_com;
@@ -195,7 +198,7 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
 
   if (denominator == 0) //| (X>10 & X<11))
   {
-    cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
+    // cout << "\ncenterOfMass::denominator == 0 - This should not happen\n";
     for (int i = 0; i < centered_amps_size; i++) {
       channel = get<0>(centered_amps.at(i));
       // cout << " " << get<1>(centered_amps.at(i)) << " "

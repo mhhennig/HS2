@@ -129,12 +129,11 @@ void Detection::MeanVoltage(short *vm, int tInc,
   }
 }
 
-void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2,
-                        int maxFramesProcessed) {
+void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed) {
   // MeanVoltage(vm, tInc, tCut);
   int a;    // to buffer the difference between ADC counts and Qm, and basline
   int t, i; // counters
-  SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut2);
+  SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut, tCut2);
 
   ++iterations;
   // Does this need to end at tInc + tCut? (Cole+Martino)

@@ -25,7 +25,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
                               int maa, int ahpthr, int maxsl, int minsl, bool decay_filtering, bool verbose)
         void MedianVoltage(short * vm)
         void MeanVoltage(short * vm, int tInc, int tCut)
-        void Iterate(short * vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
+        void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
         void FinishDetection()
 
 
@@ -37,7 +37,7 @@ def detectData(probe, file_name, to_localize, sf, thres,
                cutout_start, cutout_end,
                maa=5, maxsl=None, minsl=None,
                ahpthr=0, num_com_centers=1,
-               decay_filtering=False, verbose=False,
+               decay_filtering=False, verbose=True,
                nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 

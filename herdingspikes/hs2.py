@@ -49,7 +49,7 @@ class HSDetection(object):
                  cutout_start=None, cutout_end=None,
                  threshold=20, maa=0, maxsl=None, minsl=None, ahpthr=0,
                  out_file_name="ProcessedSpikes", file_directory_name="",
-                 decay_filtering=True, save_all=False,
+                 decay_filtering=False, save_all=False,
                  left_cutout_time=1.0, right_cutout_time=2.2,
                  amp_evaluation_time=0.4,  # former minsl
                  spk_evaluation_time=1.7):  # former maxsl
@@ -95,6 +95,8 @@ class HSDetection(object):
         self.ahpthr = ahpthr
         self.decay_filtering = decay_filtering
         self.num_com_centers = num_com_centers
+        self.sp_flat = None
+        self.spikes = None
 
         # Make directory for results if it doesn't exist
         os.makedirs(file_directory_name, exist_ok=True)
@@ -135,12 +137,19 @@ class HSDetection(object):
                 "when no spikes were detected due to the detection parameters" +
                 " being set too strictly".format(self.out_file_name))
         else:
-            sp_flat = np.memmap(self.out_file_name, dtype=np.int32,
-                                mode="r")
-            assert sp_flat.shape[0] // (self.cutout_length + 5) is not \
-                sp_flat.shape[0] / (self.cutout_length + 5), \
+            try:
+                del self.spikes
+            except AttributeError:
+                pass
+
+            if self.sp_flat is not None:
+                del self.sp_flat
+            self.sp_flat = np.memmap(self.out_file_name, dtype=np.int32,
+                                     mode="r")
+            assert self.sp_flat.shape[0] // (self.cutout_length + 5) is not \
+                self.sp_flat.shape[0] / (self.cutout_length + 5), \
                 "spike data has wrong dimensions"  # ???
-            shapecache = sp_flat.reshape((-1, self.cutout_length + 5))
+            shapecache = self.sp_flat.reshape((-1, self.cutout_length + 5))
 
         self.spikes = pd.DataFrame({'ch': shapecache[:, 0],
                                     't': shapecache[:, 1],
@@ -152,7 +161,7 @@ class HSDetection(object):
         self.IsClustered = False
         print('Detected and read ' + str(self.spikes.shape[0]) + ' spikes.')
 
-    def DetectFromRaw(self, load=False, decay_filtering=True, nFrames=None,
+    def DetectFromRaw(self, load=False, nFrames=None,
                       tInc=50000, recording_duration=None):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -163,11 +172,6 @@ class HSDetection(object):
         Arguments:
         load -- bool: load the detected spikes when finished?
         """
-
-        try:
-            del self.spikes
-        except AttributeError:
-            pass
 
         if nFrames is not None:
             warnings.warn("nFrames is deprecated and will be removed. Leave " +
@@ -413,6 +417,7 @@ class HSClustering(object):
                         _f.close()
                         self.LoadHDF5_legacy_detected(f, append=not_first_file,
                                                       **kwargs)
+
                 elif filetype == ".bin":
                     if cutout_length is None:
                         raise ValueError(
@@ -524,15 +529,15 @@ class HSClustering(object):
                            replace=False))
             if normalise:
                 print("...normalising shapes by peak...")
-                s = [row.Shape/row.Shape.min()
+                s = [row.Shape / row.Shape.min()
                      for row in self.spikes.loc[inds].itertuples()]
             else:
                 s = self.spikes.Shape.loc[inds].values.tolist()
             _pca.fit(np.array(s))
         else:
-            print("Fitting PCA using "+str(self.spikes.shape[0])+" spikes...")
+            print("Fitting PCA using " + str(self.spikes.shape[0]) + " spikes...")
             if normalise:
-                s = [row.Shape/row.Shape.min()
+                s = [row.Shape / row.Shape.min()
                      for row in self.spikes.itertuples()]
             else:
                 s = self.spikes.Shape.values.tolist()
@@ -543,10 +548,11 @@ class HSClustering(object):
             # is this the best way? Warning: Pandas slicing with .loc is different!
             # print(i*chunk_size, (i + 1)*chunk_size)
             if normalise:
-                s = [row.Shape/row.Shape.min() for row in self.spikes.loc[i * chunk_size:(i+1) * chunk_size-1].itertuples()]
+                s = [row.Shape / row.Shape.min() for row in self.spikes.loc[
+                    i * chunk_size:(i + 1) * chunk_size - 1].itertuples()]
             else:
-                s = self.spikes.Shape.loc[i * chunk_size:(i+1) * chunk_size-1].values.tolist()
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = _pca.transform(s)
+                s = self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size - 1].values.tolist()
+            _pcs[i * chunk_size:(i + 1) * chunk_size, :] = _pca.transform(s)
         self.pca = _pca
         self.features = _pcs
         print("...done")
@@ -576,10 +582,10 @@ class HSClustering(object):
         _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            print(i*chunk_size, (i + 1)*chunk_size)
-            _pcs[i*chunk_size:(i + 1)*chunk_size, :] = pca.transform(np.array(
+            print(i * chunk_size, (i + 1) * chunk_size)
+            _pcs[i * chunk_size:(i + 1) * chunk_size, :] = pca.transform(np.array(
                 self.spikes.Shape.loc[
-                    i * chunk_size:(i+1) * chunk_size-1].tolist()))
+                    i * chunk_size:(i + 1) * chunk_size - 1].tolist()))
         self.features = _pcs
         return _pcs
 
@@ -606,9 +612,8 @@ class HSClustering(object):
         self.pca = ica
         _ics = np.empty((self.spikes.shape[0], ica_ncomponents))
         for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _ics[i*chunk_size:(i + 1)*chunk_size, :] = ica.transform(
-                self.spikes.Shape.loc[
-                    i * chunk_size:(i + 1) * chunk_size-1].tolist())
+            _ics[i * chunk_size:(i + 1) * chunk_size, :] = ica.transform(
+                self.spikes.Shape.loc[i * chunk_size:(i + 1) * chunk_size - 1].tolist())
         self.features = _ics
 
         return _ics
@@ -619,6 +624,7 @@ class HSClustering(object):
             spikes = self.spikes[limits[0]:limits[1]]
         else:
             spikes = self.spikes
+
         g = h5py.File(filename, 'w')
         if transpose:
             g.create_dataset("data", data=np.vstack(
@@ -639,15 +645,23 @@ class HSClustering(object):
                                  data=self.clusters[['ctr_x', 'ctr_y']])
             # g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
+        else:
+            g.create_dataset("centres", data=[])
+            g.create_dataset("cluster_id", data=[])
+
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
-        cutout_length = spikes.Shape.iloc[0].size
-        sh_tmp = np.empty((cutout_length, spikes.Shape.size),
-                          dtype=int)
-        for i, s in enumerate(spikes.Shape):
-            sh_tmp[:, i] = s
-        g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        if(not spikes.empty):
+            cutout_length = spikes.Shape.iloc[0].size
+            sh_tmp = np.empty((cutout_length, spikes.Shape.size),
+                              dtype=int)
+            for i, s in enumerate(spikes.Shape):
+                sh_tmp[:, i] = s
+            g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        else:
+            g.create_dataset("shapes", data=[], compression=compression)
+
         g.close()
 
     def SaveHDF5(self, filename, compression=None, sampling=None,
@@ -705,12 +719,12 @@ class HSClustering(object):
         print("Creating memmapped cache for shapes, reading in chunks of size",
               chunk_size, "and converting to integer...")
         i = len(self.shapecache)
-        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
-                               dtype=np.int32, mode="w+",
-                               shape=g['shapes'].shape[::-1]))
+        # self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
+        #                        dtype=np.int32, mode="w+",
+        #                        shape=g['shapes'].shape[::-1]))
         for i in range(g['shapes'].shape[1] // chunk_size + 1):
-            tmp = (scale*np.transpose(
-                g['shapes'][:, i*chunk_size:(i+1)*chunk_size])).astype(np.int32)
+            tmp = (scale * np.transpose(
+                g['shapes'][:, i * chunk_size:(i + 1) * chunk_size])).astype(np.int32)
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Read chunk ' + str(i + 1))
@@ -740,7 +754,7 @@ class HSClustering(object):
 
         if 'centres' in list(g.keys()):
             self.centerz = g['centres'].value
-            if len(self.centerz)<5:
+            if len(self.centerz) < 5:
                 print('WARNING Hack: Assuming HS1 data format')
                 self.centerz = self.centerz.T
             self.NClusters = len(self.centerz)
@@ -767,6 +781,8 @@ class HSClustering(object):
         else:
             self.IsClustered = False
 
+        g.close()
+
         if append:
             self.expinds.append(len(self.spikes))
             self.spikes = pd.concat([self.spikes, spikes], ignore_index=True)
@@ -775,8 +791,6 @@ class HSClustering(object):
             self.spikes = spikes
             self.expinds = [0]
             self.filelist = [filename]
-
-        g.close()
 
     def LoadHDF5_legacy_detected(self, filename, append=False,
                                  chunk_size=1000000, scale=1):
@@ -796,16 +810,16 @@ class HSClustering(object):
         g = h5py.File(filename, 'r')
         print('Reading from unclustered HS1 file ' + filename)
         if scale == 1:
-            scale = -1.0*g['Ascale'].value
+            scale = -1.0 * g['Ascale'].value
         print("Creating memmapped cache for shapes, reading in chunks of size",
               chunk_size, "and converting to integer...")
         i = len(self.shapecache)
-        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
+        self.shapecache.append(np.memmap("tmp" + str(i) + ".bin",
                                dtype=np.int32, mode="w+",
                                shape=g['Shapes'].shape))
         for i in range(g['Shapes'].shape[0] // chunk_size + 1):
-            tmp = (scale*np.transpose(
-                g['Shapes'][i*chunk_size:(i+1)*chunk_size, :])).astype(np.int32).T
+            tmp = (scale * np.transpose(
+                g['Shapes'][i * chunk_size:(i + 1) * chunk_size, :])).astype(np.int32).T
             inds = np.where(tmp > 20000)[0]
             tmp[inds] = 0
             print('Read chunk ' + str(i + 1))
@@ -820,13 +834,15 @@ class HSClustering(object):
         spikes = pd.DataFrame(
             {'ch': np.zeros(g['Times'].shape[0], dtype=int),
              't': g['Times'],
-             'Amplitude': (-g['Amplitudes'][:]*scale).astype(int),
+             'Amplitude': (-g['Amplitudes'][:] * scale).astype(int),
              'x': g['Locations'][:, 0],
              'y': g['Locations'][:, 1],
              'Shape': list(self.shapecache[-1])
              }, copy=False)
 
         self.IsClustered = False
+
+        g.close()
 
         if append:
             self.expinds.append(len(self.spikes))
@@ -836,8 +852,6 @@ class HSClustering(object):
             self.spikes = spikes
             self.expinds = [0]
             self.filelist = [filename]
-
-        g.close()
 
     def LoadBin(self, filename, cutout_length, append=False):
         """
@@ -849,7 +863,7 @@ class HSClustering(object):
         print('# loading', filename)
         self.shapecache.append(np.memmap(filename,
                                          dtype=np.int32, mode="r").reshape(
-                                         (-1, cutout_length + 5)))
+            (-1, cutout_length + 5)))
         assert self.shapecache[-1].shape[0] // (cutout_length + 5) is not \
             self.shapecache[-1].shape[0] / (cutout_length + 5), \
             "spike data has wrong dimensions"  # ???
@@ -899,7 +913,7 @@ class HSClustering(object):
         if ylim is None:
             meanshape = np.mean(cutouts.loc[:2000], axis=0)
             yoff = -meanshape[0]
-            maxy, miny = meanshape.max()+yoff, meanshape.min()+yoff
+            maxy, miny = meanshape.max() + yoff, meanshape.min() + yoff
             varshape = np.var(cutouts.loc[:1000].values, axis=0)  # direct not possible, why?
             varmin = varshape[np.argmin(meanshape)]
             varmax = varshape[np.argmax(meanshape)]
@@ -914,9 +928,9 @@ class HSClustering(object):
 
             if ax is None:
                 plt.subplot(nrows, ncols, i + 1)
-            [plt.plot(v-v[0], 'gray', alpha=0.3)
+            [plt.plot(v - v[0], 'gray', alpha=0.3)
                 for v in cutouts.loc[inds[:n_shapes]].values]
-            plt.plot(meanshape+yoff, c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
+            plt.plot(meanshape + yoff, c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
 #             plt.plot(np.mean(cutouts.loc[inds]+yoff, axis=0),
 #                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
             plt.ylim(ylim)
@@ -1013,7 +1027,7 @@ class HSClustering(object):
         # show unclustered spikes (if any)
         if show_unclustered:
             cx, cy = self.clusters['ctr_x'][cl], self.clusters['ctr_y'][cl]
-            inds = np.where(self.spikes.cl == self.NClusters-1)[0][:max_shapes]
+            inds = np.where(self.spikes.cl == self.NClusters - 1)[0][:max_shapes]
             x, y = self.spikes.x[inds].values, self.spikes.y[inds].values
             dists = np.sqrt((cx - x)**2 + (cy - y)**2)
             spInds = np.where(dists < radius)[0]

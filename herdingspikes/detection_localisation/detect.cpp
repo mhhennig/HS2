@@ -2002,7 +2002,7 @@ static PyObject *__pyx_pw_13herdingspikes_22detection_localisation_6detect_1dete
  *                cutout_start, cutout_end,
  *                maa=5, maxsl=None, minsl=None,             # <<<<<<<<<<<<<<
  *                ahpthr=0, num_com_centers=1,
- *                decay_filtering=False, verbose=False,
+ *                decay_filtering=False, verbose=True,
  */
     values[8] = ((PyObject *)Py_None);
     values[9] = ((PyObject *)Py_None);
@@ -2012,16 +2012,16 @@ static PyObject *__pyx_pw_13herdingspikes_22detection_localisation_6detect_1dete
     /* "herdingspikes/detection_localisation/detect.pyx":40
  *                maa=5, maxsl=None, minsl=None,
  *                ahpthr=0, num_com_centers=1,
- *                decay_filtering=False, verbose=False,             # <<<<<<<<<<<<<<
+ *                decay_filtering=False, verbose=True,             # <<<<<<<<<<<<<<
  *                nFrames=None, tInc=50000):
  *     """ Read data from a file and pipe it to the spike detector. """
  */
     values[12] = ((PyObject *)Py_False);
-    values[13] = ((PyObject *)Py_False);
+    values[13] = ((PyObject *)Py_True);
 
     /* "herdingspikes/detection_localisation/detect.pyx":41
  *                ahpthr=0, num_com_centers=1,
- *                decay_filtering=False, verbose=False,
+ *                decay_filtering=False, verbose=True,
  *                nFrames=None, tInc=50000):             # <<<<<<<<<<<<<<
  *     """ Read data from a file and pipe it to the spike detector. """
  * 
