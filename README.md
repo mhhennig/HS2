@@ -44,7 +44,7 @@ If your system does not have Python pre-installed, the [Anaconda distribution](h
 We suggest you use Anaconda if you don't have a favourite Python installed yet. We also recommend installing the code in a virtual environment (see below). A *tentative* pip distribution is available as follows:
 
     pip install numpy scipy
-    pip install pip install --index-url https://test.pypi.org/simple/ herdingspikes
+    pip install --index-url https://test.pypi.org/simple/ herdingspikes
 
 To install from source, clone this repository and follow the instructions below.
 
