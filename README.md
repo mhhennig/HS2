@@ -34,10 +34,19 @@ Since we believe publicly funded research code should be free and open, all code
 
 ## Quick start <a name="quickstart"></a>
 
-The code has been tested with Python version 3.6. It is essential `numpy` and `cython` are available before installing.
+The code has been tested with Python version 3.6. It is essential `numpy` is available before installing.
 The other dependencies will be installed by the installer.
 
 If your system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
+
+### Installation via pip
+
+We suggest you use Anaconda if you don't have a favourite Python installed yet. We also recommend installing the code in a virtual environment (see below). A *tentative* pip distribution is available as follows:
+
+    pip install numpy scipy
+    pip install pip install --index-url https://test.pypi.org/simple/ herdingspikes
+
+To install from source, clone this repository and follow the instructions below.
 
 ### Linux/Mac
 
@@ -50,9 +59,9 @@ You can omit `--system-site-packages` if you don't want to use the local version
 
 The module can automatically be installed, including all dependencies, by running
 
-    python3 setup.py install
+    pip install numpy scipy
+    python setup.py install
 
-This will also compile the Cython code.
 
 ### Windows
 
@@ -62,7 +71,7 @@ This will also compile the Cython code.
 
 Once [Anaconda](https://www.anaconda.com/download/#windows) is installed, create and activate a virtual environment called ``HS2env``. This can be done with the ``Anaconda Navigator`` per mouse click. To make sure ``numpy`` and ``Cython`` are available, type
 
-    conda install -n C:\Users\HS2env numpy Cython
+    conda install -n C:\Users\HS2env numpy
 
 
 ##### Option 2: Command line
@@ -79,13 +88,13 @@ This environment should be activated every time HS2 is used with the command
 
     conda activate C:\Users\HS2env
 
-To make sure ``numpy`` and ``Cython`` are available, type
+To make sure ``numpy`` is available, type
 
-    conda install -n C:\Users\HS2env numpy Cython
+    conda install -n C:\Users\HS2env numpy
 
 #### 2. Installing a C++ Compiler
 
-HS2 contains fast C++ code, which requires a compiler. The easiest solution is to download and install the Microsoft Visual Studio Build Tools: [https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017](https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017).
+HS2 contains fast C++ code, which requires a compiler. If you don't have a C++ compiler installed, the easiest solution is to download and install the Microsoft Visual Studio Build Tools: [https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017](https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017).
 
 
 #### 3. Obtaining and installing HS2
@@ -108,7 +117,7 @@ To install, go to the HS2 directory, e.g.
 
 and type
 
-    python3 setup.py install
+    python setup.py install
 
 Now HS2 will be available in the current virtual environment.
 
