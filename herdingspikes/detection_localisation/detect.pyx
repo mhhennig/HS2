@@ -12,12 +12,13 @@ from libcpp cimport bool
 from libcpp.string cimport string
 import sys
 import pprint
+import warnings
 
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
-        void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices, int agl)
-        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_delay,
+        void InitDetection(long nFrames, int sf, int NCh, long ti, long int * Indices, int agl)
+        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, \
@@ -32,29 +33,35 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
 #  return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
 
-def detectData(probe, _file_name, _to_localize, sf, thres,
-               _cutout_start=10, _cutout_end=20, maa=5, maxsl=None, minsl=None,
+def detectData(probe, file_name, to_localize, sf, thres,
+               cutout_start, cutout_end,
+               maa=5, maxsl=None, minsl=None,
                ahpthr=0, num_com_centers=1,
-               _decay_filtering=False, _verbose=True, nFrames=None, tInc=50000):
+               decay_filtering=False, verbose=True,
+               nFrames=None, tInc=50000):
     """ Read data from a file and pipe it to the spike detector. """
 
-    nSec = probe.nFrames / sf  # the duration in seconds of the recording
-    sf = int(sf) # ensure sampling rate is integer
+    # READ PROBE PARAMETERS
+    sf = int(sf) # ensure sampling rate is integer, assumed to be in Hertz
     num_channels = int(probe.num_channels)
-    spike_delay = int(probe.spike_delay)
     spike_peak_duration = int(probe.spike_peak_duration)
     noise_duration = int(probe.noise_duration)
     noise_amp_percent = float(probe.noise_amp_percent)
     max_neighbors = int(probe.max_neighbors)
     inner_radius = float(probe.inner_radius)
-    cutout_start = int(_cutout_start)
-    cutout_end = int(_cutout_end)
-    to_localize = _to_localize
-    verbose = _verbose
-    decay_filtering = _decay_filtering
-    nRecCh = num_channels
+    positions_file_path = probe.positions_file_path.encode()
+    neighbors_file_path = probe.neighbors_file_path.encode()
+
     if nFrames is None:
-      nFrames = probe.nFrames
+        nFrames = probe.nFrames
+
+    # READ DETECTION PARAMETERS AND SET DEFAULTS
+    nRecCh = num_channels
+    if not maxsl:
+        maxsl = int(sf*1/1000 + 0.5)
+    if not minsl:
+        minsl = int(sf*0.3/1000 + 0.5)
+
     masked_channel_list = probe.masked_channels
     cdef np.ndarray[int, mode="c"] masked_channels = np.ones(num_channels, dtype=ctypes.c_int)
     if masked_channel_list == []:
@@ -65,31 +72,27 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
         for channel in masked_channel_list:
             masked_channels[channel] = 0
 
-    positions_file_path = probe.positions_file_path.encode() # <- python 3 seems to need this
-    neighbors_file_path = probe.neighbors_file_path.encode()
+
 
 
     print("# Sampling rate: " + str(sf))
 
-    if to_localize == True:
+    if to_localize:
         print("# Localization On")
     else:
         print("# Localization Off")
 
-    if verbose is True:
+    if verbose:
         print("# Writing out extended detection info")
 
     print("# Number of recorded channels: " + str(num_channels))
-    print("# Analysing frames: " + str(nFrames) + "; Seconds: " + str(nSec))
+    print("# Analysing frames: " + str(nFrames) + "; Seconds: " + str(nFrames/sf))
     print("# Frames before spike in cutout: " + str(cutout_start))
     print("# Frames after spike in cutout: " + str(cutout_end))
 
     cdef Detection * det = new Detection()
 
-    if not maxsl:
-        maxsl = int(sf*1/1000 + 0.5)
-    if not minsl:
-        minsl = int(sf*0.3/1000 + 0.5)
+
 
     # set tCut, tCut2 and tInc
     tCut = cutout_start + maxsl
@@ -107,7 +110,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
     #cdef np.ndarray[short, mode = "c"] ChIndN = np.zeros((nRecCh * 10), dtype=ctypes.c_short)
 
     # initialise detection algorithm
-    det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, &Indices[0], 0)
+    det.InitDetection(nFrames, sf, nRecCh, tInc, &Indices[0], 0)
 
     cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
     for i,p in enumerate(probe.positions):
@@ -119,7 +122,7 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
       neighbor_matrix[i,:len(p)] = p
 
     det.SetInitialParams(&position_matrix[0,0], &neighbor_matrix[0,0], num_channels,
-                         spike_delay, spike_peak_duration, _file_name, noise_duration,
+                         spike_peak_duration, file_name, noise_duration,
                          noise_amp_percent, inner_radius, &masked_channels[0],
                          max_neighbors, num_com_centers, to_localize,
                          thres, cutout_start, cutout_end, maa, ahpthr, maxsl,
@@ -152,16 +155,16 @@ def detectData(probe, _file_name, _to_localize, sf, thres,
             'Probe Object': probe,
             'Date and Time Detection': str(now),
             'Threshold': thres,
-            'Localization': _to_localize,
+            'Localization': to_localize,
             'Masked Channels': masked_channel_list,
-            'Associated Results File': _file_name,
+            'Associated Results File': file_name,
             'Positions File Path': positions_file_path,
             'Neighbors File Path': neighbors_file_path,
-            'Cutout Length': _cutout_start + _cutout_end,
+            'Cutout Length': cutout_start + cutout_end,
             'Advice': 'For more information about detection, load and look at the parameters of the probe object',
         }
 
-    target = open(_file_name.decode() + 'DetectionDict' + now.strftime("%Y-%m-%d_%H%M%S_%f") + '.txt', 'a')
+    target = open(file_name.decode() + 'DetectionDict' + now.strftime("%Y-%m-%d_%H%M%S_%f") + '.txt', 'a')
     target.write(pprint.pformat(detection_state_dict))
     target.close()
 
