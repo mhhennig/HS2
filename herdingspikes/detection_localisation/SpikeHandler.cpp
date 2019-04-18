@@ -571,6 +571,11 @@ Spike storeCOMWaveformsCounts(Spike curr_spike) {
   int channel = curr_spike.channel;
   for (int i = 0; i < Parameters::num_com_centers; i++) {
     int curr_max_channel = Parameters::inner_neighbor_matrix[channel][i];
+    if (curr_max_channel == -1) {
+      cout << "num_com_centers too large. Not enough inner neighbors."
+           << endl;
+      exit(EXIT_FAILURE);
+    }
     curr_spike.largest_channels.push_back(curr_max_channel);
     int frames_processed = Parameters::max_frames_processed * Parameters::iterations;
     for (int j = 0; j < Parameters::max_neighbors; j++) {

@@ -68,9 +68,15 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
     int do_correction = 1;
     int correct = 0;
     int amps_size = amps.size();
+    if (Parameters::debug) {
+      cout << "Correction phase..." << endl;
+    }
     if (do_correction == 1) {
       sort(begin(amps), end(amps), CustomLessThan()); // sort the array
       //correct = get<1>(amps.at(0))-1;
+      if (Parameters::debug) {
+              cout << "Amps size: " << amps_size << endl;
+      }
       if(amps_size % 2 == 0) {
               correct = (get<1>(amps.at(amps_size/2)) +
               get<1>(amps.at(amps_size/2 + 1)))/2;
@@ -79,6 +85,9 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
               correct = get<1>(amps.at(amps_size/2));
       }
 
+    }
+    if (Parameters::debug) {
+      cout << "Done correcting..." << endl;
     }
     // Correct amplitudes (threshold)
     deque<tuple<int, int>> centered_amps;
@@ -183,6 +192,9 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
               // Updated each localization
   int centered_amps_size = centered_amps.size();
 
+  if (Parameters::debug) {
+    cout << "Done localizing..." << endl;
+  }
   for (int i = 0; i < centered_amps_size; i++) {
     weight = get<1>(centered_amps.at(i));
     channel = get<0>(centered_amps.at(i));
