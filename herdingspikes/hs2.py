@@ -158,13 +158,9 @@ class HSDetection(object):
                 "strictly".format(self.out_file_name)
             )
         else:
-            try:
-                del self.spikes
-            except AttributeError:
-                pass
+            del self.spikes
+            del self.sp_flat
 
-            if self.sp_flat is not None:
-                del self.sp_flat
             self.sp_flat = np.memmap(self.out_file_name, dtype=np.int32, mode="r")
             assert self.sp_flat.shape[0] // (
                 self.cutout_length + 5
@@ -288,9 +284,6 @@ class HSDetection(object):
         # red overlay for central channel
         plt.scatter(pos[channel][0], pos[channel][1], s=200, c="r")
 
-        # # red dot of event location
-        # plt.scatter(event.x, event.y, s=80, c='r')
-
     def PlotTracesChannels(
         self,
         eventid,
@@ -398,7 +391,6 @@ class HSDetection(object):
         return ax
 
     def PlotDensity(self, binsize=1.0, invert=False, ax=None):
-        raise NotImplementedError()
         if ax is None:
             ax = plt.gca()
         x, y = self.spikes.x, self.spikes.y
@@ -408,7 +400,7 @@ class HSDetection(object):
         binsy = np.arange(y.min(), y.max(), binsize)
         h, xb, yb = np.histogram2d(x, y, bins=[binsx, binsy])
         ax.imshow(
-            np.log10(h),
+            np.clip(np.log10(h), 1e-10, None),
             extent=[xb.min(), xb.max(), yb.min(), yb.max()],
             interpolation="none",
             origin="lower",
