@@ -7,6 +7,7 @@ notebooks/results/*
 *.h5
 *.hdf5
 *.npy
+tests/results/*
 
 # For macOS
 *.DS_Store
