@@ -13,7 +13,7 @@ FILEDIR = "results/"
 FILENAME = "ProcessedSpikes_visapy"
 
 
-class TestHS(unittest.TestCase):
+class TestWorkflow(unittest.TestCase):
     """These tests are only designed to check if detection and clustering
     run smoothly and no bugs were introduced that break down the current pipeline
     in the most basic sense. They don't check for correctness of the result and
@@ -30,11 +30,7 @@ class TestHS(unittest.TestCase):
             DATA, inner_radius=60, neighbor_radius=100
         )
         self.H = hs.HSDetection(
-            self.Probe,
-            out_file_name=FILENAME,
-            file_directory_name=FILEDIR,
-            left_cutout_time=0.45,
-            right_cutout_time=1.12,
+            self.Probe, out_file_name=FILENAME, file_directory_name=FILEDIR
         )
 
     def test_01_run_detection(self):
@@ -47,7 +43,7 @@ class TestHS(unittest.TestCase):
         self.Probe.show()
         plt.savefig(os.path.join(FILEDIR, "probe.png"))
         plt.figure()
-        self.H.PlotTracesChannels(145, window_size=102)
+        self.H.PlotTracesChannels(10, window_size=0)
         plt.savefig(os.path.join(FILEDIR, "traces.png"))
         plt.figure()
         self.H.PlotAll(invert=True)

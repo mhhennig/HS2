@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import h5py
 import os
-import math
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 
@@ -228,69 +227,13 @@ class HSDetection(object):
             # reload data into memory (detect saves it on disk)
             self.LoadDetected()
 
-    def PlotData(self, length, frame, channel, ax=None, window_size=200):
-        """
-        Draw a figure with an electrode and its neighbours, showing the raw
-        traces and events. Note that this requires loading the raw data in
-        memory again.
-
-        Arguments:
-        length -- amount of data to be shown
-        frame -- frame to be analyzed
-        channel -- channel where the graph is centered (contains a red dot)
-        ax -- a matplotlib axes object where to draw. Defaults to current axis.
-        window_size -- number of samples shown around a spike
-        """
-        pos, neighs = self.probe.positions, self.probe.neighbors
-
-        cutlen = length
-        dst = np.abs(pos[channel][0] - pos[neighs[channel]][:, 0])
-        interdistance = np.min(dst[dst > 0])
-        if ax is None:
-            ax = plt.gca()
-
-        # scatter of the large grey balls for electrode location
-        x = pos[[neighs[channel], 0]]
-        y = pos[[neighs[channel], 1]]
-        plt.scatter(x, y, s=1600, alpha=0.2)
-
-        # electrode numbers
-        for i, txt in enumerate(neighs[channel]):
-            ax.annotate(txt, (x[i], y[i]))
-
-        ws = window_size // 2
-        t1 = np.max((0, frame - ws))
-        t2 = frame + ws
-        scale = interdistance / 110.0
-        trange = (np.arange(t1, t2) - frame) * scale
-        start_bluered = frame - t1 - self.cutout_start
-        trange_bluered = trange[start_bluered : start_bluered + cutlen]
-        trange_bluered = (
-            np.arange(-self.cutout_start, -self.cutout_start + cutlen) * scale
-        )
-
-        data = self.probe.Read(t1, t2).reshape((t2 - t1, self.probe.num_channels))
-
-        # grey and blue traces
-        for n in neighs[channel]:
-            col = "g" if n in self.probe.masked_channels else "b"
-            plt.plot(pos[n][0] + trange, pos[n][1] + data[:, n] * scale, "gray")
-            plt.plot(
-                pos[n][0] + trange_bluered,
-                pos[n][1] + data[start_bluered : start_bluered + cutlen, n] * scale,
-                col,
-            )
-
-        # red overlay for central channel
-        plt.scatter(pos[channel][0], pos[channel][1], s=200, c="r")
-
     def PlotTracesChannels(
         self,
         eventid,
         ax=None,
         window_size=100,
         show_channels=True,
-        ascale=1,
+        ascale=1.0,
         show_channel_numbers=True,
         show_loc=True,
     ):
@@ -305,6 +248,9 @@ class HSDetection(object):
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
         window_size -- number of samples shown around a spike
         """
+        if ax is None:
+            ax = plt.gca()
+
         pos, neighs = self.probe.positions, self.probe.neighbors
 
         event = self.spikes.loc[eventid]
@@ -312,11 +258,11 @@ class HSDetection(object):
         print("Spike detected at frame: ", event.t)
         print("Spike localised in position", event.x, event.y)
         cutlen = len(event.Shape)
-        assert window_size > cutlen, "window_size is too small"
-        dst = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
-        interdistance = np.min(dst[dst > 0])
-        if ax is None:
-            ax = plt.gca()
+
+        # compute distance between electrodes, for scaling
+        distances = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
+        interdistance = np.min(distances[distances > 0])
+        scale = interdistance / 110.0 * ascale
 
         # scatter of the large grey balls for electrode location
         x = pos[(neighs[event.ch], 0)]
@@ -325,52 +271,40 @@ class HSDetection(object):
             plt.scatter(x, y, s=1600, alpha=0.2)
 
         ws = window_size // 2
+        ws = max(ws, 1 + self.cutout_start, 1 + self.cutout_end)
         t1 = np.max((0, event.t - ws))
         t2 = event.t + ws
-        scale = interdistance / 110.0 * ascale
+
         trange = (np.arange(t1, t2) - event.t) * scale
         start_bluered = event.t - t1 - self.cutout_start
         trange_bluered = trange[start_bluered : start_bluered + cutlen]
-        print("trange", trange.shape)
-        assert start_bluered + cutlen < window_size, "window_size is too small"
 
         data = self.probe.Read(t1, t2).reshape((t2 - t1, self.probe.num_channels))
-        print("Data", data.shape)
-
-        ys = np.zeros(len(neighs[event.ch]))
-        for i, n in enumerate(neighs[event.ch]):
-            if data[0, n] > 200:
-                ys[i] = -data[0, n]
 
         # grey and blue traces
         for i, n in enumerate(neighs[event.ch]):
-            dist_from_max = math.sqrt(
+            dist_from_max = np.sqrt(
                 (pos[n][0] - pos[event.ch][0]) ** 2
                 + (pos[n][1] - pos[event.ch][1]) ** 2
             )
-            col = "g" if n in self.probe.masked_channels else "b"
-            col = (
-                "orange"
-                if dist_from_max <= self.probe.inner_radius
-                and n not in self.probe.masked_channels
-                else col
-            )
-            plt.plot(
-                pos[n][0] + trange, pos[n][1] + (data[:, n] + ys[i]) * scale, "gray"
-            )
+            if n in self.probe.masked_channels:
+                col = "g"
+            elif dist_from_max <= self.probe.inner_radius:
+                col = "orange"
+            else:
+                col = "b"
+            plt.plot(pos[n][0] + trange, pos[n][1] + data[:, n] * scale, "gray")
             plt.plot(
                 pos[n][0] + trange_bluered,
-                pos[n][1]
-                + (data[start_bluered : start_bluered + cutlen, n] + ys[i]) * scale,
-                col,
+                pos[n][1] + data[start_bluered : start_bluered + cutlen, n] * scale,
+                col
             )
 
         # red overlay for central channel
         plt.plot(
             pos[event.ch][0] + trange_bluered,
-            pos[event.ch][1]
-            + (event.Shape + ys[np.where(neighs[event.ch] == event.ch)[0]]) * scale,
-            "r",
+            pos[event.ch][1] + event.Shape * scale,
+            "r"
         )
         inner_radius_circle = plt.Circle(
             (pos[event.ch][0], pos[event.ch][1]),
@@ -388,6 +322,7 @@ class HSDetection(object):
         if show_channel_numbers:
             for i, txt in enumerate(neighs[event.ch]):
                 ax.annotate(txt, (x[i], y[i]))
+        ax.set_aspect("equal")
         return ax
 
     def PlotDensity(self, binsize=1.0, invert=False, ax=None):
