@@ -530,7 +530,7 @@ class SiNAPS_S1(NeuralProbe):
         )
         self.data_file = data_file_path
         self.hfile = openHDF5file(data_file_path)
-        self.raw_data = self.hfile[raw_group_path]
+        self.raw_data = self.hfile[raw_group_path]['data']
         self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
