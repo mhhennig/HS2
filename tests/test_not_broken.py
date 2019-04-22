@@ -33,6 +33,11 @@ class TestWorkflow(unittest.TestCase):
             self.Probe, out_file_name=FILENAME, file_directory_name=FILEDIR
         )
 
+    def test_00_plot_pre_detection(self):
+        plt.figure()
+        self.Probe.show()
+        plt.savefig(os.path.join(FILEDIR, "probe.png"))
+
     def test_01_run_detection(self):
         self.H.DetectFromRaw(load=True)
         fname = os.path.join(FILEDIR, FILENAME)
@@ -40,8 +45,9 @@ class TestWorkflow(unittest.TestCase):
 
     def test_02_plots_post_detection(self):
         self.H.LoadDetected()
-        self.Probe.show()
-        plt.savefig(os.path.join(FILEDIR, "probe.png"))
+        plt.figure()
+        self.H.PlotDensity()
+        plt.savefig(os.path.join(FILEDIR, "density.png"))
         plt.figure()
         self.H.PlotTracesChannels(10, window_size=0)
         plt.savefig(os.path.join(FILEDIR, "traces.png"))
@@ -61,8 +67,9 @@ class TestWorkflow(unittest.TestCase):
         self.C.SaveHDF5(fname)
         self.assertTrue(os.path.isfile(fname))
 
+        plt.figure()
         self.C.PlotShapes(range(2))
         plt.savefig(os.path.join(FILEDIR, "cl_shapes.png"))
-
+        plt.figure()
         self.C.PlotNeighbourhood(1, radius=6, alpha=0.8)
         plt.savefig(os.path.join(FILEDIR, "cl_neigh.png"))
