@@ -1,13 +1,11 @@
 from __future__ import division
 from __future__ import absolute_import
-import logging
 import pandas as pd
 import numpy as np
 import h5py
 import os
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
-
 # from sklearn.cluster import MeanShift # joblib things are broken
 from .clustering.mean_shift_ import MeanShift
 from sklearn.decomposition import PCA, FastICA, SparsePCA
@@ -68,8 +66,8 @@ class HSDetection(object):
     ):  # former maxsl
         """
         Arguments:
-        probe -- probe object, with raw data
-        to_localize -- set False if spikes should only be detected, not
+        probe -- probe object, with a link to raw data
+        to_localize -- set to False if spikes should only be detected, not
             localised (will break sorting)
         cutout_start -- deprecated, frame-based version of left_cutout_ms
         cutout_end -- deprecated, frame-based version of right_cutout_ms
@@ -79,6 +77,7 @@ class HSDetection(object):
         minsl -- deprecated, frame-based version of amp_evaluation_time
         ahpthr --
         out_file_name -- base file name (without extension) for the output files
+        file_directory_name -- directory where output is saved
         save_all --
         left_cutout_ms -- the number of milliseconds, before the spike,
         to be included in the spike shape
@@ -86,9 +85,9 @@ class HSDetection(object):
         to be included in the spike shape
         amp_evaluation_time -- the number of milliseconds during which the trace
         is integrated, for the purposed of evaluating amplitude, used for later
-        comparison with maa
+        comparison with 'maa'
         spk_evaluation_time -- dead time in ms after spike peak, used for
-        further testing
+        further triaging of spike shape
         """
         self.probe = probe
 
@@ -141,31 +140,38 @@ class HSDetection(object):
         """
          Adds and merges dict_of_new_parameters with the current fields of the
          object. Uses the PEP448 convention to group two dics together.
+
+         Arguments:
+         dict_of_new_parameters -- the dictionary of parameters to be updated.
         """
         self.__dict__.update(dict_of_new_parameters)
 
-    def LoadDetected(self):
+    def LoadDetected(self, file_name=None):
         """
         Reads a binary file with spikes detected with the DetectFromRaw()
-        method. The file name is contained in HSDetection.out_file_name.
+        method.
+
+        Arguments:
+        file_name -- The name of the .bin file. Defaults to self.out_file_name.
         """
-        if os.stat(self.out_file_name).st_size == 0:
+        if file_name is None:
+            file_name = self.out_file_name
+
+        if os.stat(file_name).st_size == 0:
             shapecache = np.asarray([]).reshape(0, 5)
-            logging.warn(
+            warnings.warn(
                 "Loading an empty file {} . This usually happens when no spikes were"
                 "detected due to the detection parameters being set too "
-                "strictly".format(self.out_file_name)
+                "strictly".format(file_name)
             )
         else:
             del self.spikes
             del self.sp_flat
 
-            self.sp_flat = np.memmap(self.out_file_name, dtype=np.int32, mode="r")
-            assert self.sp_flat.shape[0] // (
-                self.cutout_length + 5
-            ) is not self.sp_flat.shape[0] / (
-                self.cutout_length + 5
-            ), "spike data has wrong dimensions"  # ???
+            self.sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
+            assert self.sp_flat.shape[0] // self.cutout_length + 5 is \
+                not self.sp_flat.shape[0] / self.cutout_length + 5, \
+                "spike data has wrong dimensions"  # ???
             shapecache = self.sp_flat.reshape((-1, self.cutout_length + 5))
 
         self.spikes = pd.DataFrame(
@@ -180,7 +186,7 @@ class HSDetection(object):
             copy=False,
         )
         self.IsClustered = False
-        print("Detected and read " + str(self.spikes.shape[0]) + " spikes.")
+        print("Loaded " + str(self.spikes.shape[0]) + " spikes.")
 
     def DetectFromRaw(
         self, load=False, nFrames=None, tInc=50000, recording_duration=None
@@ -193,6 +199,10 @@ class HSDetection(object):
 
         Arguments:
         load -- bool: load the detected spikes when finished?
+        nFrames -- deprecated, frame-based version of recording_duration
+        tInc -- size of chunks to be read
+        recording_duration -- maximum time limit of recording (the rest will be
+        ignored)
         """
 
         if nFrames is not None:
@@ -247,6 +257,10 @@ class HSDetection(object):
         event id.
         ax -- a matplotlib axes object where to draw. Defaults to current axis.
         window_size -- number of samples shown around a spike
+        show_channels -- show bubbles corresponding to electrode locations
+        ascale -- make traces larger or smaller
+        show_channel_numbers -- whether to print electrode numbers next to them
+        show_loc -- whether to show a red point where the spike was localised
         """
         if ax is None:
             ax = plt.gca()
