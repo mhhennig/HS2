@@ -1,5 +1,7 @@
 # Herding Spikes 2
 
+[![Build Status](https://travis-ci.org/martinosorb/HS2.svg?branch=master)](https://travis-ci.org/martinosorb/HS2)
+
 ![Spikes](documentation/pictures/spikes.png)
 
 ## Software for high density electrophysiology
