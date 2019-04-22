@@ -6,7 +6,6 @@ import h5py
 import os
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
-# from sklearn.cluster import MeanShift # joblib things are broken
 from .clustering.mean_shift_ import MeanShift
 from sklearn.decomposition import PCA, FastICA, SparsePCA
 from os.path import splitext
