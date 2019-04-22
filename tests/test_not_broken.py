@@ -25,7 +25,7 @@ class TestWorkflow(unittest.TestCase):
     def setUpClass(cls):
         rmtree(FILEDIR, ignore_errors=True)
         os.makedirs(FILEDIR, exist_ok=True)
-        if not os.isfile(DATA):
+        if not os.path.isfile(DATA):
             urllib.request.urlretrieve(URL, DATA)
 
     def setUp(self):
