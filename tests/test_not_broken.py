@@ -3,10 +3,12 @@ import herdingspikes as hs
 import matplotlib.pyplot as plt
 import os
 from shutil import rmtree
+import urllib.request
 
 
 # raw data location
 DATA = "data/visapy_data.npy"
+URL = "https://www.dropbox.com/s/5lkvfcizd2dtnbs/visapy_data.npy?dl=1"
 
 # detection parameters
 FILEDIR = "results/"
@@ -23,6 +25,8 @@ class TestWorkflow(unittest.TestCase):
     def setUpClass(cls):
         rmtree(FILEDIR, ignore_errors=True)
         os.makedirs(FILEDIR, exist_ok=True)
+        if not os.isfile(DATA):
+            urllib.request.urlretrieve(URL, DATA)
 
     def setUp(self):
         os.makedirs(FILEDIR, exist_ok=True)
