@@ -730,8 +730,7 @@ class HSClustering(object):
         Arguments:
         filename -- file to load from
         append -- append to data alreday im memory
-        chunk_size -- read shapes in chunks of this size to avoid memory
-        problems
+        chunk_size -- read shapes in chunks of this size to avoid memory problems
         compute_cluster_sizes -- count number of spikes in each unit (slow)
         scale -- re-scale shapes by this factor (may be required for HS1 data)
         """
