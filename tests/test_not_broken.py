@@ -79,3 +79,6 @@ class TestWorkflow(unittest.TestCase):
         plt.figure()
         self.C.PlotNeighbourhood(1, radius=6, alpha=0.8)
         plt.savefig(os.path.join(FILEDIR, "cl_neigh.png"))
+        plt.figure()
+        self.H.PlotAll(invert=True)
+        plt.savefig(os.path.join(FILEDIR, "locations_clustered.png"))
