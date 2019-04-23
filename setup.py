@@ -2,7 +2,7 @@ from setuptools import setup, Extension, find_packages
 import os
 import platform
 import numpy
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 FOLDER = "herdingspikes/detection_localisation/"
 
@@ -13,9 +13,13 @@ try:
 except ImportError:
     use_cython = False
 
-if StrictVersion(platform.python_version()) < StrictVersion('3.6.0'):
-    use_cython = True
-    os.remove(os.path.join(FOLDER, "detect.cpp"))
+if LooseVersion(platform.python_version()) < LooseVersion('3.6.0'):
+    if use_cython:
+        os.remove(os.path.join(FOLDER, "detect.cpp"))
+    else:
+        raise ImportError("The precompiled cpp file is compatible only with"
+                          " Python 3.6 or newer. To use with Python 3.5 or "
+                          "older, please install Cython before setup.")
 
 here = os.path.abspath(os.path.dirname(__file__))
 
