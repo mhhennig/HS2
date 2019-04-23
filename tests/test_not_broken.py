@@ -7,7 +7,8 @@ import urllib.request
 
 
 # raw data location
-DATA = "data/visapy_data.npy"
+DATADIR = "data/"
+DATA = os.path.join(DATADIR, "visapy_data.npy")
 URL = "https://www.dropbox.com/s/5lkvfcizd2dtnbs/visapy_data.npy?dl=1"
 
 # detection parameters
@@ -26,6 +27,7 @@ class TestWorkflow(unittest.TestCase):
         rmtree(FILEDIR, ignore_errors=True)
         os.makedirs(FILEDIR, exist_ok=True)
         if not os.path.isfile(DATA):
+            os.makedirs(DATADIR, exist_ok=True)
             urllib.request.urlretrieve(URL, DATA)
 
     def setUp(self):
