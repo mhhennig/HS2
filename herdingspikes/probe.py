@@ -684,7 +684,7 @@ class SiNAPS_S1(NeuralProbe):
         self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
-        return readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling
+        return (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
 
 
 class GenericBinary(NeuralProbe):
