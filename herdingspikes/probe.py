@@ -662,6 +662,11 @@ class SiNAPS_S1(NeuralProbe):
     ):
         positions_file_path = in_probe_info_dir("positions_SiNAPS_S1")
         neighbors_file_path = in_probe_info_dir("neighbormatrix_SiNAPS_S1")
+        self.data_file = data_file_path
+        self.hfile = openHDF5file(data_file_path)
+        fps = self.hfile['param']['fs'][()][0]
+        num_channels = self.hfile['param']['numCh'][()][0]
+        self.scaling = self.hfile['param']['scalingFactor'][()][0].astype(ctypes.c_short)
         NeuralProbe.__init__(
             self,
             num_channels=num_channels,
@@ -675,13 +680,11 @@ class SiNAPS_S1(NeuralProbe):
             event_length=event_length,
             peak_jitter=peak_jitter,
         )
-        self.data_file = data_file_path
-        self.hfile = openHDF5file(data_file_path)
         self.raw_data = self.hfile[raw_group_path]["data"]
         self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
-        return readSiNAPS_S1Probe(self.raw_data, t0, t1)
+        return (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
 
 
 class GenericBinary(NeuralProbe):
