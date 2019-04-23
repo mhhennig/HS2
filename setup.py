@@ -2,6 +2,7 @@ from setuptools import setup, Extension, find_packages
 import os
 import platform
 import numpy
+from distutils.version import StrictVersion
 
 FOLDER = "herdingspikes/detection_localisation/"
 
@@ -11,6 +12,10 @@ try:
     from Cython.Build import cythonize
 except ImportError:
     use_cython = False
+
+if StrictVersion(platform.python_version()) < StrictVersion('3.6.0'):
+    use_cython = True
+    os.remove(os.path.join(FOLDER, "detect.cpp"))
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -136,9 +141,9 @@ setup(
         # 'Programming Language :: Python :: 2',
         # 'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 
     # This field adds keywords for your project which will appear on the
