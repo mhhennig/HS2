@@ -48,6 +48,8 @@ We suggest you use Anaconda if you don't have a favourite Python installed yet. 
     pip install numpy scipy
     pip install --index-url https://test.pypi.org/simple/ herdingspikes
 
+**Note:** If you're using python 3.5.x or older, you will additionally need to install cython before herdingspikes.
+
 To install from source, clone this repository and follow the instructions below.
 
 ### Linux/Mac
