@@ -667,7 +667,7 @@ class SiNAPS_S1(NeuralProbe):
         fps = self.hfile['param']['fs'][()][0]
         num_channels = self.hfile['param']['numCh'][()][0]
 #         self.scaling = (self.hfile['param']['scalingFactor'][()][0]//2).astype(ctypes.c_short)
-        self.scaling = 4
+        self.scaling = 5
         ch_positions = self.hfile['param']['posCh'][()]
         num_channels = ch_positions.shape[0]
         print("# Generating new position and neighbor files from data file")
@@ -692,7 +692,9 @@ class SiNAPS_S1(NeuralProbe):
         self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
-        return (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
+        d = (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
+        d[d<-10000] = 0 # hack to get rid of channels in overdrive 
+        return d
 
 
 class GenericBinary(NeuralProbe):
