@@ -651,22 +651,26 @@ class SiNAPS_S1(NeuralProbe):
         self,
         data_file_path,
         raw_group_path,
-        num_channels=512,
+        num_channels=None,
         noise_amp_percent=0.95,
-        fps=25000,
+        fps=None,
         inner_radius=40,
         neighbor_radius=None,
         masked_channels=None,
         event_length=DEFAULT_EVENT_LENGTH,
         peak_jitter=DEFAULT_PEAK_JITTER,
     ):
+        if num_channels is not None or fps is not None:
+            warnings.warn("num_channels and the sampling rate are ignored "
+                          "and read directly from the data file.")
         positions_file_path = in_probe_info_dir("positions_SiNAPS_S1")
         neighbors_file_path = in_probe_info_dir("neighbormatrix_SiNAPS_S1")
         self.data_file = data_file_path
-        self.hfile = openHDF5file(data_file_path, driver='core') # faster access
+        self.hfile = openHDF5file(data_file_path, driver='core')  # faster access
         fps = self.hfile['param']['fs'][()][0]
         num_channels = self.hfile['param']['numCh'][()][0]
-#         self.scaling = (self.hfile['param']['scalingFactor'][()][0]//2).astype(ctypes.c_short)
+        # self.scaling = (self.hfile['param']['scalingFactor'][()][0] // 2).astype(
+        #     ctypes.c_short)
         self.scaling = 5
         ch_positions = self.hfile['param']['posCh'][()]
         num_channels = ch_positions.shape[0]
@@ -692,8 +696,9 @@ class SiNAPS_S1(NeuralProbe):
         self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
-        d = (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
-        d[d<-10000] = 0 # hack to get rid of channels in overdrive 
+        d = (readSiNAPS_S1Probe(self.raw_data, t0, t1) / self.scaling).astype(
+            ctypes.c_short)
+        d[d < -10000] = 0  # hack to get rid of channels in overdrive
         return d
 
 
