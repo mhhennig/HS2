@@ -1,7 +1,7 @@
 # Herding Spikes 2
 
 [![Build Status](https://travis-ci.org/mhhennig/HS2.svg?branch=master)](https://travis-ci.org/mhhennig/HS2)
-[![Gitter chat](https://badges.gitter.im/mhhennig/HerdingSpikes.png)](https://gitter.im/mhhennig/HerdingSpikes)
+[![Gitter chat](https://badges.gitter.im/HerdingSpikes.png)](https://gitter.im/HerdingSpikes)
 
 ![Spikes](documentation/pictures/spikes.png)
 
