@@ -1,6 +1,6 @@
 # Herding Spikes 2
 
-[![Build Status](https://travis-ci.org/martinosorb/HS2.svg?branch=master)](https://travis-ci.org/martinosorb/HS2)
+[![Build Status](https://travis-ci.org/mhhennig/HS2.svg?branch=master)](https://travis-ci.org/mhhennig/HS2)
 
 ![Spikes](documentation/pictures/spikes.png)
 
