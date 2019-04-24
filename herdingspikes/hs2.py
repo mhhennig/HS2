@@ -672,9 +672,9 @@ class HSClustering(object):
             "and converting to integer...",
         )
         i = len(self.shapecache)
-        # self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
-        #                        dtype=np.int32, mode="w+",
-        #                        shape=g['shapes'].shape[::-1]))
+        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
+                               dtype=np.int32, mode="w+",
+                               shape=g['shapes'].shape[::-1]))
         for i in range(g["shapes"].shape[1] // chunk_size + 1):
             tmp = (
                 scale
@@ -685,6 +685,7 @@ class HSClustering(object):
             print("Read chunk " + str(i + 1))
             if len(inds) > 0:
                 print("Found", len(inds), "data points out of linear regime")
+            print(len(self.shapecache),tmp.shape, i * chunk_size , (i + 1) * chunk_size)
             self.shapecache[-1][i * chunk_size : (i + 1) * chunk_size] = tmp[:]
 
         self.cutout_length = self.shapecache[-1].shape[1]
