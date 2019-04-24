@@ -666,7 +666,14 @@ class SiNAPS_S1(NeuralProbe):
         self.hfile = openHDF5file(data_file_path)
         fps = self.hfile['param']['fs'][()][0]
         num_channels = self.hfile['param']['numCh'][()][0]
-        self.scaling = self.hfile['param']['scalingFactor'][()][0].astype(ctypes.c_short)
+        self.scaling = (self.hfile['param']['scalingFactor'][()][0]//2).astype(ctypes.c_short)
+        ch_positions = self.hfile['param']['posCh'][()]
+        num_channels = ch_positions.shape[0]
+        print("# Generating new position and neighbor files from data file")
+        create_probe_files(
+            positions_file_path, neighbors_file_path, inner_radius, ch_positions
+        )
+
         NeuralProbe.__init__(
             self,
             num_channels=num_channels,
