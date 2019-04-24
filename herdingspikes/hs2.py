@@ -7,7 +7,7 @@ import os
 from .detection_localisation.detect import detectData
 from matplotlib import pyplot as plt
 from .clustering.mean_shift_ import MeanShift
-from sklearn.decomposition import PCA, FastICA, SparsePCA
+from sklearn.decomposition import PCA
 from os.path import splitext
 import warnings
 
@@ -164,9 +164,6 @@ class HSDetection(object):
                 "strictly".format(file_name)
             )
         else:
-            del self.spikes
-            del self.sp_flat
-
             self.sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
             assert self.sp_flat.shape[0] // self.cutout_length + 5 is \
                 not self.sp_flat.shape[0] / self.cutout_length + 5, \
@@ -293,6 +290,8 @@ class HSDetection(object):
         trange_bluered = trange[start_bluered : start_bluered + cutlen]
 
         data = self.probe.Read(t1, t2).reshape((t2 - t1, self.probe.num_channels))
+        # remove offsets
+        data = data - data[0]
 
         # grey and blue traces
         for i, n in enumerate(neighs[event.ch]):
@@ -516,7 +515,8 @@ class HSClustering(object):
         self.IsClustered = True
 
     def ShapePCA(
-        self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000, normalise=False
+        self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000, normalise=False,
+        custom_decomposition=None
     ):
         """
         Finds the principal components (PCs) of spike shapes contained in the
@@ -527,30 +527,30 @@ class HSClustering(object):
         pca_whiten -- whiten data before PCA.
         chunk_size -- maximum number of shapes to be used to find PCs,
         default 1 million.
+        custom_decomposition -- a custom instance of a sklearn decomposition object
+        (such as instances PCA or FastICA), to be used for custom dimensionality
+        reduction. pca_ncomponents and pca_whiten are ignored if provided.
         """
-        _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
+        if custom_decomposition is None:  # default is PCA
+            _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
+        else:  # Accepts an arbitrary sklearn.decomposition object instead of PCA
+            _pca = custom_decomposition
+
         if self.spikes.shape[0] > chunk_size:
-            print(
-                "Fitting PCA using",
-                chunk_size,
-                "out of ",
-                self.spikes.shape[0],
-                "spikes...",
-            )
-            inds = np.sort(
-                np.random.choice(self.spikes.shape[0], chunk_size, replace=False)
-            )
+            print("Fitting dimensionality reduction using", chunk_size, "out of",
+                  self.spikes.shape[0], "spikes...")
+            inds = np.sort(np.random.choice(self.spikes.shape[0],
+                           chunk_size, replace=False))
             if normalise:
                 print("...normalising shapes by peak...")
-                s = [
-                    row.Shape / row.Shape.min()
-                    for row in self.spikes.loc[inds].itertuples()
-                ]
+                s = [row.Shape / row.Shape.min() for row in self.spikes.loc[
+                    inds].itertuples()]
             else:
                 s = self.spikes.Shape.loc[inds].values.tolist()
             _pca.fit(np.array(s))
+
         else:
-            print("Fitting PCA using " + str(self.spikes.shape[0]) + " spikes...")
+            print("Fitting dimensionality reduction using all spikes...")
             if normalise:
                 s = [row.Shape / row.Shape.min() for row in self.spikes.itertuples()]
             else:
@@ -560,14 +560,9 @@ class HSClustering(object):
         print("...projecting...")
         for i in range(self.spikes.shape[0] // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            # print(i*chunk_size, (i + 1)*chunk_size)
             if normalise:
-                s = [
-                    row.Shape / row.Shape.min()
-                    for row in self.spikes.loc[
-                        i * chunk_size : (i + 1) * chunk_size - 1
-                    ].itertuples()
-                ]
+                s = [row.Shape / row.Shape.min() for row in self.spikes.loc[
+                     i * chunk_size : (i + 1) * chunk_size - 1].itertuples()]
             else:
                 s = self.spikes.Shape.loc[
                     i * chunk_size : (i + 1) * chunk_size - 1
@@ -576,72 +571,6 @@ class HSClustering(object):
         self.pca = _pca
         self.features = _pcs
         print("...done")
-        # return _pcs
-
-    def ShapeSparsePCA(self, pca_ncomponents=2, chunk_size=1000000):
-        """
-        Finds the principal components (PCs) of spike shapes contained in the
-        class, and saves them to HSClustering.features, to be used for
-        clustering.
-
-        Arguments -- pca_ncomponents: number of PCs to be used (default 2)
-        chunk_size -- maximum number of
-        shapes to be used to find PCs, default 1 million.
-        """
-        pca = SparsePCA(n_components=pca_ncomponents)
-        if self.spikes.shape[0] > 1e6:
-            print("Fitting PCA using 1e6 out of", self.spikes.shape[0], "spikes...")
-            inds = np.random.choice(self.spikes.shape[0], int(1e6), replace=False)
-            pca.fit(
-                self.spikes.Shape.loc[inds].values.tolist()
-            )  # so we need tolist here?
-        else:
-            print("Fitting PCA using", self.spikes.shape[0], "spikes...")
-            pca.fit(self.spikes.Shape.value.tolist())
-        self.pca = pca
-        _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
-        for i in range(self.spikes.shape[0] // chunk_size + 1):
-            # is this the best way? Warning: Pandas slicing with .loc is different!
-            print(i * chunk_size, (i + 1) * chunk_size)
-            _pcs[i * chunk_size : (i + 1) * chunk_size, :] = pca.transform(
-                np.array(
-                    self.spikes.Shape.loc[
-                        i * chunk_size : (i + 1) * chunk_size - 1
-                    ].tolist()
-                )
-            )
-        self.features = _pcs
-        return _pcs
-
-    def ShapeICA(self, ica_ncomponents=2, ica_whiten=True, chunk_size=1000000):
-        """
-        Finds the principal components (PCs) of spike shapes contained in the
-        class, and saves them to HSClustering.features, to be used for
-        clustering.
-
-        Arguments -- ica_ncomponents: number of ICs to be used (default 2)
-        ica_whiten -- whiten data before ICA. chunk_size: maximum number of
-        shapes to be used to find ICs, default 1 million.
-        """
-        ica = FastICA(n_components=ica_ncomponents, whiten=ica_whiten)
-        if self.spikes.shape[0] > 1e6:
-            print("Fitting ICA using 1e6 out of", self.spikes.shape[0], "spikes...")
-            inds = np.random.choice(self.spikes.shape[0], int(1e6), replace=False)
-            ica.fit(self.spikes.Shape.loc[inds].values.tolist())
-        else:
-            print("Fitting iCA using", self.spikes.shape[0], "spikes...")
-            ica.fit(self.spikes.Shape.tolist())
-        self.pca = ica
-        _ics = np.empty((self.spikes.shape[0], ica_ncomponents))
-        for i in range(self.spikes.shape[0] // chunk_size + 1):
-            _ics[i * chunk_size : (i + 1) * chunk_size, :] = ica.transform(
-                self.spikes.Shape.loc[
-                    i * chunk_size : (i + 1) * chunk_size - 1
-                ].tolist()
-            )
-        self.features = _ics
-
-        return _ics
 
     def _savesinglehdf5(self, filename, limits, compression, sampling, transpose=False):
         if limits is not None:
@@ -697,6 +626,7 @@ class HSClustering(object):
         filename -- the names of the file or list of files to be saved.
         compression -- passed to HDF5, for compression of shapes only.
         sampling -- provide this information to include it in the file.
+        transpose -- whether to swap x and y.
         """
 
         if sampling is None:
@@ -728,9 +658,8 @@ class HSClustering(object):
 
         Arguments:
         filename -- file to load from
-        append -- append to data alreday im memory
+        append -- append to data already im memory
         chunk_size -- read shapes in chunks of this size to avoid memory problems
-        compute_cluster_sizes -- count number of spikes in each unit (slow)
         scale -- re-scale shapes by this factor (may be required for HS1 data)
         """
 
@@ -831,10 +760,8 @@ class HSClustering(object):
 
         Arguments:
         filename -- file to load from
-        append -- append to data alreday im memory
-        chunk_size -- read shapes in chunks of this size to avoid memory
-        problems
-        compute_cluster_sizes -- count number of spikes in each unit (slow)
+        append -- append to data already im memory
+        chunk_size -- read shapes in chunks of this size to avoid memory problems
         scale -- re-scale shapes by this factor (may be required for HS1 data)
         """
 
@@ -946,10 +873,8 @@ class HSClustering(object):
         units,
         nshapes=100,
         ncols=4,
-        ax=None,
         ylim=None,
-        max_shapes=1000,
-        n_shapes=100,
+        max_shapes=100,
     ):
         """
         Plot a sample of the spike shapes contained in a given set of clusters
@@ -959,13 +884,10 @@ class HSClustering(object):
         units -- a list of the cluster IDs to be considered.
         nshapes -- the number of shapes to plot (default 100).
         ncols -- the number of columns under which to distribute the plots.
-        ax -- a matplotlib axis object (defaults to current axis).
         ylim -- limits of the vertical axis of the plots. If None, try to figure
         them out.
         """
         nrows = np.ceil(len(units) / ncols)
-        if ax is None:
-            plt.figure(figsize=(3 * ncols, 3 * nrows))
         cutouts = self.spikes.Shape
 
         # all this is to determine suitable ylims TODO probe should provide
@@ -974,29 +896,22 @@ class HSClustering(object):
             meanshape = np.mean(cutouts.loc[:2000], axis=0)
             yoff = -meanshape[0]
             maxy, miny = meanshape.max() + yoff, meanshape.min() + yoff
-            varshape = np.var(
-                cutouts.loc[:1000].values, axis=0
-            )  # direct not possible, why?
+            varshape = np.var(cutouts.loc[:1000].values, axis=0)
             varmin = varshape[np.argmin(meanshape)]
             varmax = varshape[np.argmax(meanshape)]
             maxy += 4.0 * np.sqrt(varmax)
             miny -= 2.0 * np.sqrt(varmin)
             ylim = [miny, maxy]
 
+        plt.figure(figsize=(3 * ncols, 3 * nrows))
         for i, cl in enumerate(units):
             inds = np.where(self.spikes.cl == cl)[0][:max_shapes]
             meanshape = np.mean(cutouts.loc[inds], axis=0)
             yoff = -meanshape[0]
 
-            if ax is None:
-                plt.subplot(nrows, ncols, i + 1)
-            [
-                plt.plot(v - v[0], "gray", alpha=0.3)
-                for v in cutouts.loc[inds[:n_shapes]].values
-            ]
+            plt.subplot(nrows, ncols, i + 1)
+            [plt.plot(v - v[0], "gray", alpha=0.3) for v in cutouts.loc[inds].values]
             plt.plot(meanshape + yoff, c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
-            #             plt.plot(np.mean(cutouts.loc[inds]+yoff, axis=0),
-            #                      c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
             plt.ylim(ylim)
             plt.title("Cluster " + str(cl))
 
