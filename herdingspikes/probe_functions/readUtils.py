@@ -9,8 +9,8 @@ def read_flat(d, t0, t1, nch):
     return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
 
-def openHDF5file(path):
-    return h5py.File(path, 'r')
+def openHDF5file(path, **kwargs):
+    return h5py.File(path, 'r', **kwargs)
 
 
 def getHDF5params(rf):
