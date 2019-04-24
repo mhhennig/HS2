@@ -663,10 +663,18 @@ class SiNAPS_S1(NeuralProbe):
         positions_file_path = in_probe_info_dir("positions_SiNAPS_S1")
         neighbors_file_path = in_probe_info_dir("neighbormatrix_SiNAPS_S1")
         self.data_file = data_file_path
-        self.hfile = openHDF5file(data_file_path)
+        self.hfile = openHDF5file(data_file_path, driver='core') # faster access
         fps = self.hfile['param']['fs'][()][0]
         num_channels = self.hfile['param']['numCh'][()][0]
-        self.scaling = self.hfile['param']['scalingFactor'][()][0].astype(ctypes.c_short)
+#         self.scaling = (self.hfile['param']['scalingFactor'][()][0]//2).astype(ctypes.c_short)
+        self.scaling = 5
+        ch_positions = self.hfile['param']['posCh'][()]
+        num_channels = ch_positions.shape[0]
+        print("# Generating new position and neighbor files from data file")
+        create_probe_files(
+            positions_file_path, neighbors_file_path, inner_radius, ch_positions
+        )
+
         NeuralProbe.__init__(
             self,
             num_channels=num_channels,
@@ -684,7 +692,9 @@ class SiNAPS_S1(NeuralProbe):
         self.nFrames = self.raw_data.shape[0]
 
     def Read(self, t0, t1):
-        return (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
+        d = (readSiNAPS_S1Probe(self.raw_data, t0, t1)/self.scaling).astype(ctypes.c_short)
+        d[d<-10000] = 0 # hack to get rid of channels in overdrive 
+        return d
 
 
 class GenericBinary(NeuralProbe):
