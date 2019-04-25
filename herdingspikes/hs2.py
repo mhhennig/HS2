@@ -515,7 +515,7 @@ class HSClustering(object):
         self.IsClustered = True
 
     def ShapePCA(
-        self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000, normalise=False,
+        self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000,
         custom_decomposition=None
     ):
         """
@@ -531,43 +531,31 @@ class HSClustering(object):
         (such as instances PCA or FastICA), to be used for custom dimensionality
         reduction. pca_ncomponents and pca_whiten are ignored if provided.
         """
+        n_spikes = self.spikes.shape[0]
         if custom_decomposition is None:  # default is PCA
             _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
         else:  # Accepts an arbitrary sklearn.decomposition object instead of PCA
             _pca = custom_decomposition
 
-        if self.spikes.shape[0] > chunk_size:
+        if n_spikes > chunk_size:
             print("Fitting dimensionality reduction using", chunk_size, "out of",
-                  self.spikes.shape[0], "spikes...")
-            inds = np.sort(np.random.choice(self.spikes.shape[0],
-                           chunk_size, replace=False))
-            if normalise:
-                print("...normalising shapes by peak...")
-                s = [row.Shape / row.Shape.min() for row in self.spikes.loc[
-                    inds].itertuples()]
-            else:
-                s = self.spikes.Shape.loc[inds].values.tolist()
-            _pca.fit(np.array(s))
-
+                  n_spikes, "spikes...")
+            inds = np.sort(np.random.choice(n_spikes, chunk_size, replace=False))
+            s = self.spikes.Shape.loc[inds].values.tolist()
         else:
             print("Fitting dimensionality reduction using all spikes...")
-            if normalise:
-                s = [row.Shape / row.Shape.min() for row in self.spikes.itertuples()]
-            else:
-                s = self.spikes.Shape.values.tolist()
-            _pca.fit(s)
-        _pcs = np.empty((self.spikes.shape[0], pca_ncomponents))
+            s = self.spikes.Shape.values.tolist()
+
+        _pca.fit(np.asarray(s))
+
         print("...projecting...")
-        for i in range(self.spikes.shape[0] // chunk_size + 1):
+        _pcs = np.empty((n_spikes, pca_ncomponents))
+        for i in range(n_spikes // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
-            if normalise:
-                s = [row.Shape / row.Shape.min() for row in self.spikes.loc[
-                     i * chunk_size : (i + 1) * chunk_size - 1].itertuples()]
-            else:
-                s = self.spikes.Shape.loc[
-                    i * chunk_size : (i + 1) * chunk_size - 1
-                ].values.tolist()
+            s = self.spikes.Shape.loc[
+                i * chunk_size : (i + 1) * chunk_size - 1].values.tolist()
             _pcs[i * chunk_size : (i + 1) * chunk_size, :] = _pca.transform(s)
+
         self.pca = _pca
         self.features = _pcs
         print("...done")
@@ -965,7 +953,6 @@ class HSClustering(object):
         cl,
         radius=1,
         show_cluster_numbers=True,
-        max_spikes=10000,
         alpha=0.4,
         show_unclustered=False,
         max_shapes=1000,
