@@ -440,7 +440,7 @@ class HSClustering(object):
             self.IsClustered = False
 
     def CombinedClustering(
-        self, alpha, clustering_algorithm=MeanShift, cluster_subset=None, **kwargs
+        self, alpha, clustering_algorithm=None, cluster_subset=None, **kwargs
     ):
         """
         Clusters spikes based on their (x, y) location and on the other features
@@ -452,10 +452,11 @@ class HSClustering(object):
         Arguments:
         alpha -- the weight given to the other features, relative to spatial
         components (which have weight 1.)
-        clustering_algorithm -- a sklearn.cluster class, defaults to
-        sklearn.cluster.MeanShift. sklearn.cluster.DBSCAN is a possible
-        alternative. The class passed here has to have a method fit, and a
-        predict method if cluster_subset is non-zero.
+        clustering_algorithm -- An instance of a scikit-learn clustering object.
+        If None, a sklearn.cluster.MeanShift object will be instantiated, and the
+        **kwargs will be passed to it. A possible alternative is DBSCAN:
+            dbscan = sklearn.cluster.DBSCAN(...options...)
+            HSClusterer.CombinedClustering(clustering_algorithm=dbscan)
         cluster_subset -- Number of spikes used to build clusters, spikes are
         then assigned to the nearest by Euclidean distance
         **kwargs -- additional arguments are passed to the clustering class.
@@ -470,7 +471,10 @@ class HSClustering(object):
             print("Warning: no PCA or other features available, location only!")
 
         print("Clustering...")
-        clusterer = clustering_algorithm(**kwargs)
+        if clustering_algorithm is None:
+            clusterer = MeanShift(**kwargs)
+        else:
+            clusterer = clustering_algorithm
 
         if cluster_subset is not None:
             print("Using", cluster_subset, "out of", self.spikes.shape[0], "spikes...")
@@ -639,7 +643,7 @@ class HSClustering(object):
         else:
             raise ValueError("filename not understood")
 
-    def LoadHDF5(self, filename, append=False, chunk_size=1000000, scale=1):
+    def LoadHDF5(self, filename, append=False, chunk_size=1000000, scale=1.0):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
         HS1 folowing clustering.
@@ -740,7 +744,7 @@ class HSClustering(object):
             self.filelist = [filename]
 
     def LoadHDF5_legacy_detected(
-        self, filename, append=False, chunk_size=1000000, scale=1
+        self, filename, append=False, chunk_size=1000000, scale=1.0
     ):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
@@ -816,9 +820,13 @@ class HSClustering(object):
     def LoadBin(self, filename, cutout_length, append=False):
         """
         Reads a binary file with spikes detected with the DetectFromRaw() method
-        """
 
-        # sp_flat = np.memmap(filename, dtype=np.int32, mode="r")
+        Arguments:
+        filename -- the name of the file
+        cutout_length -- the length of each spike shape, in frames (this is necessary
+        because the data is stored as a 1d array)
+        append -- append to data already im memory
+        """
         # 5 here are the non-shape data columns
         print("# loading", filename)
         self.shapecache.append(
@@ -859,7 +867,6 @@ class HSClustering(object):
     def PlotShapes(
         self,
         units,
-        nshapes=100,
         ncols=4,
         ylim=None,
         max_shapes=100,
@@ -870,7 +877,6 @@ class HSClustering(object):
 
         Arguments:
         units -- a list of the cluster IDs to be considered.
-        nshapes -- the number of shapes to plot (default 100).
         ncols -- the number of columns under which to distribute the plots.
         ylim -- limits of the vertical axis of the plots. If None, try to figure
         them out.
@@ -926,16 +932,18 @@ class HSClustering(object):
         fontsize -- font size for annotations
         **kwargs -- additional arguments are passed to pyplot.scatter
         """
+        n_spikes = self.spikes.shape[0]
         if ax is None:
             ax = plt.gca()
         x, y = self.spikes.x, self.spikes.y
         if invert:
             x, y = y, x
         if self.spikes.shape[0] > max_show:
-            inds = np.random.choice(self.spikes.shape[0], max_show, replace=False)
-            print("We have", self.spikes.shape[0], "spikes, only showing ", max_show)
+            inds = np.random.choice(n_spikes, max_show, replace=False)
+            print("We have", n_spikes, "spikes, only showing ", max_show)
         else:
-            inds = np.arange(self.spikes.shape[0])
+            inds = np.arange(n_spikes)
+
         c = plt.cm.hsv(self.clusters.Color[self.spikes.cl])
         ax.scatter(x[inds], y[inds], c=c[inds], **kwargs)
         if show_labels and self.IsClustered:
@@ -951,7 +959,7 @@ class HSClustering(object):
     def PlotNeighbourhood(
         self,
         cl,
-        radius=1,
+        radius=1.0,
         show_cluster_numbers=True,
         alpha=0.4,
         show_unclustered=False,
@@ -962,8 +970,14 @@ class HSClustering(object):
         Plot all units and spikes in the neighbourhood of cluster cl.
 
         Arguments:
-        cl -- number of te cluster to be shown
+        cl -- ID of the cluster to be shown
         radius -- spikes are shown for units this far away from cluster centre
+        show_cluster_numbers -- whether to print cluster labels
+        alpha -- transparency of spike points
+        show_unclustered -- whether to show unclustered spikes (left by certain
+        clustering algorithms)
+        max_shapes -- maximum number of shapes to be plotted
+        figsize -- the size of the figure
         """
 
         plt.figure(figsize=figsize)
