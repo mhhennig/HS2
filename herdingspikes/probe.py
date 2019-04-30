@@ -501,8 +501,8 @@ class RecordingExtractor(NeuralProbe):
         peak_jitter=DEFAULT_PEAK_JITTER,
     ):
         self.d = re
-        positions_file_path = in_probes_dir("positions_spikeextractor")
-        neighbors_file_path = in_probes_dir("neighbormatrix_spikeextractor")
+        positions_file_path = in_probe_info_dir("positions_spikeextractor")
+        neighbors_file_path = in_probe_info_dir("neighbormatrix_spikeextractor")
         self.nFrames = re.get_num_frames()
         num_channels = re.get_num_channels()
         fps = re.get_sampling_frequency()
