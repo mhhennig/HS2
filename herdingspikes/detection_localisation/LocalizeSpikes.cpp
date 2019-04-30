@@ -78,8 +78,7 @@ tuple<float, float> localizeSpike(Spike spike_to_be_localized) {
               cout << "Amps size: " << amps_size << endl;
       }
       if(amps_size % 2 == 0) {
-              correct = (get<1>(amps.at(amps_size/2)) +
-              get<1>(amps.at(amps_size/2 + 1)))/2;
+              correct = (get<1>(amps.at(amps_size/2 - 1)) + get<1>(amps.at(amps_size/2)))/2;
       }
       else {
               correct = get<1>(amps.at(amps_size/2));
