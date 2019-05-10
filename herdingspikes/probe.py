@@ -37,13 +37,21 @@ def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
             f.write("{},\n".format(str(list(neighbors))[1:-1]))
     f.close()
 
-
+#JJJ modified
 def in_probes_dir(file):
-    return os.path.join(this_file_path, "probes", file)
+    probe_path1 = os.getenv('HS2_PROBE_PATH', this_file_path)    
+    probe_path = os.path.join(probe_path1, "probes")
+    if not os.path.exists(probe_path):
+        os.mkdir(probe_path)
+    return os.path.join(probe_path, file)
 
-
+#JJJ modified
 def in_probe_info_dir(file):
-    return os.path.join(this_file_path, "probe_info", file)
+    probe_path1 = os.getenv('HS2_PROBE_PATH', this_file_path)    
+    probe_path = os.path.join(probe_path1, "probe_info")
+    if not os.path.exists(probe_path):
+        os.mkdir(probe_path)
+    return os.path.join(probe_path, file)
 
 
 class NeuralProbe(object):
