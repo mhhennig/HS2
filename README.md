@@ -42,18 +42,20 @@ The other dependencies will be installed by the installer.
 
 If your system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
 
-### Installation via pip
+### All operative systems - Installation via pip
 
-We suggest you use Anaconda if you don't have a favourite Python installed yet. We also recommend installing the code in a virtual environment (see below). A *tentative* pip distribution is available as follows:
+We suggest you use Anaconda if you don't have a favourite Python installed yet. We also recommend installing the code in a virtual environment (see below in the "from source" sections).
+
+A pip distribution is available and can be installed as follows:
 
     pip install numpy scipy
-    pip install --index-url https://test.pypi.org/simple/ herdingspikes
+    pip install herdingspikes
 
-**Note:** If you're using python 3.5.x or older, you will additionally need to install cython before herdingspikes.
+**Note:** HerdingSpikes is tested on Python 3.5 and above. It *may* work on Python 3.0-3.4.
 
 To install from source, clone this repository and follow the instructions below.
 
-### Linux/Mac
+### Linux/Mac - from source
 
 We suggest you install the code in a virtual environment. You can create one by running
 
@@ -68,7 +70,7 @@ The module can automatically be installed, including all dependencies, by runnin
     python setup.py install
 
 
-### Windows
+### Windows - from source
 
 #### 1. Creating a Python virtual environment
 
@@ -79,7 +81,7 @@ Once [Anaconda](https://www.anaconda.com/download/#windows) is installed, create
     conda install -n C:\Users\HS2env numpy
 
 
-##### Option 2: Command line
+##### Option 2: Command line (from source)
 
 Alternatively, open the ``Anaconda Prompt`` and type:
 
