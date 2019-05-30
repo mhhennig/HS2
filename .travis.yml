@@ -6,7 +6,7 @@ python:
 # command to install dependencies
 install:
   - pip install numpy scipy matplotlib
-  - python setup.py install
+  - pip install herdingspikes
 # command to run tests
 script:
   - pytest
