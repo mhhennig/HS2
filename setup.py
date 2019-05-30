@@ -6,7 +6,7 @@ from distutils.version import LooseVersion
 
 FOLDER = "herdingspikes/detection_localisation/"
 
-use_cython = True
+use_cython = False
 # do not use it if cython is not installed
 try:
     from Cython.Build import cythonize
@@ -183,7 +183,7 @@ setup(
     setup_requires=['numpy >= 1.14', 'scipy'],
     install_requires=['h5py', 'matplotlib >= 2.0',
                       'pandas', 'scikit-learn >= 0.19.1'],
-    python_requires='>=3.4',
+    python_requires='>=3.5',
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
