@@ -1,5 +1,6 @@
 from setuptools import setup, Extension, find_packages
 import os
+from shutil import copyfile
 import platform
 import numpy
 from distutils.version import LooseVersion
@@ -17,11 +18,11 @@ except ImportError:
 # the following trick allows us to have both compiled versions, so that the user
 # is not forced to compile the .pyx.
 if LooseVersion(platform.python_version()) < LooseVersion('3.6.0'):
-    os.rename(os.path.join(FOLDER, "detect3.5.cpp"),
-              os.path.join(FOLDER, "detect.cpp"))
+    copyfile(os.path.join(FOLDER, "detect3.5.cpp"),
+             os.path.join(FOLDER, "detect.cpp"))
 else:
-    os.rename(os.path.join(FOLDER, "detect3.6.cpp"),
-              os.path.join(FOLDER, "detect.cpp"))
+    copyfile(os.path.join(FOLDER, "detect3.6.cpp"),
+             os.path.join(FOLDER, "detect.cpp"))
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -248,3 +249,5 @@ setup(
         'Source': 'https://github.com/mhhennig/HS2/',
     },
 )
+
+os.remove(os.path.join(FOLDER, "detect.cpp"))
