@@ -168,6 +168,25 @@ given.
   Parameters::inner_neighbor_matrix = createInnerNeighborMatrix();
   Parameters::outer_neighbor_matrix = createOuterNeighborMatrix();
   fillNeighborLayerMatrices();
+  int min_inner_channels = 1000;
+  int max_inner_channels = 0;
+  for (int i = 0; i < Parameters::num_channels; i++) {
+    int num_inner_channels = 0;
+    for (int j = 0; j < Parameters::max_neighbors; j++) {
+      if(Parameters::inner_neighbor_matrix[i][j] != -1) {
+        num_inner_channels = num_inner_channels + 1;
+      }
+    }
+    if(num_inner_channels > max_inner_channels) {
+      max_inner_channels = num_inner_channels;
+    }
+    if(num_inner_channels < min_inner_channels) {
+      min_inner_channels = num_inner_channels;
+    }
+  }
+  cout << "Min Inner Channels: " << min_inner_channels << endl;
+  cout << "Max Inner Channels: " << max_inner_channels << endl;
+  
   if (Parameters::debug) {
     for (int i = 0; i < Parameters::num_channels; i++) {
       cout << "Channel: " << i << endl;
