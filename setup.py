@@ -183,7 +183,8 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     setup_requires=['numpy >= 1.14', 'scipy'],
     install_requires=['h5py', 'matplotlib >= 2.0',
-                      'pandas', 'scikit-learn >= 0.19.1'],
+                      'pandas', 'scikit-learn >= 0.19.1',
+                      'joblib', 'six'],
     python_requires='>=3.5',
 
     # List additional groups of dependencies here (e.g. development
