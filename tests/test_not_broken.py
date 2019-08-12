@@ -9,7 +9,7 @@ import urllib.request
 # raw data location
 DATADIR = "data/"
 DATA = os.path.join(DATADIR, "visapy_data.npy")
-URL = "https://www.dropbox.com/s/za017ro7ff88a5e/visapy_data.npy?dl=0"
+URL = "https://www.dropbox.com/s/za017ro7ff88a5e/visapy_data.npy"
 
 # detection parameters
 FILEDIR = "results/"
