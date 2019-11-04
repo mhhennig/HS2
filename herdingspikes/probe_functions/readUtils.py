@@ -33,9 +33,8 @@ def getHDF5params(rf):
     file_format = rf['3BData'].attrs.get('Version')
     if file_format == 100:
         nRecCh = len(rf['3BData/Raw'][0])
-        # raise Warning('This may go wrong!')
-    elif file_format == 101:
-        nRecCh = int(1.*rf['3BData/Raw'].shape[0]/nFrames)
+    elif (file_format == 101) or (file_format == 102):
+        nRecCh = int(1. * rf['3BData/Raw'].shape[0] / nFrames)
     else:
         raise Exception('Unknown data file format.')
 
