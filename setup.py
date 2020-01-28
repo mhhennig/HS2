@@ -5,7 +5,29 @@ import platform
 import numpy
 from distutils.version import LooseVersion
 
+import sys
+
 FOLDER = "herdingspikes/detection_localisation/"
+
+
+def get_pkg_version():
+    version = {}
+    version['__file__'] = __file__
+
+    # Because __init__.py in herdingspikes loads packages we may not have installed yet, we need to parse version.py directly
+    # (see https://packaging.python.org/guides/single-sourcing-package-version/)
+    with open("herdingspikes/version.py") as fp:
+        exec(fp.read(), version)
+
+    # Store the commit hash for when we don't have access to git
+    with open("herdingspikes/.commit_version", 'w') as cf:
+        cf.write(version['__commit__'])
+
+    # Public versions should not contain local identifiers (inspired from mypy)
+    if any(cmd in sys.argv[1:] for cmd in ('install', 'bdist_wheel', 'sdist')):
+        return version['base_version']
+    else:
+        return version['__version__']
 
 use_cython = False
 # do not use it if cython is not installed
@@ -86,7 +108,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.3.3',  # Required
+    version=get_pkg_version(),  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -206,7 +228,8 @@ setup(
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     package_data={  # Optional
-        'herdingspikes': ['probe_info/neighbormatrix*',  # probe data
+        'herdingspikes': ['.commit_version', 
+                          'probe_info/neighbormatrix*',  # probe data
                           'probe_info/positions*',
                           # needed for setup's long_description
                           '../README.md',
@@ -252,3 +275,4 @@ setup(
 )
 
 os.remove(os.path.join(FOLDER, "detect.cpp"))
+os.remove("herdingspikes/.commit_version")
