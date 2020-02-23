@@ -132,7 +132,8 @@ def detectData(probe, file_name, to_localize, sf, thres,
     t0 = 0
     while t0 + tInc + tCut2 <= nFrames:
         t1 = t0 + tInc
-        print('# Analysing frames from ' + str(t0-tCut) + ' to '+str(t1+tCut2)+\
+        if verbose:
+            print('# Analysing frames from ' + str(t0-tCut) + ' to '+str(t1+tCut2)+\
               '  ({:.1f}%)'.format(100*t0/nFrames))
         #sys.stdout.flush()
         # slice data
