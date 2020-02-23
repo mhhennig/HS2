@@ -1,5 +1,6 @@
 from setuptools import setup, Extension, find_packages
 import os
+import io
 from shutil import copyfile
 import platform
 import numpy
@@ -49,7 +50,7 @@ else:
 
 here = os.path.abspath(os.path.dirname(__file__))
 # Get the long description from the README file
-with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 sources = ["SpkDonline.cpp",
@@ -228,7 +229,7 @@ setup(
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     package_data={  # Optional
-        'herdingspikes': ['.commit_version', 
+        'herdingspikes': ['.commit_version',
                           'probe_info/neighbormatrix*',  # probe data
                           'probe_info/positions*',
                           # needed for setup's long_description
