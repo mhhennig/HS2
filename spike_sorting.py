@@ -12,7 +12,7 @@ file_name = 'ProcessedSpikesNeuropixel'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Spike detection and clustering using Heardingspikes')
-    parser.add_argument('-i', '--input', action='store_true', default="rawDataSample.bin",
+    parser.add_argument('-i', '--input', type=str,
         help="path to binary file to read from, default is rawDataSample.bin")
 
     args = parser.parse_args()
