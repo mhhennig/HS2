@@ -28,11 +28,6 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
         void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
         void FinishDetection()
 
-
-#def read_flat(d, t0, t1, nch):
-#  return d[t0*nch:t1*nch].astype(ctypes.c_short)
-
-
 def detectData(probe, file_name, to_localize, sf, thres,
                cutout_start, cutout_end,
                maa=5, maxsl=None, minsl=None,
@@ -72,27 +67,21 @@ def detectData(probe, file_name, to_localize, sf, thres,
         for channel in masked_channel_list:
             masked_channels[channel] = 0
 
-
-
-
     print("# Sampling rate: " + str(sf))
-
     if to_localize:
         print("# Localization On")
     else:
         print("# Localization Off")
-
     if verbose:
         print("# Writing out extended detection info")
-
     print("# Number of recorded channels: " + str(num_channels))
+    if num_channels<20:
+        print("# Few recording channels: not subtracing mean from activity")
     print("# Analysing frames: " + str(nFrames) + "; Seconds: " + str(nFrames/sf))
     print("# Frames before spike in cutout: " + str(cutout_start))
     print("# Frames after spike in cutout: " + str(cutout_end))
 
     cdef Detection * det = new Detection()
-
-
 
     # set tCut, tCut2 and tInc
     tCut = cutout_start + maxsl
@@ -142,7 +131,7 @@ def detectData(probe, file_name, to_localize, sf, thres,
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
-        if num_channels>1:
+        if num_channels>=20:
             det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
