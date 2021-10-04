@@ -557,7 +557,7 @@ class RecordingExtractor(NeuralProbe):
             self.d.get_traces(
                 channel_ids=self.d.get_channel_ids(), start_frame=t0, end_frame=t1
             )
-            .T.ravel()
+            .ravel()
             .astype(ctypes.c_short)
         )
 
