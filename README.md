@@ -5,6 +5,13 @@
 
 ![Spikes](documentation/pictures/spikes.png)
 
+---
+**Update: 22 Oct 2021**
+
+This is the latest version 0.3.99, which introduces compatbility with [SpikeInterface](https://github.com/SpikeInterface/spikeinterface) version 0.90+ (note version 0.10 is no longer supported). SpikeInterface wraps many spike sorters, can read almost any file format and contains other useful functionality into a single code base. We will soon transition to a version of Herding Spikes that fully integrates with SpikeInterface. The example notebooks in this repository illustrate the main HS2 functionality, but do not run at the moment as the data links have become stale. 
+
+---
+
 ## Software for high density electrophysiology
 
 This software provides functionality for the detection, localisation and clustering of spike data from dense multielectrode arrays based on the methods described in the following papers:
@@ -17,12 +24,14 @@ This implementation is highly efficient, spike detection and localisation runs i
 
 Since we believe publicly funded research code should be free and open, all code is released under GPL-3.0.
 
+
+
 ### Supported systems  <a name="systems"></a>
 
 - [3Brain](http://3brain.com/) BIOCAM and BIOCAM X
 - [Neuropixel array](https://www.ucl.ac.uk/neuropixels)
 - [ETH MEA1K](https://www.bsse.ethz.ch/bel/research/cmos-microsystems/microelectrode-systems.html)
-- [128 channel Neuroseeker array](http://neuroseeker.eu/)
+- any data formast supported by [SpikeInterface](https://github.com/SpikeInterface/spikeinterface)
 
 ## Contributors, alphabetical <a name="people"></a>
 
