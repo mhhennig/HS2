@@ -1,4 +1,6 @@
+# Various helper functions to read from BioCam data files
 # 3Brain 3rd gen .brw (HDF5)
+
 import h5py
 import ctypes
 
@@ -8,10 +10,8 @@ import numpy as np
 def read_flat(d, t0, t1, nch):
     return d[t0*nch:t1*nch].astype(ctypes.c_short)
 
-
 def openHDF5file(path, **kwargs):
     return h5py.File(path, 'r', **kwargs)
-
 
 def getHDF5params(rf):
     # Read recording variables
@@ -51,12 +51,10 @@ def getHDF5params(rf):
 
     return (nFrames, samplingRate, nRecCh, chIndices, file_format, signalInv)
 
-
 def readHDF5(rf, t0, t1):
     ''' In order to use the algorithms designed for the old format,
     the input data must be inverted.'''
     return 4095 - rf['3BData/Raw'][t0:t1].flatten().astype(ctypes.c_short)
-
 
 def readHDF5t_100(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
@@ -69,7 +67,6 @@ def readHDF5t_100(rf, t0, t1, nch):
         return 2048 - rf['3BData/Raw'][t1:t0].flatten(
                     'F').astype(ctypes.c_short)
 
-
 def readHDF5t_100_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
@@ -80,7 +77,6 @@ def readHDF5t_100_i(rf, t0, t1, nch):
         raise Exception('Reading backwards? Not sure about this.')
         return rf['3BData/Raw'][t1:t0].flatten(
                     'F').astype(ctypes.c_short) - 2048
-
 
 def readHDF5t_101(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
@@ -96,7 +92,6 @@ def readHDF5t_101(rf, t0, t1, nch):
         d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
 
-
 def readHDF5t_101_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
@@ -110,29 +105,3 @@ def readHDF5t_101_i(rf, t0, t1, nch):
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)
         d[np.where(np.abs(d) > 1500)[0]] = 0
         return d
-
-
-def getNeuroSeekerParams(rf, pipette=False):
-    if pipette:
-        return rf['kampff_probe_data'].attrs['no_frames'], \
-            rf.attrs['frequency'], 1, [1]
-
-    return (rf['kampff_probe_data'].attrs['no_frames'],
-            rf.attrs['frequency'],
-            rf['kampff_probe_data'].attrs['no_channels'],
-            np.arange(rf['kampff_probe_data'].attrs['no_channels']),
-            rf.attrs['probe_closest_electrode'])
-
-
-def readNeuroSeekerProbe(rf, t0, t1):
-    return (rf['kampff_probe_data'][t0:t1].flatten() - 20000).astype(
-        ctypes.c_short)
-
-
-def readNeuroSeekerPipette(rf, t0, t1):
-    return 50000 - rf['kampff_pipette_data'][t0:t1].flatten()
-
-
-def readSiNAPS_S1Probe(raw_data, t0, t1):
-    raw_traces = raw_data[t0:t1]
-    return raw_traces.flatten('C').astype(ctypes.c_short)
