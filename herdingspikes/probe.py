@@ -2,12 +2,10 @@ from __future__ import division
 import numpy as np
 import json
 from matplotlib import pyplot as plt
-from .probe_functions.readUtils import read_flat, readSiNAPS_S1Probe
+from .probe_functions.readUtils import read_flat
 from .probe_functions.readUtils import openHDF5file, getHDF5params
 from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
 from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
-from .probe_functions.readUtils import getNeuroSeekerParams
-from .probe_functions.readUtils import readNeuroSeekerProbe
 from .probe_functions.neighborMatrixUtils import createNeighborMatrix
 import h5py
 import ctypes
