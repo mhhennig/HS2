@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-__version__ = '0.3.99'
+__version__ = '0.3.100'
 base_version = __version__
 
 __commit__ = ''
