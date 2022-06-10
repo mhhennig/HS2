@@ -117,7 +117,7 @@ class HSDetection(object):
         os.makedirs(file_directory_name, exist_ok=True)
 
         if out_file_name[-4:] == ".bin":
-            file_path = file_directory_name + out_file_name
+            file_path = os.path.join(file_directory_name, out_file_name)
             self.out_file_name = file_path
         else:
             file_path = os.path.join(file_directory_name, out_file_name)
