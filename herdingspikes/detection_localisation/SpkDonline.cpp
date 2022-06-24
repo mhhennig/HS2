@@ -90,21 +90,21 @@ void Detection::SetInitialParams(float * pos_mtx,
       cutout_start, cutout_end, maxsl, decay_filtering, verbose);
 }
 
-void Detection::MedianVoltage(short *vm) // easier to interpret, though
+void Detection::MedianVoltage(short *vm, int tInc, int tCut) // easier to interpret, though
                                          // it takes a little longer to
                                          // run, but I'm sure there is
                                          // a faster method in C++ for
                                          // computing the median
 { // otherwise could try to take the mean also (have to ignore channels out of
   // the linear regime then) as signals are about 15% correlated
-  for (int t = 0; t < tInc; t++) { // this function wastes most of the time
+  for (int t = tCut; t < tInc + tCut; t++) { // this function wastes most of the time
     for (int i = 0; i < NChannels; i++) { // loop across channels
         if (masked_channels[i] != 0) {
-          Slice[i] = vm[i + t * NChannels];   // vm [i] [t];
+          Slice[i] = vm[i + t * NChannels];   // vm [i] [t]; // contains rubbish data in sort if masked? (Rickey)
         }
     }
-    sort(Slice, Slice + sizeof Slice / sizeof Slice[0]);
-    Aglobal[t] = Slice[NChannels / 2];
+    sort(Slice, Slice + NChannels);
+    Aglobal[t - tCut] = Slice[NChannels / 2];
   }
 }
 

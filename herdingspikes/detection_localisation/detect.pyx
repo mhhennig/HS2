@@ -23,7 +23,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, \
                               int maa, int ahpthr, int maxsl, int minsl, bool decay_filtering, bool verbose)
-        void MedianVoltage(short * vm)
+        void MedianVoltage(short * vm, int tInc, int tCut)
         void MeanVoltage(short * vm, int tInc, int tCut)
         void Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int maxFramesProcessed)
         void FinishDetection()
