@@ -37,7 +37,7 @@ void Detection::InitDetection(long nFrames, int sf, int NCh,
 
 }
 
-void Detection::SetInitialParams(int * pos_mtx,
+void Detection::SetInitialParams(float * pos_mtx,
                                 int * neigh_mtx, int num_channels,
                                 int spike_peak_duration,
                                 string file_name, int noise_duration,
@@ -90,21 +90,21 @@ void Detection::SetInitialParams(int * pos_mtx,
       cutout_start, cutout_end, maxsl, decay_filtering, verbose);
 }
 
-void Detection::MedianVoltage(short *vm) // easier to interpret, though
+void Detection::MedianVoltage(short *vm, int tInc, int tCut) // easier to interpret, though
                                          // it takes a little longer to
                                          // run, but I'm sure there is
                                          // a faster method in C++ for
                                          // computing the median
 { // otherwise could try to take the mean also (have to ignore channels out of
   // the linear regime then) as signals are about 15% correlated
-  for (int t = 0; t < tInc; t++) { // this function wastes most of the time
+  for (int t = tCut; t < tInc + tCut; t++) { // this function wastes most of the time
     for (int i = 0; i < NChannels; i++) { // loop across channels
         if (masked_channels[i] != 0) {
-          Slice[i] = vm[i + t * NChannels];   // vm [i] [t];
+          Slice[i] = vm[i + t * NChannels];   // vm [i] [t]; // contains rubbish data in sort if masked? (Rickey)
         }
     }
-    sort(Slice, Slice + sizeof Slice / sizeof Slice[0]);
-    Aglobal[t] = Slice[NChannels / 2];
+    sort(Slice, Slice + NChannels);
+    Aglobal[t - tCut] = Slice[NChannels / 2];
   }
 }
 
@@ -117,7 +117,7 @@ void Detection::MeanVoltage(short *vm, int tInc,
   int Vsum;
 
   for (int t = tCut; t < tInc + tCut; t++) {
-    n = 1; // constant offset doesn't matter, avoid zero division
+    n = 0; // no zero division problem unless all channels are masked
     Vsum = 0;
     for (int i = 0; i < NChannels; i++) { // loop across channels
       if (masked_channels[i] != 0) {
@@ -136,8 +136,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
   SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut, tCut2);
 
   ++iterations;
-  // Does this need to end at tInc + tCut? (Cole+Martino)
-  for (t = tCut; t < tInc;
+  // Does this need to end at tInc + tCut? (Cole+Martino) // Yes (Rickey)
+  for (t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     currQmsPosition += 1;
@@ -164,7 +164,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
         Qms[i][currQmsPosition % (MaxSl + Parameters::spike_peak_duration)] = Qm[i];
 
         a = (vm[i + t * NChannels] - Aglobal[t - tCut]) * Ascale -
-            Qm[i]; // should tCut be subtracted here??
+            Qm[i]; // should tCut be subtracted here?? // this is correct now
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) {                     // Sl frames after peak value
           Sl[i] = (Sl[i] + 1) % (MaxSl + 1); // increment Sl[i]
