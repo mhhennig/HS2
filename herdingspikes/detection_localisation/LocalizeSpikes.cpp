@@ -181,11 +181,11 @@ tuple<float, float> centerOfMass(deque<tuple<int, int>> centered_amps) {
   // int curr_amp;
   float X = 0;
   float Y = 0;
-  int X_numerator = 0;
-  int Y_numerator = 0;
+  float X_numerator = 0;
+  float Y_numerator = 0;
   int denominator = 0;
-  int X_coordinate;
-  int Y_coordinate;
+  float X_coordinate;
+  float Y_coordinate;
   int channel;
   int weight; // contains the amplitudes for the center of mass calculation.
               // Updated each localization
