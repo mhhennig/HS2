@@ -136,8 +136,8 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
   SpikeHandler::loadRawData(vm, tCut, iterations, maxFramesProcessed, tCut, tCut2);
 
   ++iterations;
-  // Does this need to end at tInc + tCut? (Cole+Martino)
-  for (t = tCut; t < tInc;
+  // Does this need to end at tInc + tCut? (Cole+Martino) // Yes (Rickey)
+  for (t = tCut; t < tInc + tCut;
        t++) { // loop over data, will be removed for an online algorithm
               // SPIKE DETECTION
     currQmsPosition += 1;
@@ -164,7 +164,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
         Qms[i][currQmsPosition % (MaxSl + Parameters::spike_peak_duration)] = Qm[i];
 
         a = (vm[i + t * NChannels] - Aglobal[t - tCut]) * Ascale -
-            Qm[i]; // should tCut be subtracted here??
+            Qm[i]; // should tCut be subtracted here?? // this is correct now
         // TREATMENT OF THRESHOLD CROSSINGS
         if (Sl[i] > 0) {                     // Sl frames after peak value
           Sl[i] = (Sl[i] + 1) % (MaxSl + 1); // increment Sl[i]
