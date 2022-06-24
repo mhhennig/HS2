@@ -117,7 +117,7 @@ void Detection::MeanVoltage(short *vm, int tInc,
   int Vsum;
 
   for (int t = tCut; t < tInc + tCut; t++) {
-    n = 1; // constant offset doesn't matter, avoid zero division
+    n = 0; // no zero division problem unless all channels are masked
     Vsum = 0;
     for (int i = 0; i < NChannels; i++) { // loop across channels
       if (masked_channels[i] != 0) {
