@@ -18,7 +18,7 @@ cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
         void InitDetection(long nFrames, int sf, int NCh, long ti, long int * Indices, int agl)
-        void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels,
+        void SetInitialParams(float * pos_mtx, int * neigh_mtx, int num_channels,
                               int spike_peak_duration, string file_name, int noise_duration,
                               float noise_amp_percent, float inner_radius, int* _masked_channels, \
                               int max_neighbors, int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, \
@@ -101,7 +101,7 @@ def detectData(probe, file_name, to_localize, sf, thres,
     # initialise detection algorithm
     det.InitDetection(nFrames, sf, nRecCh, tInc, &Indices[0], 0)
 
-    cdef np.ndarray[int, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_int)
+    cdef np.ndarray[float, ndim=2, mode = "c"] position_matrix = np.zeros((nRecCh,2), dtype=ctypes.c_float)
     for i,p in enumerate(probe.positions):
       position_matrix[i,0] = p[0]
       position_matrix[i,1] = p[1]

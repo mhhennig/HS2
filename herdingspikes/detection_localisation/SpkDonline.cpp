@@ -37,7 +37,7 @@ void Detection::InitDetection(long nFrames, int sf, int NCh,
 
 }
 
-void Detection::SetInitialParams(int * pos_mtx,
+void Detection::SetInitialParams(float * pos_mtx,
                                 int * neigh_mtx, int num_channels,
                                 int spike_peak_duration,
                                 string file_name, int noise_duration,

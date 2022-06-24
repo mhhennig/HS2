@@ -62,7 +62,7 @@ public:
   Detection();
   ~Detection();
   void InitDetection(long nFrames, int sf, int NCh, long ti, long int *Indices, int agl);
-  void SetInitialParams(int * pos_mtx, int * neigh_mtx, int num_channels, int spike_peak_duration,
+  void SetInitialParams(float * pos_mtx, int * neigh_mtx, int num_channels, int spike_peak_duration,
                         string file_name, int noise_duration, float noise_amp_percent, float inner_radius, int* _masked_channels, int max_neighbors,
                         int num_com_centers, bool to_localize, int thres, int cutout_start, int cutout_end, int maa, int ahpthr, int maxsl, int minsl,
                         bool decay_filtering, bool verbose);
