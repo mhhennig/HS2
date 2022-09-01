@@ -59,9 +59,6 @@ def getHDF5params_brw4(rf):
     signalInv = exp_setting['ValueConverter']['ScaleFactor']
     file_format = 'brw4'
 
-    # Read chip variable
-    nCols = 64
-
     # Get the actual number of channels used in the recording
     nRecCh = len(rf['Well_A1']['StoredChIdxs'])
 
@@ -70,12 +67,6 @@ def getHDF5params_brw4(rf):
           exp_setting['ValueConverter']['MaxAnalogValue'])
     # Compute indices
     chIndices = rf['Well_A1']['StoredChIdxs'][()].tolist()
-    
-    # Name channels ([0..4095] for fullarray files)
-    #chIndices = [(x-1) + (y-1)*nCols for (y, x) in rawIndices]
-    #print()
-    # chIndices = [(x-1) + (y-1)*nCols for (x,y) in rawIndices]
-    # Swap X and Y (old format)
 
     return (nFrames, samplingRate, nRecCh, chIndices, file_format, signalInv)
 
