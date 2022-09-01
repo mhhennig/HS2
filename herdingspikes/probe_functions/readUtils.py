@@ -3,7 +3,7 @@
 
 import h5py
 import ctypes
-
+import json
 import numpy as np
 
 
@@ -51,6 +51,34 @@ def getHDF5params(rf):
 
     return (nFrames, samplingRate, nRecCh, chIndices, file_format, signalInv)
 
+def getHDF5params_brw4(rf):
+
+    exp_setting = json.loads(rf['ExperimentSettings'].asstr()[0])
+    nFrames = int((len(rf['Well_A1']['Raw']))/len(rf['Well_A1']['StoredChIdxs']))
+    samplingRate = exp_setting['TimeConverter']['FrameRate']
+    signalInv = exp_setting['ValueConverter']['ScaleFactor']
+    file_format = 'brw4'
+
+    # Read chip variable
+    nCols = 64
+
+    # Get the actual number of channels used in the recording
+    nRecCh = len(rf['Well_A1']['StoredChIdxs'])
+
+    print('# 3Brain data format:', 'BRW v4.x', 'signal inversion', signalInv)
+    print('#       signal range: ', exp_setting['ValueConverter']['MinAnalogValue'], '- ',
+          exp_setting['ValueConverter']['MaxAnalogValue'])
+    # Compute indices
+    chIndices = rf['Well_A1']['StoredChIdxs'][()].tolist()
+    
+    # Name channels ([0..4095] for fullarray files)
+    #chIndices = [(x-1) + (y-1)*nCols for (y, x) in rawIndices]
+    #print()
+    # chIndices = [(x-1) + (y-1)*nCols for (x,y) in rawIndices]
+    # Swap X and Y (old format)
+
+    return (nFrames, samplingRate, nRecCh, chIndices, file_format, signalInv)
+
 def readHDF5(rf, t0, t1):
     ''' In order to use the algorithms designed for the old format,
     the input data must be inverted.'''
@@ -82,6 +110,20 @@ def readHDF5t_101(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
         d = rf['3BData/Raw'][nch*t0:nch*t1].reshape(
+            (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
+        d[np.abs(d) > 1500] = 0
+        return d
+    else:  # Reversed read
+        raise Exception('Reading backwards? Not sure about this.')
+        d = rf['3BData/Raw'][nch*t1:nch*t0].reshape(
+            (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
+        d[np.where(np.abs(d) > 1500)[0]] = 0
+        return d
+
+def readHDF5_brw4(rf, t0, t1, nch):
+    ''' Transposed version for the interpolation method. '''
+    if t0 <= t1:
+        d = rf['Well_A1/Raw'][nch*t0:nch*t1].reshape(
             (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
         d[np.abs(d) > 1500] = 0
         return d
