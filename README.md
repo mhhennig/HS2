@@ -24,8 +24,6 @@ This implementation is highly efficient, spike detection and localisation runs i
 
 Since we believe publicly funded research code should be free and open, all code is released under GPL-3.0.
 
-
-
 ### Supported systems  <a name="systems"></a>
 
 - [3Brain](http://3brain.com/) BIOCAM and BIOCAM X
@@ -73,13 +71,13 @@ Then run:
 
 #### 1. Visual Studio
 
-The C++ code in Herding Spikes requires the Microsoft C++ Build tools. Install them from [https://visualstudio.microsoft.com/visual-cpp-build-tools/](https://visualstudio.microsoft.com/visual-cpp-build-tools/). For a minimal setup, choose ``Desktop development with C++`` 
+The C++ code in Herding Spikes requires the Microsoft C++ Build tools. Install them from [https://visualstudio.microsoft.com/visual-cpp-build-tools/](https://visualstudio.microsoft.com/visual-cpp-build-tools/). For a minimal setup, choose ``Desktop development with C++``:
 
-![Spikes](documentation/pictures/vs1.png)
+<img src="documentation/pictures/vs1.png" width="240" />
 
 and select these packages:
 
-![Spikes](documentation/pictures/vs2.png)
+<img src="documentation/pictures/vs2.png" width="240" />
 
 #### 2. Python and Herding Spikes
 
