@@ -6,7 +6,7 @@
 ![Spikes](documentation/pictures/spikes.png)
 
 ---
-**Update: 22 Oct 2021**
+**Update**
 
 This is the latest version 0.3.99, which introduces compatbility with [SpikeInterface](https://github.com/SpikeInterface/spikeinterface) version 0.90+ (note version 0.10 is no longer supported). SpikeInterface wraps many spike sorters, can read almost any file format and contains other useful functionality into a single code base. We will soon transition to a version of Herding Spikes that fully integrates with SpikeInterface. The example notebooks in this repository illustrate the main HS2 functionality, but do not run at the moment as the data links have become stale. 
 
@@ -46,10 +46,7 @@ Since we believe publicly funded research code should be free and open, all code
 
 ## Quick start <a name="quickstart"></a>
 
-The code has been tested with Python version 3.6. It is essential `numpy` is available before installing.
-The other dependencies will be installed by the installer.
-
-If your system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
+The code has been tested with Python version 3.6 and above. If your system does not have Python pre-installed, the [Anaconda distribution](https://www.anaconda.com/download/) may be used.
 
 ### All operative systems - Installation via pip
 
@@ -57,87 +54,40 @@ We suggest you use Anaconda if you don't have a favourite Python installed yet. 
 
 A pip distribution is available and can be installed as follows:
 
-    pip install numpy scipy
     pip install herdingspikes
-
-**Note:** HerdingSpikes is tested on Python 3.5 and above. It *may* work on Python 3.0-3.4.
 
 To install from source, clone this repository and follow the instructions below.
 
 ### Linux/Mac - from source
 
-We suggest you install the code in a virtual environment. You can create one by running
+The module can automatically be installed, including all dependencies, by cloning this repository:
 
-    python3 -m venv --system-site-packages desired/location/HS2venv
-    source desired/location/HS2venv/bin/activate
-
-You can omit `--system-site-packages` if you don't want to use the local versions of common Python libraries. You will need to `activate` whenever you're using the module.
-
-The module can automatically be installed, including all dependencies, by running
-
+    git clone https://github.com/mhhennig/HS2.git
+    
+Then run:
+    
     pip install numpy scipy
     python setup.py install
 
+### Windows
 
-### Windows - from source
+#### 1. Visual Studio
 
-#### 1. Creating a Python virtual environment
+The C++ code in Herding Spikes requires the Microsoft C++ Build tools. Install them from [https://visualstudio.microsoft.com/visual-cpp-build-tools/](https://visualstudio.microsoft.com/visual-cpp-build-tools/). For a minimal setup, choose ``Desktop development with C++`` 
 
-##### Option 1: GUI
+![Spikes](documentation/pictures/vs1.png)
 
-Once [Anaconda](https://www.anaconda.com/download/#windows) is installed, create and activate a virtual environment called ``HS2env``. This can be done with the ``Anaconda Navigator`` per mouse click. To make sure ``numpy`` and ``Cython`` are available, type
+and select these packages:
 
-    conda install -n C:\Users\HS2env numpy
+![Spikes](documentation/pictures/vs2.png)
 
+#### 2. Python and Herding Spikes
 
-##### Option 2: Command line (from source)
+Install [Anaconda](https://www.anaconda.com/download/#windows) ands create a Python environment. This can be done with the ``Anaconda Navigator`` per mouse click.
 
-Alternatively, open the ``Anaconda Prompt`` and type:
+Then opoen a ternminal in the newly created environment and type
 
-    conda search "^python$"
-
-This will display a list of available python versions. Here we choose 3.6.5:
-
-    conda create -n C:\Users\HS2env python=3.6.5 anaconda
-
-This environment should be activated every time HS2 is used with the command
-
-    conda activate C:\Users\HS2env
-
-To make sure ``numpy`` is available, type
-
-    conda install -n C:\Users\HS2env numpy
-
-#### 2. Installing a C++ Compiler
-
-HS2 contains fast C++ code, which requires a compiler. If you don't have a C++ compiler installed, the easiest solution is to download and install the Microsoft Visual Studio Build Tools: [https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017](https://www.visualstudio.com/downloads/#build-tools-for-visual-studio-2017).
-
-
-#### 3. Obtaining and installing HS2
-
-##### Getting the code
-
-**Either** download and uncompress: [https://github.com/mhhennig/HS2/archive/master.zip](https://github.com/mhhennig/HS2/archive/master.zip)
-
-**Or** install ``git`` from [https://git-scm.com/download/win](https://git-scm.com/download/win). Then open a command prompt and type
-
-    git clone https://github.com/mhhennig/HS2.git
-
-This will create a folder ``HS2`` in the current directory. Note that updates can now be simply retrieved by typing ``git pull``.
-
-##### Install
-
-To install, go to the HS2 directory, e.g.
-
-    cd HS2
-
-and type
-
-    python setup.py install
-
-Now HS2 will be available in the current virtual environment.
-
-
+    pip install herdingspikes
 
 ## Example code
 
