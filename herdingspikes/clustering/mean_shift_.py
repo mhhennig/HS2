@@ -239,7 +239,7 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
                                  key=lambda tup: (tup[1], tup[0]),
                                  reverse=True)
     sorted_centers = np.array([tup[0] for tup in sorted_by_intensity])
-    unique = np.ones(len(sorted_centers), dtype=np.bool)
+    unique = np.ones(len(sorted_centers), dtype=bool)
     nbrs = NearestNeighbors(radius=bandwidth,
                             n_jobs=1).fit(sorted_centers)
     for i, center in enumerate(sorted_centers):
@@ -252,7 +252,7 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
 
     # ASSIGN LABELS: a point belongs to the cluster that it is closest to
     nbrs = NearestNeighbors(n_neighbors=1, n_jobs=1).fit(cluster_centers)
-    labels = np.zeros(n_samples, dtype=np.int)
+    labels = np.zeros(n_samples, dtype=int)
     distances, idxs = nbrs.kneighbors(X)
     if cluster_all:
         labels = idxs.flatten()
@@ -301,7 +301,7 @@ def get_bin_seeds(X, bin_size, min_bin_freq=1):
 
     # Select only those bins as seeds which have enough members
     bin_seeds = np.array([point for point, freq in six.iteritems(bin_sizes) if
-                          freq >= min_bin_freq], dtype=np.float32)
+                          freq >= min_bin_freq], dtype=float)
     if len(bin_seeds) == len(X):
         warnings.warn("Binning data failed with provided bin_size=%f,"
                       " using data points as seeds." % bin_size)
