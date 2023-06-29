@@ -2,11 +2,12 @@ from __future__ import division
 import numpy as np
 import json
 from matplotlib import pyplot as plt
-from .probe_functions.readUtils import read_flat
-from .probe_functions.readUtils import openHDF5file, getHDF5params
-from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
-from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
-from .probe_functions.neighborMatrixUtils import createNeighborMatrix
+from probe_functions.readUtils import read_flat
+from probe_functions.readUtils import openHDF5file, getHDF5params, getHDF5params_brw4
+from probe_functions.readUtils import readHDF5t_100, readHDF5t_101
+from probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
+from probe_functions.readUtils import readHDF5_brw4
+from probe_functions.neighborMatrixUtils import createNeighborMatrix
 import h5py
 import ctypes
 import os.path
@@ -171,7 +172,10 @@ class BioCam(NeuralProbe):
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = openHDF5file(data_file_path)
-            params = getHDF5params(self.d)
+            if '3BData' in self.d:
+                params = getHDF5params(self.d)
+            else:
+                params = getHDF5params_brw4(self.d)
             self.nFrames, sfd, self.num_channels, chIndices, file_format, inversion = (
                 params
             )
@@ -187,11 +191,13 @@ class BioCam(NeuralProbe):
                     self.read_function = readHDF5t_100
                 else:
                     self.read_function = readHDF5t_100_i
-            else:
+            elif file_format == 101 or file_format == 102:
                 if inversion == -1:
                     self.read_function = readHDF5t_101_i
                 else:
                     self.read_function = readHDF5t_101
+            elif file_format == 'brw4':
+                self.read_function = readHDF5_brw4
         else:
             print("# Note: data file not specified, setting some defaults")
             self.num_channels = 4096

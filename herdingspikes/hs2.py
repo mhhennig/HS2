@@ -1010,7 +1010,7 @@ class HSClustering(object):
             inds = np.where(self.spikes.cl == cl_t)[0][:max_shapes]
             x, y = self.spikes.x[inds], self.spikes.y[inds]
             ax[0].scatter(
-                x, y, c=plt.cm.hsv(self.clusters["Color"][cl_t]), s=3, alpha=alpha
+                x, y, color=plt.cm.hsv(self.clusters["Color"][cl_t]), s=3, alpha=alpha
             )
             if show_cluster_numbers:
                 ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color="w")
