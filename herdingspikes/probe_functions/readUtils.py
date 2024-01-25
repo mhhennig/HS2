@@ -58,7 +58,7 @@ def getHDF5params_brw4(rf):
     samplingRate = exp_setting['TimeConverter']['FrameRate']
     signalInv = exp_setting['ValueConverter']['ScaleFactor']
     file_format = 'brw4'
-    print('NEW IMPL')
+
     for key in rf:
         if key.startswith("Well_"):
             nFrames = int((len(rf[key]['Raw']))/len(rf[key]['StoredChIdxs']))
