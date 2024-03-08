@@ -2,12 +2,12 @@ from __future__ import division
 import numpy as np
 import json
 from matplotlib import pyplot as plt
-from probe_functions.readUtils import read_flat
-from probe_functions.readUtils import openHDF5file, getHDF5params, getHDF5params_brw4
-from probe_functions.readUtils import readHDF5t_100, readHDF5t_101
-from probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
-from probe_functions.readUtils import readHDF5_brw4
-from probe_functions.neighborMatrixUtils import createNeighborMatrix
+from .probe_functions.readUtils import read_flat
+from .probe_functions.readUtils import openHDF5file, getHDF5params, getHDF5params_brw4
+from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
+from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
+from .probe_functions.readUtils import readHDF5_brw4
+from .probe_functions.neighborMatrixUtils import createNeighborMatrix
 import h5py
 import ctypes
 import os.path

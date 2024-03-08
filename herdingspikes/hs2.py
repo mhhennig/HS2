@@ -1003,7 +1003,7 @@ class HSClustering(object):
             ax.append(plt.subplot2grid((len(clInds) + 1, 4), (i, 3), colspan=1))
             ax[i + 1].axis("off")
             if i > 0:
-                ax[i].get_shared_y_axes().join(ax[i], ax[i + 1])
+                ax[i].sharey(ax[i + 1])
 
         for i_cl, cl_t in enumerate(clInds):
             cx, cy = self.clusters["ctr_x"][cl_t], self.clusters["ctr_y"][cl_t]
