@@ -54,20 +54,23 @@ def getHDF5params(rf):
 def getHDF5params_brw4(rf):
 
     exp_setting = json.loads(rf['ExperimentSettings'].asstr()[0])
-    nFrames = int((len(rf['Well_A1']['Raw']))/len(rf['Well_A1']['StoredChIdxs']))
+    
     samplingRate = exp_setting['TimeConverter']['FrameRate']
     signalInv = exp_setting['ValueConverter']['ScaleFactor']
     file_format = 'brw4'
 
-    # Get the actual number of channels used in the recording
-    nRecCh = len(rf['Well_A1']['StoredChIdxs'])
+    for key in rf:
+        if key.startswith("Well_"):
+            nFrames = int((len(rf[key]['Raw']))/len(rf[key]['StoredChIdxs']))
+            # Get the actual number of channels used in the recording
+            nRecCh = len(rf[key]['StoredChIdxs'])
+            # Compute indices
+            chIndices = rf[key]['StoredChIdxs'][()].tolist()
 
     print('# 3Brain data format:', 'BRW v4.x', 'signal inversion', signalInv)
     print('#       signal range: ', exp_setting['ValueConverter']['MinAnalogValue'], '- ',
           exp_setting['ValueConverter']['MaxAnalogValue'])
-    # Compute indices
-    chIndices = rf['Well_A1']['StoredChIdxs'][()].tolist()
-
+    
     return (nFrames, samplingRate, nRecCh, chIndices, file_format, signalInv)
 
 def readHDF5(rf, t0, t1):
@@ -113,17 +116,19 @@ def readHDF5t_101(rf, t0, t1, nch):
 
 def readHDF5_brw4(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
-    if t0 <= t1:
-        d = rf['Well_A1/Raw'][nch*t0:nch*t1].reshape(
-            (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
-        d[np.abs(d) > 1500] = 0
-        return d
-    else:  # Reversed read
-        raise Exception('Reading backwards? Not sure about this.')
-        d = rf['3BData/Raw'][nch*t1:nch*t0].reshape(
-            (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
-        d[np.where(np.abs(d) > 1500)[0]] = 0
-        return d
+    for key in rf:
+        if key.startswith("Well_"):
+            if t0 <= t1:
+                d = rf[key]['Raw'][nch*t0:nch*t1].reshape(
+                    (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
+                d[np.abs(d) > 1500] = 0
+                return d
+            else:  # Reversed read
+                raise Exception('Reading backwards? Not sure about this.')
+                d = rf['3BData/Raw'][nch*t1:nch*t0].reshape(
+                    (-1, nch), order='C').flatten('C').astype(ctypes.c_short)-2048
+                d[np.where(np.abs(d) > 1500)[0]] = 0
+                return d
 
 def readHDF5t_101_i(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
