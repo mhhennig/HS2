@@ -19,22 +19,29 @@ this_file_path = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_EVENT_LENGTH = 0.5
 DEFAULT_PEAK_JITTER = 0.2
 
-
-def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
-    n_channels = ch_positions.shape[0]
-    # NB: Notice the column, row order in write
-    with open(pos_file, "w") as f:
-        for pos in ch_positions:
-            f.write("{},{},\n".format(pos[0], pos[1]))
-    f.close()
-    # # NB: it is also possible to use metric='cityblock' (Manhattan distance)
+def get_neighbors(radius, ch_positions):
     distances = cdist(ch_positions, ch_positions, metric="euclidean")
-    indices = np.arange(n_channels)
-    with open(neighbor_file, "w") as f:
-        for dist_from_ch in distances:
-            neighbors = indices[dist_from_ch <= radius]
-            f.write("{},\n".format(str(list(neighbors))[1:-1]))
-    f.close()
+    indices = np.arange(ch_positions.shape[0])
+    neighbors = []
+    for dist_from_ch in distances:
+        neighbors.append(indices[dist_from_ch <= radius])
+    return neighbors
+
+# def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
+#     n_channels = ch_positions.shape[0]
+#     # NB: Notice the column, row order in write
+#     with open(pos_file, "w") as f:
+#         for pos in ch_positions:
+#             f.write("{},{},\n".format(pos[0], pos[1]))
+#     f.close()
+#     # # NB: it is also possible to use metric='cityblock' (Manhattan distance)
+#     distances = cdist(ch_positions, ch_positions, metric="euclidean")
+#     indices = np.arange(n_channels)
+#     with open(neighbor_file, "w") as f:
+#         for dist_from_ch in distances:
+#             neighbors = indices[dist_from_ch <= radius]
+#             f.write("{},\n".format(str(list(neighbors))[1:-1]))
+#     f.close()
 
 def in_probes_dir(file):
     probe_path1 = os.getenv('HS2_PROBE_PATH', this_file_path)    
@@ -66,7 +73,7 @@ class NeuralProbe(object):
         spike_peak_duration=None,
         noise_duration=None,
     ):
-        if neighbor_radius is not None:
+        if neighbor_radius is not None and positions_file_path is not None:
             createNeighborMatrix(
                 neighbors_file_path, positions_file_path, neighbor_radius
             )
@@ -86,8 +93,9 @@ class NeuralProbe(object):
         if masked_channels is None:
             self.masked_channels = []
 
-        self.loadPositions(positions_file_path)
-        self.loadNeighbors(neighbors_file_path)
+        if positions_file_path is not None and neighbors_file_path is not None:
+            self.loadPositions(positions_file_path)
+            self.loadNeighbors(neighbors_file_path)
 
     # Load in neighbor and positions files
     def loadNeighbors(self, neighbors_file_path):
@@ -276,8 +284,8 @@ class RecordingExtractor(NeuralProbe):
         peak_jitter=DEFAULT_PEAK_JITTER,
     ):
         self.d = re
-        positions_file_path = in_probe_info_dir("positions_spikeextractor")
-        neighbors_file_path = in_probe_info_dir("neighbormatrix_spikeextractor")
+        # positions_file_path = in_probe_info_dir("positions_spikeextractor")
+        # neighbors_file_path = in_probe_info_dir("neighbormatrix_spikeextractor")
         try:
             self.nFrames = re.get_num_frames()
         except:
@@ -301,9 +309,12 @@ class RecordingExtractor(NeuralProbe):
                 xy = (ch_positions.shape[1] - 2, ch_positions.shape[1] - 1)
             ch_positions = ch_positions[:, xy]
         print("# Generating new position and neighbor files from data file")
-        create_probe_files(
-            positions_file_path, neighbors_file_path, inner_radius, ch_positions
-        )
+        # create_probe_files(
+        #     positions_file_path, neighbors_file_path, inner_radius, ch_positions
+        # )
+        self.positions = ch_positions
+        self.neighbors = get_neighbors(inner_radius, ch_positions)
+        self.max_neighbors = max([len(n) for n in self.neighbors])
 
         NeuralProbe.__init__(
             self,
@@ -311,8 +322,8 @@ class RecordingExtractor(NeuralProbe):
             noise_amp_percent=noise_amp_percent,
             fps=fps,
             inner_radius=inner_radius,
-            positions_file_path=positions_file_path,
-            neighbors_file_path=neighbors_file_path,
+            positions_file_path=None,
+            neighbors_file_path=None,
             masked_channels=masked_channels,
             neighbor_radius=neighbor_radius,
             event_length=event_length,

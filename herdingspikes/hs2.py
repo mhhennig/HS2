@@ -55,7 +55,7 @@ class HSDetection(object):
         minsl=None,
         ahpthr=0,
         out_file_name="ProcessedSpikes",
-        file_directory_name="",
+        file_directory_name="HS2_results",
         decay_filtering=False,
         save_all=False,
         left_cutout_time=1.0,
@@ -185,7 +185,7 @@ class HSDetection(object):
         print("Loaded " + str(self.spikes.shape[0]) + " spikes.")
 
     def DetectFromRaw(
-        self, load=False, nFrames=None, tInc=50000, recording_duration=None
+        self, load=True, nFrames=None, tInc=50000, recording_duration=None
     ):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -474,7 +474,7 @@ class HSClustering(object):
         if clustering_algorithm is None:
             clusterer = MeanShift(**kwargs)
         else:
-            clusterer = clustering_algorithm
+            clusterer = clustering_algorithm(**kwargs)
 
         if cluster_subset is not None:
             print("Using", cluster_subset, "out of", self.spikes.shape[0], "spikes...")

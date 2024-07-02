@@ -44,8 +44,8 @@ def detectData(probe, file_name, to_localize, sf, thres,
     noise_amp_percent = float(probe.noise_amp_percent)
     max_neighbors = int(probe.max_neighbors)
     inner_radius = float(probe.inner_radius)
-    positions_file_path = probe.positions_file_path.encode()
-    neighbors_file_path = probe.neighbors_file_path.encode()
+    # positions_file_path = probe.positions_file_path.encode()
+    # neighbors_file_path = probe.neighbors_file_path.encode()
 
     if nFrames is None:
         nFrames = probe.nFrames
@@ -131,8 +131,8 @@ def detectData(probe, file_name, to_localize, sf, thres,
         else:
             vm = probe.Read(t0-tCut, t1+tCut2)
         # detect spikes
-        if num_channels>=20:
-            det.MeanVoltage( &vm[0], tInc, tCut)
+        # if num_channels>=20:
+        #     det.MeanVoltage( &vm[0], tInc, tCut)
         det.Iterate(&vm[0], t0, tInc, tCut, tCut2, maxFramesProcessed)
         t0 += tInc
         if t0 < nFrames - tCut2:
@@ -148,8 +148,8 @@ def detectData(probe, file_name, to_localize, sf, thres,
             'Localization': to_localize,
             'Masked Channels': masked_channel_list,
             'Associated Results File': file_name,
-            'Positions File Path': positions_file_path,
-            'Neighbors File Path': neighbors_file_path,
+            # 'Positions File Path': positions_file_path,
+            # 'Neighbors File Path': neighbors_file_path,
             'Cutout Length': cutout_start + cutout_end,
             'Advice': 'For more information about detection, load and look at the parameters of the probe object',
         }

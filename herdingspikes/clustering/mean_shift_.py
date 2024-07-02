@@ -29,7 +29,7 @@ from joblib import delayed
 from joblib import effective_n_jobs
 
 def estimate_bandwidth(X, quantile=0.3, n_samples=None, random_state=0,
-                       n_jobs=None):
+                       n_jobs=1):
     """Estimate the bandwidth to use with the mean-shift algorithm.
 
     That this function takes time at least quadratic in n_samples. For large
@@ -117,7 +117,7 @@ def _mean_shift_multi_seeds(my_means, X, nbrs, max_iter):
 
 def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
                min_bin_freq=1, cluster_all=True, max_iter=300,
-               n_jobs=None):
+               n_jobs=-1):
     """Perform mean shift clustering of data using a flat kernel.
 
     Read more in the :ref:`User Guide <mean_shift>`.
@@ -209,9 +209,10 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
 
     ncpus = effective_n_jobs(n_jobs)
     nseeds = int(len(seeds)//ncpus+1)
+    print("requested "+str(n_jobs)+" cpus")
+    print("using "+str(ncpus)+" cpus")
     print("number of seeds: "+str(len(seeds)))
     print("seeds/job: "+str(nseeds))
-    print("using "+str(ncpus)+" cpus")
 
     # here each job gets its batch of seeds:
     all_res = Parallel(n_jobs=ncpus, max_nbytes=1e6, verbose=2)(

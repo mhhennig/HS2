@@ -50,11 +50,11 @@ def get_version() -> str:
         if commit:
             with open('herdingspikes/.commit_version', 'w') as f:
                 f.write(commit)
-        return version['version']
+        return version['__version__']
     else:
         # in install, include commit hash in version if possible
         commit = '+git.' + commit[:8] if commit else ''
-        return version['version'] + commit
+        return version['__version__'] + commit
 
 
 with open('README.md', 'r', encoding='utf-8') as f:
