@@ -60,13 +60,7 @@ def get_version() -> str:
 with open('README.md', 'r', encoding='utf-8') as f:
     long_description = f.read()
 
-
-ext_src = ['detect.pyx']
-
-# all cpp should start with capital, except for cython generated
-sources = glob.glob('herdingspikes/detection_localisation/**/[A-Z]*.cpp', recursive=True)
-sources += [os.path.join('herdingspikes/detection_localisation', fn) for fn in ext_src]
-
+# Compile C++ code
 extra_compile_args = ['-std=c++17', '-O3', '-fopenmp'] + \
     ['-march=native', '-mtune=native'] * NATIVE_OPTIM
 link_extra_args = ['-fopenmp']
@@ -75,20 +69,39 @@ if platform.system() == 'Darwin':
     extra_compile_args += ['-mmacosx-version-min=10.14', '-F.']
     link_extra_args += ['-stdlib=libc++', '-mmacosx-version-min=10.14']
 
-# compile with/without Cython
-detect_ext = cythonize(
-    Extension(name='herdingspikes.detection_localisation.detect',
+# lightning detection code
+ext_src = ['detect.py']
+sources = glob.glob('herdingspikes/detection_lightning/**/[A-Z]*.cpp', recursive=True)
+sources += [os.path.join('herdingspikes/detection_lightning', fn) for fn in ext_src]
+detect_lightning = Extension(name='herdingspikes.detection_lightning.detect',
               sources=sources,
               include_dirs=[numpy_include],
               define_macros=[
                   ('CYTHON_TRACE_NOGIL', '1' if PROFILE >= 2 else '0')],
               extra_compile_args=extra_compile_args,
               extra_link_args=link_extra_args,
-              language='c++'),
-    compiler_directives={'language_level': '3',
-                         'profile': PROFILE >= 1,
-                         'linetrace': PROFILE >= 2},
-    force=FORCE_CYTHONIZE)
+              language='c++')
+    # compiler_directives={'language_level': '3',
+    #                      'profile': PROFILE >= 1,
+    #                      'linetrace': PROFILE >= 2},
+    # force=FORCE_CYTHONIZE)
+
+# original detection code
+ext_src = ['detect.pyx']
+sources = glob.glob('herdingspikes/detection_localisation/**/[A-Z]*.cpp', recursive=True)
+sources += [os.path.join('herdingspikes/detection_localisation', fn) for fn in ext_src]
+detect_ext = Extension(name='herdingspikes.detection_localisation.detect',
+              sources=sources,
+              include_dirs=[numpy_include],
+              define_macros=[
+                  ('CYTHON_TRACE_NOGIL', '1' if PROFILE >= 2 else '0')],
+              extra_compile_args=extra_compile_args,
+              extra_link_args=link_extra_args,
+              language='c++')
+    # compiler_directives={'language_level': '3',
+    #                      'profile': PROFILE >= 1,
+    #                      'linetrace': PROFILE >= 2},
+    # force=FORCE_CYTHONIZE)
 
 
 setup(
@@ -97,7 +110,7 @@ setup(
     description='Efficient spike detection and sorting for dense MEA',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/lkct/hs-detection',
+    url='https://github.com/mhhennig/HS2',
     author='Matthias Hennig Lab, University of Edinburgh',
     author_email='m.hennig@ed.ac.uk',
     license='GPLv3',
@@ -133,21 +146,28 @@ setup(
     package_data={
         'herdingspikes': [
             '.commit_version',
-            'detection_localisation/**'
+            'detection_localisation/**',
+            'detection_lightning/**',
         ]
     },
     exclude_package_data={
         'herdingspikes': [
             # 'detect/detect.cpp',  # can only be exlcuded from MANIFEST.in
             'detection_localisation/*.so',
+            'detection_lightning/*.so',
             '**/__pycache__/*'
         ]
     },
-    ext_modules=detect_ext,
-    zip_safe=False,
-    project_urls={
-        'Source': 'https://github.com/mhhennig/HS2/'
-    }
+    # ext_modules=detect_ext,
+    # zip_safe=False,
+    # project_urls={
+    #     'Source': 'https://github.com/mhhennig/HS2/'
+    # },
+    ext_modules=[detect_ext,detect_lightning],
+    # zip_safe=False,
+    # project_urls={
+    #     'Source': 'https://github.com/mhhennig/HS2/'
+    # },
 )
 
 

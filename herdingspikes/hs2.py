@@ -4,7 +4,10 @@ import pandas as pd
 import numpy as np
 import h5py
 import os
+from pathlib import Path
+
 from .detection_localisation.detect import detectData
+from .detection_lightning.detect import HSDetectionLightning as detectDataLightning
 from matplotlib import pyplot as plt
 from .clustering.mean_shift_ import MeanShift
 from sklearn.decomposition import PCA
@@ -60,9 +63,9 @@ class HSDetection(object):
         save_all=False,
         left_cutout_time=1.0,
         right_cutout_time=2.2,
-        amp_evaluation_time=0.4,  # former minsl
+        amp_evaluation_time=0.4,
         spk_evaluation_time=1.7,
-    ):  # former maxsl
+    ):  
         """
         Arguments:
         probe -- probe object, with a link to raw data
@@ -164,6 +167,7 @@ class HSDetection(object):
                 "strictly".format(file_name)
             )
         else:
+#             self.sp_flat = np.memmap(file_name, dtype=np.int16, mode="r")
             self.sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
             assert self.sp_flat.shape[0] // self.cutout_length + 5 is \
                 not self.sp_flat.shape[0] / self.cutout_length + 5, \
@@ -185,7 +189,7 @@ class HSDetection(object):
         print("Loaded " + str(self.spikes.shape[0]) + " spikes.")
 
     def DetectFromRaw(
-        self, load=True, nFrames=None, tInc=50000, recording_duration=None
+        self, load=True, nFrames=None, tInc=1000000, recording_duration=None
     ):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -230,8 +234,227 @@ class HSDetection(object):
         )
 
         if load:
-            # reload data into memory (detect saves it on disk)
-            self.LoadDetected()
+            self.LoadDetected()        
+
+    def PlotTracesChannels(
+        self,
+        eventid,
+        ax=None,
+        window_size=100,
+        show_channels=True,
+        ascale=1.0,
+        show_channel_numbers=True,
+        show_loc=True,
+    ):
+        """
+        Draw a figure with an electrode and its neighbours, showing the raw
+        traces and events. Note that this requires loading the raw data in
+        memory again.
+
+        Arguments:
+        eventid -- centers, spatially and temporally, the plot to a specific
+        event id.
+        ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        window_size -- number of samples shown around a spike
+        show_channels -- show bubbles corresponding to electrode locations
+        ascale -- make traces larger or smaller
+        show_channel_numbers -- whether to print electrode numbers next to them
+        show_loc -- whether to show a red point where the spike was localised
+        """
+        if ax is None:
+            ax = plt.gca()
+
+        pos, neighs = self.probe.positions, self.probe.neighbors
+
+        event = self.spikes.loc[eventid]
+        print("Spike detected at channel: ", event.ch)
+        print("Spike detected at frame: ", event.t)
+        print("Spike localised in position", event.x, event.y)
+        cutlen = len(event.Shape)
+
+        # compute distance between electrodes, for scaling
+        distances = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
+        interdistance = np.min(distances[distances > 0])
+        scale = interdistance / 110.0 * ascale
+
+        # scatter of the large grey balls for electrode location
+        x = pos[(neighs[event.ch], 0)]
+        y = pos[(neighs[event.ch], 1)]
+        if show_channels:
+            plt.scatter(x, y, s=1600, alpha=0.2)
+
+        ws = window_size // 2
+        ws = max(ws, 1 + self.cutout_start, 1 + self.cutout_end)
+        t1 = np.max((0, event.t - ws))
+        t2 = event.t + ws
+
+        trange = (np.arange(t1, t2) - event.t) * scale
+        start_bluered = event.t - t1 - self.cutout_start
+        trange_bluered = trange[start_bluered : start_bluered + cutlen]
+
+        data = self.probe.Read(t1, t2).reshape((t2 - t1, self.probe.num_channels))
+        # remove offsets
+        data = data - data[0]
+
+        # grey and blue traces
+        for i, n in enumerate(neighs[event.ch]):
+            dist_from_max = np.sqrt(
+                (pos[n][0] - pos[event.ch][0]) ** 2
+                + (pos[n][1] - pos[event.ch][1]) ** 2
+            )
+            if n in self.probe.masked_channels:
+                col = "g"
+            elif dist_from_max <= self.probe.inner_radius:
+                col = "orange"
+            else:
+                col = "b"
+            plt.plot(pos[n][0] + trange, pos[n][1] + data[:, n] * scale, "gray")
+            plt.plot(
+                pos[n][0] + trange_bluered,
+                pos[n][1] + data[start_bluered : start_bluered + cutlen, n] * scale,
+                col
+            )
+
+        # red overlay for central channel
+        plt.plot(
+            pos[event.ch][0] + trange_bluered,
+            pos[event.ch][1] + event.Shape * scale,
+            "r"
+        )
+        inner_radius_circle = plt.Circle(
+            (pos[event.ch][0], pos[event.ch][1]),
+            self.probe.inner_radius,
+            color="red",
+            fill=False,
+        )
+        ax.add_artist(inner_radius_circle)
+
+        # red dot of event location
+        if show_loc:
+            plt.scatter(event.x, event.y, s=80, c="r")
+
+        # electrode numbers
+        if show_channel_numbers:
+            for i, txt in enumerate(neighs[event.ch]):
+                ax.annotate(txt, (x[i], y[i]))
+        ax.set_aspect("equal")
+        return ax
+
+    def PlotDensity(self, binsize=1.0, invert=False, ax=None):
+        if ax is None:
+            ax = plt.gca()
+        x, y = self.spikes.x, self.spikes.y
+        if invert:
+            x, y = y, x
+        binsx = np.arange(x.min(), x.max(), binsize)
+        binsy = np.arange(y.min(), y.max(), binsize)
+        h, xb, yb = np.histogram2d(x, y, bins=[binsx, binsy])
+        ax.imshow(
+            np.clip(np.log10(h), 1e-10, None),
+            extent=[xb.min(), xb.max(), yb.min(), yb.max()],
+            interpolation="none",
+            origin="lower",
+        )
+        return h, xb, yb
+
+    def PlotAll(self, invert=False, ax=None, max_show=100000, **kwargs):
+        """
+        Plots all the spikes currently stored in the class, in (x, y) space.
+
+        Arguments:
+        invert -- (boolean, optional) if True, flips x and y
+        ax -- a matplotlib axes object where to draw. Defaults to current axis.
+        max_show -- maximum number of spikes to show
+        **kwargs -- additional arguments are passed to pyplot.scatter
+        """
+        if ax is None:
+            ax = plt.gca()
+        x, y = self.spikes.x, self.spikes.y
+        if invert:
+            x, y = y, x
+        if self.spikes.shape[0] > max_show:
+            inds = np.random.choice(self.spikes.shape[0], max_show, replace=False)
+            print("We have", self.spikes.shape[0], "spikes, only showing", max_show)
+        else:
+            inds = np.arange(self.spikes.shape[0])
+        ax.scatter(x[inds], y[inds], **kwargs)
+        return ax
+
+    def Cluster(self):
+        return HSClustering(self)
+
+
+class HSDetectionLightning(object):
+    """ This class provides a simple interface to the detection, localisation of
+    spike data from dense multielectrode arrays according to the methods
+    described in the following papers:
+
+    Muthmann, J. O., Amin, H., Sernagor, E., Maccione, A., Panas, D.,
+    Berdondini, L., ... & Hennig, M. H. (2015). Spike detection for large neural
+    populations using high density multielectrode arrays. Frontiers in
+    neuroinformatics, 9.
+
+    Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
+    Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
+    large-scale, high-density multielectrode arrays. Cell reports, 18(10),
+    2521-2532.
+
+    Usage:
+        1. Create a HSDetection object by calling its constructor with a
+    Probe object and all the detection parameters (see documentation there).
+        2. Call DetectFromRaw.
+        3. Save the result, or create a HSClustering object.
+    """
+
+    def __init__(
+        self,
+        rec,
+        params=None
+    ):
+        """
+        Arguments:
+        """
+
+        self.sp_flat = None
+        self.spikes = None
+        self.recording = rec
+        self.params = params
+        if self.params == None:
+            self.params = detectDataLightning.DEFAULT_PARAMS
+        self.out_file_name = self.params['out_file']
+        
+#         out_file_name = self.params['out_file_name']
+#         # Make directory for results if it doesn't exist
+#         os.makedirs(file_directory_name, exist_ok=True)
+#         if out_file_name[-4:] == ".bin":
+#             file_path = os.path.join(file_directory_name, out_file_name)
+#             self.out_file_name = file_path
+#         else:
+#             file_path = os.path.join(file_directory_name, out_file_name)
+#             self.out_file_name = file_path + ".bin"
+#         self.save_all = save_all
+
+    def DetectFromRaw(self):
+        """
+        This function is a wrapper of the C function `detectData`. It takes
+        the raw data file, performs detection and localisation, saves the result
+        to HSDetection.out_file_name and loads the latter into memory by calling
+        LoadDetected if load=True.
+        """
+        det = detectDataLightning(self.recording, self.params)
+        sp = det.detect()
+        self.spikes = pd.DataFrame(
+            {
+                "ch": sp[0]['channel_ind'],
+                "t": sp[0]['sample_ind'],
+                "Amplitude": sp[0]['amplitude'],
+                "x": sp[0]['location'][:,0],
+                "y": sp[0]['location'][:,1],
+                "Shape": list(sp[0]['spike_shape']),
+            },
+            copy=False,
+            )
+        
 
     def PlotTracesChannels(
         self,
@@ -882,7 +1105,7 @@ class HSClustering(object):
         ylim -- limits of the vertical axis of the plots. If None, try to figure
         them out.
         """
-        nrows = np.ceil(len(units) / ncols)
+        nrows = int(np.ceil(len(units) / ncols))
         cutouts = self.spikes.Shape
 
         # all this is to determine suitable ylims TODO probe should provide
