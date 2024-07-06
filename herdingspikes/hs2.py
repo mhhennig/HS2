@@ -1130,7 +1130,7 @@ class HSClustering(object):
             plt.subplot(nrows, ncols, i + 1)
             [plt.plot(v - v[0], "gray", alpha=0.3) for v in cutouts.loc[inds].values]
             plt.plot(meanshape + yoff, c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
-            plt.ylim(ylim)
+            # plt.ylim(ylim)
             plt.title("Cluster " + str(cl))
 
     def PlotAll(

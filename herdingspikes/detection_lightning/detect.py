@@ -112,7 +112,7 @@ class HSDetectionLightning(object):
         self.rescale = params['rescale']
         if self.rescale:
             l, m, r = np.quantile(self.get_random_data_chunks(),
-                                  q=[0.05, 0.5, 1 - 0.05], axis=0)
+                                  q=[0.025, 0.5, 1 - 0.025], axis=0)
             # quantile gives float64 on float32 data
             l: NDArray[np.single] = l.astype(np.single)
             m: NDArray[np.single] = m.astype(np.single)
