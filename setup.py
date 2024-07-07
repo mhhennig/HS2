@@ -61,13 +61,16 @@ with open('README.md', 'r', encoding='utf-8') as f:
     long_description = f.read()
 
 # Compile C++ code
-extra_compile_args = ['-std=c++17', '-O3', '-fopenmp'] + \
+extra_compile_args = ['-std=c++17', '-O3'] + \
     ['-march=native', '-mtune=native'] * NATIVE_OPTIM
-link_extra_args = ['-fopenmp']
+link_extra_args = []
 # OS X support
 if platform.system() == 'Darwin':
     extra_compile_args += ['-mmacosx-version-min=10.14', '-F.']
     link_extra_args += ['-stdlib=libc++', '-mmacosx-version-min=10.14']
+else:
+    extra_compile_args += ['-fopenmp']
+    link_extra_args += ['-fopenmp']    
 
 # lightning detection code
 ext_src = ['detect.py']
