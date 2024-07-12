@@ -194,16 +194,25 @@ namespace HSDetection
         thAlignedEnd = min(thAlignedEnd, alignedChannels);
         IntChannel thActualEnd = min(thAlignedEnd * channelAlign, numChannels);
 
+        // perform averaging over two frames
+        for (IntChannel t = chunkStart + chunkLen; t > chunkStart; t--)
+        {
+            for (IntChannel i = thAlignedStart * channelAlign; i < thActualEnd; i++)
+            {
+                trace[t][i] = (trace[t][i] + trace[t - 1][i]) / 2;
+            }
+        }
+
         for (IntFrame t = chunkStart; t < chunkStart + chunkLen; t++)
         {
             estimation(runningBaseline[t], runningDeviation[t],
-                       trace[t], commonRef[t],
-                       runningBaseline[t - 1], runningDeviation[t - 1],
-                       thAlignedStart, thAlignedEnd);
+                        trace[t], commonRef[t],
+                        runningBaseline[t - 1], runningDeviation[t - 1],
+                        thAlignedStart, thAlignedEnd);
 
             detection(trace[t], commonRef[t],
-                      runningBaseline[t], runningDeviation[t],
-                      thAlignedStart * channelAlign, thActualEnd, t);
+                        runningBaseline[t], runningDeviation[t],
+                        thAlignedStart * channelAlign, thActualEnd, t);
         }
     }
 

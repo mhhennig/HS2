@@ -75,17 +75,21 @@ extra_compile_args = ["-std=c++17", "-O3"] + [
 link_extra_args = []
 # OS X support
 if platform.system() == "Darwin":
-    extra_compile_args += ["-mmacosx-version-min=10.14", "-F."]
+    # "-L/opt/homebrew/opt/libomp/lib"
+    # "-I/opt/homebrew/opt/libomp/include"
+    extra_compile_args += ["-mmacosx-version-min=10.14", "-F.", "-I/opt/homebrew/opt/libomp/include"]
     link_extra_args += [
         "-stdlib=libc++",
         "-mmacosx-version-min=10.14",
+        "-lomp",
+        "-L/opt/homebrew/opt/libomp/lib"
     ]
 else:
     extra_compile_args += ["-fopenmp"]
     link_extra_args += ["-fopenmp"]
 
 # lightning detection code
-ext_src = ["detect.py"]
+ext_src = ["detect.pyx"]
 sources = glob.glob("herdingspikes/detection_lightning/**/[A-Z]*.cpp", recursive=True)
 sources += [os.path.join("herdingspikes/detection_lightning", fn) for fn in ext_src]
 detect_lightning = Extension(
