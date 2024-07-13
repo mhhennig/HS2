@@ -1,3 +1,20 @@
+# Installing Herding Spikes on a Mac
+
+
+If compile the C++ code, [Xcode](https://developer.apple.com/xcode/) is required.
+
+This has been tested and works on MacOS 14.5 - if this fails, try to install the OpenMP library. This can be done with the package manager ``brew``. If you do not have ``brew`` installed, you can do so by following the instructions at
+[https://brew.sh/](https://brew.sh/).
+
+Then open a terminal and type
+
+    brew install libomp
+
+and install Herding Spikes with
+
+    pip install numpy cython
+    pip install herdingspikes
+
 # Installing Herding Spikes on Windows
 
 ## 1. Visual Studio
@@ -16,4 +33,5 @@ Install [Anaconda](https://www.anaconda.com/download/#windows) ands create a Pyt
 
 Then opoen a ternminal in the newly created environment and type
 
+    pip install numpy cython
     pip install herdingspikes

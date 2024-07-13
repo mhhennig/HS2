@@ -649,8 +649,11 @@ class HSClustering(object):
 
     def __init__(self, arg1, legacy=False, cutout_length=None, **kwargs):
         self.shapecache = []
-        if type(arg1) == "pandas.core.frame.DataFrame":
+        if type(arg1) == pd.core.frame.DataFrame:
             print("Reading spikes from Dataframe")
+            self.spikes = arg1
+        elif type(arg1) == HSDetectionLightning:
+            print("Reading spikes from detection (Lightning)")
             self.spikes = arg1.spikes
         else:
             if type(arg1) == str:
@@ -712,17 +715,6 @@ class HSClustering(object):
                         self.spikes = spikes
                         self.expinds = [0]
                         self.filelist = [arg1]
-        # else:  # we suppose arg1 is an instance of Detection
-        #     try:  # see if LoadDetected was run
-        #         self.spikes = arg1.spikes
-        #     except NameError:
-        #         arg1.LoadDetected()
-        #         self.spikes = arg1.spikes
-        #     # this computes average amplitudes, disabled for now
-        #     # self.spikes['min_amp'] = self.spikes.Shape.apply(min_func)
-        #     self.filelist = [arg1.out_file_name]
-        #     self.expinds = [0]
-        #     self.IsClustered = False
 
     def CombinedClustering(
         self, alpha, clustering_algorithm=None, cluster_subset=None, **kwargs
@@ -848,11 +840,7 @@ class HSClustering(object):
 
         if n_spikes > chunk_size:
             print(
-                "Fitting dimensionality reduction using",
-                chunk_size,
-                "out of",
-                n_spikes,
-                "spikes...",
+                f"Fitting dimensionality reduction using {chunk_size} out of {n_spikes} spikes..."
             )
             inds = np.sort(np.random.choice(n_spikes, chunk_size, replace=False))
             s = self.spikes.Shape.loc[inds].values.tolist()

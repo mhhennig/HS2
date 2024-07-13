@@ -75,14 +75,20 @@ extra_compile_args = ["-std=c++17", "-O3"] + [
 link_extra_args = []
 # OS X support
 if platform.system() == "Darwin":
-    # "-L/opt/homebrew/opt/libomp/lib"
-    # "-I/opt/homebrew/opt/libomp/include"
-    extra_compile_args += ["-mmacosx-version-min=10.14", "-F.", "-I/opt/homebrew/opt/libomp/include"]
+    extra_compile_args += [
+        "-mmacosx-version-min=10.14",
+        "-F.",
+        # "-I/opt/homebrew/opt/libomp/include",
+        "-Xclang",
+        "-fopenmp",
+    ]
     link_extra_args += [
         "-stdlib=libc++",
         "-mmacosx-version-min=10.14",
-        "-lomp",
-        "-L/opt/homebrew/opt/libomp/lib"
+        # "-lomp",
+        # "-L/opt/homebrew/opt/libomp/lib",
+        "-Xclang",
+        "-fopenmp",
     ]
 else:
     extra_compile_args += ["-fopenmp"]
@@ -101,10 +107,6 @@ detect_lightning = Extension(
     extra_link_args=link_extra_args,
     language="c++",
 )
-# compiler_directives={'language_level': '3',
-#                      'profile': PROFILE >= 1,
-#                      'linetrace': PROFILE >= 2},
-# force=FORCE_CYTHONIZE)
 
 # original detection code
 ext_src = ["detect.pyx"]
@@ -121,11 +123,6 @@ detect_ext = Extension(
     extra_link_args=link_extra_args,
     language="c++",
 )
-# compiler_directives={'language_level': '3',
-#                      'profile': PROFILE >= 1,
-#                      'linetrace': PROFILE >= 2},
-# force=FORCE_CYTHONIZE)
-
 
 setup(
     name="herdingspikes",
@@ -143,14 +140,24 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Cython",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="spikes sorting electrophysiology detection",
-    python_requires=">=3.8",
-    install_requires=["cython", "numpy"],
+    python_requires=">=3.12",
+    install_requires=[
+        "cython",
+        "numpy",
+        "scipy",
+        "scikit-learn",
+        "matplotlib",
+        "pandas",
+        "tqdm",
+        "joblib",
+        "spikeinterface[full]",
+    ],
     # extras_require={
     #     'tests': [
     #         'spikeinterface>=0.95',  # TODO: needs to include hs-detection

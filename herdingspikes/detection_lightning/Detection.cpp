@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <numeric>
-
+#include <iostream>
 #include <omp.h>
 
 #include "Detection.h"
