@@ -3,9 +3,6 @@ from typing import TypedDict, Union
 
 
 class Params(TypedDict):
-    bandpass: bool
-    freq_min: float
-    freq_max: float
     chunk_size: int
     rescale: bool
     rescale_value: float
@@ -30,38 +27,25 @@ class Params(TypedDict):
 
 
 DEFAULT_PARAMS: Params = {
-    'bandpass': True,
-    'freq_min': 300.0,
-    'freq_max': 6000.0,
-
-    'chunk_size': 100000,
-
-    'rescale': True,
-    'rescale_value': -1280.0,
-
-    'common_reference': 'average',
-
-    'spike_duration': 1.0,
-    'amp_avg_duration': 0.4,
-    'threshold': 10.0,
-    'min_avg_amp': 5.0,
-    'AHP_thr': 0.0,
-
-    'neighbor_radius': 90.0,
-    'inner_radius': 70.0,
-
-    'peak_jitter': 0.2,
-    'rise_duration': 0.26,
-
-    'decay_filtering': False,
-    'decay_ratio': 1.0,
-
-    'localize': True,
-
-    'save_shape': True,
-    'out_file': 'HS2_detected',
-    'left_cutout_time': 0.3,
-    'right_cutout_time': 1.8,
-
-    'verbose': True
+    "chunk_size": None,
+    "rescale": True,
+    "rescale_value": -1280.0,
+    "common_reference": "median",
+    "spike_duration": 1.0,
+    "amp_avg_duration": 0.4,
+    "threshold": 8.0,
+    "min_avg_amp": 1.0,
+    "AHP_thr": 0.0,
+    "neighbor_radius": 90.0,
+    "inner_radius": 70.0,
+    "peak_jitter": 0.25,
+    "rise_duration": 0.26,
+    "decay_filtering": False,
+    "decay_ratio": 1.0,
+    "localize": True,
+    "save_shape": True,
+    "out_file": "HS2_detected",
+    "left_cutout_time": 0.3,
+    "right_cutout_time": 1.8,
+    "verbose": True,
 }

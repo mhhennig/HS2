@@ -8,12 +8,16 @@ This has been tested and works on MacOS 14.5 - if this fails, try to install the
 
 Then open a terminal and type
 
+```bash
     brew install libomp
+```
 
 and install Herding Spikes with
 
+```bash
     pip install numpy cython
     pip install herdingspikes
+```
 
 # Installing Herding Spikes on Windows
 
@@ -33,5 +37,7 @@ Install [Anaconda](https://www.anaconda.com/download/#windows) ands create a Pyt
 
 Then opoen a ternminal in the newly created environment and type
 
+```bash
     pip install numpy cython
     pip install herdingspikes
+```

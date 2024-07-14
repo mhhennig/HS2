@@ -652,8 +652,8 @@ class HSClustering(object):
         if type(arg1) == pd.core.frame.DataFrame:
             print("Reading spikes from Dataframe")
             self.spikes = arg1
-        elif type(arg1) == HSDetectionLightning:
-            print("Reading spikes from detection (Lightning)")
+        elif type(arg1) == HSDetectionLightning or type(arg1) == HSDetection:
+            print("Reading spikes from detection")
             self.spikes = arg1.spikes
         else:
             if type(arg1) == str:
@@ -871,7 +871,15 @@ class HSClustering(object):
         self.features = _pcs
         print("...done")
 
-    def _savesinglehdf5(self, filename, limits, compression, sampling, transpose=False):
+    def _savesinglehdf5(
+        self,
+        filename,
+        limits,
+        compression,
+        sampling,
+        transpose=False,
+        save_shapes=False,
+    ):
         if limits is not None:
             spikes = self.spikes[limits[0] : limits[1]]
         else:
@@ -900,17 +908,25 @@ class HSClustering(object):
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
-        if not spikes.empty:
+        # no longer save the spike shapes by default
+        if save_shapes and not spikes.empty:
             cutout_length = spikes.Shape.iloc[0].size
             sh_tmp = np.empty((cutout_length, spikes.Shape.size), dtype=int)
             for i, s in enumerate(spikes.Shape):
                 sh_tmp[:, i] = s
             g.create_dataset("shapes", data=sh_tmp, compression=compression)
-        else:
-            g.create_dataset("shapes", data=[], compression=compression)
+        # else:
+        # g.create_dataset("shapes", data=[], compression=compression)
         g.close()
 
-    def SaveHDF5(self, filename, compression=None, sampling=None, transpose=False):
+    def SaveHDF5(
+        self,
+        filename,
+        compression=None,
+        sampling=None,
+        transpose=False,
+        save_shapes=False,
+    ):
         """
         Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers
         compression of the shapes, 'lzf' appears a good trade-off between speed
@@ -925,11 +941,13 @@ class HSClustering(object):
         filename : str or list
             The names of the file or list of files to be saved.
         compression : str
-            Passed to HDF5, for compression of shapes only.
+            Passed to HDF5, to save shapes compressed.
         sampling : float
             Provide sampling rate to include it in the file.
         transpose : bool
-            Whether to swap x and y.
+            Whether to swap x and y.  Default is False.
+        save_shapes : bool
+            Whether to save the spike shapes. Default is False.
         """
         if sampling is None:
             print(
