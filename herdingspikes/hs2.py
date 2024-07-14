@@ -4,12 +4,16 @@ import pandas as pd
 import numpy as np
 import h5py
 import os
+from pathlib import Path
+
 from .detection_localisation.detect import detectData
+from .detection_lightning.detect import HSDetectionLightning as detectDataLightning
 from matplotlib import pyplot as plt
 from .clustering.mean_shift_ import MeanShift
 from sklearn.decomposition import PCA
 from os.path import splitext
 import warnings
+from numpy.lib.stride_tricks import as_strided
 
 
 def min_func(x):
@@ -21,7 +25,8 @@ def max_func(x):
 
 
 class HSDetection(object):
-    """ This class provides a simple interface to the detection, localisation of
+    """
+    This class provides a simple interface to the detection, localisation of
     spike data from dense multielectrode arrays according to the methods
     described in the following papers:
 
@@ -35,11 +40,49 @@ class HSDetection(object):
     large-scale, high-density multielectrode arrays. Cell reports, 18(10),
     2521-2532.
 
+    This is the original legacy implementation, here for backwards compatibility.
+    This is now replaced by HSDetectionLightning.
+
     Usage:
         1. Create a HSDetection object by calling its constructor with a
     Probe object and all the detection parameters (see documentation there).
         2. Call DetectFromRaw.
         3. Save the result, or create a HSClustering object.
+
+    Parameters
+    ----------
+    probe -- probe object, with a link to raw data
+    to_localize : bool
+        Set to False if spikes should only be detected, not localised (will break sorting)
+    cutout_start : int
+        Frame-based version of left_cutout_ms
+    cutout_end : int
+        Deprecated, frame-based version of right_cutout_ms
+    threshold : int
+        Detection threshold
+    maa : int
+        Minimum average amplitude
+    maxsl : int
+        Deprecated, frame-based version of spk_evaluation_time
+    minsl : int
+        Deprecated, frame-based version of amp_evaluation_time
+    ahpthr : int
+        Threshold for the repolarisation.
+    out_file_name : str
+        base file name (without extension) for the output files
+    file_directory_name : str
+        directory where output is saved
+    save_all : bool
+        Whether to stor all detection info (for debug)
+    left_cutout_ms : float
+        Milliseconds before the spike to be included in the spike shape
+    right_cutout_ms : float
+        Milliseconds after the spike to be included in the spike shape
+    amp_evaluation_time : float
+        Milliseconds during which the trace is integrated, for the purposed
+        of evaluating amplitude, used for later comparison with 'maa'
+    spk_evaluation_time : float
+        Dead time in ms after spike peak, used for further triaging of spike shape
     """
 
     def __init__(
@@ -60,34 +103,9 @@ class HSDetection(object):
         save_all=False,
         left_cutout_time=1.0,
         right_cutout_time=2.2,
-        amp_evaluation_time=0.4,  # former minsl
+        amp_evaluation_time=0.4,
         spk_evaluation_time=1.7,
-    ):  # former maxsl
-        """
-        Arguments:
-        probe -- probe object, with a link to raw data
-        to_localize -- set to False if spikes should only be detected, not
-            localised (will break sorting)
-        cutout_start -- deprecated, frame-based version of left_cutout_ms
-        cutout_end -- deprecated, frame-based version of right_cutout_ms
-        threshold -- detection threshold
-        maa -- minimum average amplitude
-        maxsl -- deprecated, frame-based version of spk_evaluation_time
-        minsl -- deprecated, frame-based version of amp_evaluation_time
-        ahpthr --
-        out_file_name -- base file name (without extension) for the output files
-        file_directory_name -- directory where output is saved
-        save_all --
-        left_cutout_ms -- the number of milliseconds, before the spike,
-        to be included in the spike shape
-        right_cutout_ms -- the number of milliseconds, after the spike,
-        to be included in the spike shape
-        amp_evaluation_time -- the number of milliseconds during which the trace
-        is integrated, for the purposed of evaluating amplitude, used for later
-        comparison with 'maa'
-        spk_evaluation_time -- dead time in ms after spike peak, used for
-        further triaging of spike shape
-        """
+    ):
         self.probe = probe
 
         self.cutout_start = self._deprecate_or_convert(
@@ -137,11 +155,13 @@ class HSDetection(object):
 
     def SetAddParameters(self, dict_of_new_parameters):
         """
-         Adds and merges dict_of_new_parameters with the current fields of the
-         object. Uses the PEP448 convention to group two dics together.
+        Adds and merges dict_of_new_parameters with the current fields of the
+        object. Uses the PEP448 convention to group two dics together.
 
-         Arguments:
-         dict_of_new_parameters -- the dictionary of parameters to be updated.
+        Parameters
+        ----------
+        dict_of_new_parameters : dict
+            The dictionary of parameters to be updated.
         """
         self.__dict__.update(dict_of_new_parameters)
 
@@ -150,8 +170,10 @@ class HSDetection(object):
         Reads a binary file with spikes detected with the DetectFromRaw()
         method.
 
-        Arguments:
-        file_name -- The name of the .bin file. Defaults to self.out_file_name.
+        Parameters
+        ----------
+        file_name : str
+            The name of the .bin file. Defaults to self.out_file_name.
         """
         if file_name is None:
             file_name = self.out_file_name
@@ -164,10 +186,12 @@ class HSDetection(object):
                 "strictly".format(file_name)
             )
         else:
+            #             self.sp_flat = np.memmap(file_name, dtype=np.int16, mode="r")
             self.sp_flat = np.memmap(file_name, dtype=np.int32, mode="r")
-            assert self.sp_flat.shape[0] // self.cutout_length + 5 is \
-                not self.sp_flat.shape[0] / self.cutout_length + 5, \
-                "spike data has wrong dimensions"  # ???
+            assert (
+                self.sp_flat.shape[0] // self.cutout_length + 5
+                is not self.sp_flat.shape[0] / self.cutout_length + 5
+            ), "spike data has wrong dimensions"  # ???
             shapecache = self.sp_flat.reshape((-1, self.cutout_length + 5))
 
         self.spikes = pd.DataFrame(
@@ -185,7 +209,7 @@ class HSDetection(object):
         print("Loaded " + str(self.spikes.shape[0]) + " spikes.")
 
     def DetectFromRaw(
-        self, load=True, nFrames=None, tInc=50000, recording_duration=None
+        self, load=True, nFrames=None, tInc=100000, recording_duration=None
     ):
         """
         This function is a wrapper of the C function `detectData`. It takes
@@ -193,12 +217,16 @@ class HSDetection(object):
         to HSDetection.out_file_name and loads the latter into memory by calling
         LoadDetected if load=True.
 
-        Arguments:
-        load -- bool: load the detected spikes when finished?
-        nFrames -- deprecated, frame-based version of recording_duration
-        tInc -- size of chunks to be read
-        recording_duration -- maximum time limit of recording (the rest will be
-        ignored)
+        Parameters
+        ----------
+        load : bool
+            Load the detected spikes into memory when finished.
+        nFrames : int
+            Frame-based version of recording_duration.
+        tInc : ibt
+            Size of chunks to be read.
+        recording_duration : int
+            maximum time limit of recording (the rest will be ignored)
         """
 
         if nFrames is not None:
@@ -230,7 +258,6 @@ class HSDetection(object):
         )
 
         if load:
-            # reload data into memory (detect saves it on disk)
             self.LoadDetected()
 
     def PlotTracesChannels(
@@ -248,15 +275,22 @@ class HSDetection(object):
         traces and events. Note that this requires loading the raw data in
         memory again.
 
-        Arguments:
-        eventid -- centers, spatially and temporally, the plot to a specific
-        event id.
-        ax -- a matplotlib axes object where to draw. Defaults to current axis.
-        window_size -- number of samples shown around a spike
-        show_channels -- show bubbles corresponding to electrode locations
-        ascale -- make traces larger or smaller
-        show_channel_numbers -- whether to print electrode numbers next to them
-        show_loc -- whether to show a red point where the spike was localised
+        Parameters
+        ----------
+        eventid : int
+            Centers, spatially and temporally, the plot to a specific event id.
+        ax : matplotlib axes
+            A matplotlib axes object where to draw. Defaults to current axis.
+        window_size : int
+            Number of samples shown around a spike.
+        show_channels : bool
+            Show bubbles corresponding to electrode locations.
+        ascale : float
+            Scaling factor for traces.
+        show_channel_numbers : bool
+            Whether to print electrode numbers next to them.
+        show_loc : bool
+            Whether to show a red point where the spike was localised.
         """
         if ax is None:
             ax = plt.gca()
@@ -309,14 +343,14 @@ class HSDetection(object):
             plt.plot(
                 pos[n][0] + trange_bluered,
                 pos[n][1] + data[start_bluered : start_bluered + cutlen, n] * scale,
-                col
+                col,
             )
 
         # red overlay for central channel
         plt.plot(
             pos[event.ch][0] + trange_bluered,
             pos[event.ch][1] + event.Shape * scale,
-            "r"
+            "r",
         )
         inner_radius_circle = plt.Circle(
             (pos[event.ch][0], pos[event.ch][1]),
@@ -338,6 +372,28 @@ class HSDetection(object):
         return ax
 
     def PlotDensity(self, binsize=1.0, invert=False, ax=None):
+        """
+        Plot the density of the spikes on the probe.
+
+        Parameters
+        ----------
+        binsize : float
+            The size of the bins for the density plot
+        invert : bool
+            Invert the x and y axes
+        ax : matplotlib axis
+            The axis to plot the density
+
+        Returns
+        -------
+        h : array
+            The histogram of the density
+        xb : array
+            The x bins
+        yb : array
+            The y bins
+        """
+
         if ax is None:
             ax = plt.gca()
         x, y = self.spikes.x, self.spikes.y
@@ -356,13 +412,23 @@ class HSDetection(object):
 
     def PlotAll(self, invert=False, ax=None, max_show=100000, **kwargs):
         """
-        Plots all the spikes currently stored in the class, in (x, y) space.
+        Plot spikes currently stored in the class, in (x, y) space.
 
-        Arguments:
-        invert -- (boolean, optional) if True, flips x and y
-        ax -- a matplotlib axes object where to draw. Defaults to current axis.
-        max_show -- maximum number of spikes to show
-        **kwargs -- additional arguments are passed to pyplot.scatter
+        Parameters
+        ----------
+        invert : bool
+            Invert the x and y axes
+        ax : matplotlib axis
+            The axis to plot the spikes
+        max_show : int
+            The maximum number of spikes to show
+        **kwargs : dict
+            Additional arguments for the scatter plot
+
+        Returns
+        -------
+        ax : matplotlib axis
+            The axis with the spikes
         """
         if ax is None:
             ax = plt.gca()
@@ -378,89 +444,301 @@ class HSDetection(object):
         return ax
 
     def Cluster(self):
+        """
+        Create a HSClustering object.
+
+        Returns
+        -------
+        HSClustering
+            The HSClustering object
+        """
+        return HSClustering(self)
+
+
+class HSDetectionLightning(object):
+    """
+    This class provides a simple interface to the detection, localisation of spikes
+    from dense multielectrode arrays. The detection is based on the methods described
+    in the following papers:
+
+    Muthmann, J. O., Amin, H., Sernagor, E., Maccione, A., Panas, D.,
+    Berdondini, L., ... & Hennig, M. H. (2015). Spike detection for large neural
+    populations using high density multielectrode arrays. Frontiers in
+    neuroinformatics, 9.
+
+    Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
+    Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
+    large-scale, high-density multielectrode arrays. Cell reports, 18(10),
+    2521-2532.
+
+    Usage:
+        1. Create a HSDetection object by calling its constructor with a SpikeInterface
+        Recording extractor and an optional detection parameter dictionary (see documentation).
+        2. Call DetectFromRaw.
+        3. Save the result, or create a HSClustering object.
+
+    Parameters
+    ----------
+    rec : RecordingExtractor
+        The recording extractor object
+    params : dict
+        The parameters for the spike detection. If None defaults will be used.
+    """
+
+    def __init__(self, rec, params=None):
+        self.sp_flat = None
+        self.spikes = None
+        self.recording = rec
+        self.num_segments = rec.get_num_segments()
+        self.params = params
+        if self.params == None:
+            self.params = detectDataLightning.DEFAULT_PARAMS
+        self.out_file_name = self.params["out_file"]
+        if self.params["chunk_size"] == None:
+            self.params["chunk_size"] = 1e9 / (rec.get_num_channels())
+        if self.out_file_name is not None:
+            out_dir = os.path.dirname(self.out_file_name)
+            self.spikes_file = self.out_file_name + ".hdf5"
+
+    def DetectFromRaw(self):
+        """
+        Detect spikes from the raw data.
+        """
+        det = detectDataLightning(self.recording, self.params)
+        sp = det.detect()
+        self.spikes = pd.DataFrame(
+            {
+                "ch": sp[0]["channel_ind"],
+                "t": sp[0]["sample_ind"],
+                "Amplitude": sp[0]["amplitude"],
+                "x": sp[0]["location"][:, 0],
+                "y": sp[0]["location"][:, 1],
+                "Shape": list(-sp[0]["spike_shape"]),
+            },
+            copy=False,
+        )
+        # check if any spikes
+        assert self.spikes.shape[0] > 0, "No spikes detected"
+        # write spikes dict to hdf5 (without shapes)
+        if self.out_file_name is not None:
+            print(f"writing spikes to {self.spikes_file}")
+            h = h5py.File(self.spikes_file, "w")
+            for key in ["ch", "t", "Amplitude", "x", "y"]:
+                h.create_dataset(key, data=self.spikes[key])
+            h["cutout_length"] = self.spikes["Shape"][0].shape[0]
+            h.close()
+
+    def PlotTracesChannels(
+        self,
+        eventid,
+        ax=None,
+        window_size=100,
+        show_channels=True,
+        ascale=1.0,
+        show_channel_numbers=True,
+        show_loc=True,
+    ):
+        print("not implemented")
+
+    def PlotDensity(self, binsize=1.0, invert=False, ax=None):
+        """
+        Plot the density of the spikes on the probe.
+
+        Parameters
+        ----------
+        binsize : float
+            The size of the bins for the density plot
+        invert : bool
+            Invert the x and y axes
+        ax : matplotlib axis
+            The axis to plot the density
+
+        Returns
+        -------
+        h : array
+            The histogram of the density
+        xb : array
+            The x bins
+        yb : array
+            The y bins
+        """
+        if ax is None:
+            ax = plt.gca()
+        x, y = self.spikes.x, self.spikes.y
+        if invert:
+            x, y = y, x
+        binsx = np.arange(x.min(), x.max(), binsize)
+        binsy = np.arange(y.min(), y.max(), binsize)
+        h, xb, yb = np.histogram2d(x, y, bins=[binsx, binsy])
+        ax.imshow(
+            np.clip(np.log10(h), 1e-10, None),
+            extent=[xb.min(), xb.max(), yb.min(), yb.max()],
+            interpolation="none",
+            origin="lower",
+        )
+        return h, xb, yb
+
+    def PlotAll(self, invert=False, ax=None, max_show=100000, **kwargs):
+        """
+        Plot spikes currently stored in the class, in (x, y) space.
+
+        Parameters
+        ----------
+        invert : bool
+            Invert the x and y axes
+        ax : matplotlib axis
+            The axis to plot the spikes
+        max_show : int
+            The maximum number of spikes to show
+        **kwargs : dict
+            Additional arguments for the scatter plot
+
+        Returns
+        -------
+        ax : matplotlib axis
+            The axis with the spikes
+        """
+        if ax is None:
+            ax = plt.gca()
+        x, y = self.spikes.x, self.spikes.y
+        if invert:
+            x, y = y, x
+        if self.spikes.shape[0] > max_show:
+            inds = np.random.choice(self.spikes.shape[0], max_show, replace=False)
+            print("We have", self.spikes.shape[0], "spikes, only showing", max_show)
+        else:
+            inds = np.arange(self.spikes.shape[0])
+        ax.scatter(x[inds], y[inds], **kwargs)
+        return ax
+
+    def Cluster(self):
+        """
+        Create a HSClustering object.
+
+        Returns
+        -------
+        HSClustering
+            The HSClustering object
+        """
         return HSClustering(self)
 
 
 class HSClustering(object):
-    """ This class provides an easy interface to the clustering of spikes based
+    """
+    This class provides an easy interface to the clustering of spikes based
     on spike location on the chip and spike waveform, as described in:
 
     Hilgen, G., Sorbaro, M., Pirmoradian, S., Muthmann, J. O., Kepiro, I. E.,
     Ullo, S., ... & Hennig, M. H. (2017). Unsupervised spike sorting for
     large-scale, high-density multielectrode arrays. Cell reports, 18(10),
-    2521-2532. """
+    2521-2532.
 
-    def __init__(self, arg1, cutout_length=None, **kwargs):
-        """ The constructor can be called in two ways:
+    Parameters
+    ----------
+    arg1 : str or list or HSDetection or HSDetectionLightning object
+        Detected spikes. This can either be a HSDetection/HSDetectionLightning object,
+        a file name for a list of file names. Lists will be concatenated into a single dataframe.
+    cutout_length : int
+        The length of the cutouts in the binary file, only required if a file or a
+        list of files is passed as first argument and legacy==True.
+    legacy : bool
+        Whether to load the spikes from the legacy format (True) or the new Lightning format.
+    **kwargs : dict
+        Additional arguments to load the data.
+    """
 
-        - with a filename or list of filenames as an argument. These should be
-        either .hdf5 files saved by this class or a previous version of this
-        class, or .bin files saved by the HSDetection class. In the latter case,
-        the cutout_length must also be passed as a second argument.
-
-        - with an instance of HSDetection as a single argument. """
-
-        # store the memmapped shapes
+    def __init__(self, arg1, legacy=False, cutout_length=None, **kwargs):
         self.shapecache = []
-
-        if type(arg1) == str:  # case arg1 is a single filename
-            arg1 = [arg1]
-
-        if type(arg1) == list:  # case arg1 is a list of filenames
-            for i, f in enumerate(arg1):
-                filetype = splitext(f)[-1]
-                not_first_file = i > 0
-                if filetype == ".hdf5":
-                    _f = h5py.File(f, "r")
-                    if "shapes" in list(_f.keys()):
-                        _f.close()
-                        self.LoadHDF5(f, append=not_first_file, **kwargs)
-                    elif "Shapes" in list(_f.keys()):
-                        _f.close()
-                        self.LoadHDF5_legacy_detected(
-                            f, append=not_first_file, **kwargs
+        if type(arg1) == pd.core.frame.DataFrame:
+            print("Reading spikes from Dataframe")
+            self.spikes = arg1
+        elif type(arg1) == HSDetectionLightning or type(arg1) == HSDetection:
+            print("Reading spikes from detection")
+            self.spikes = arg1.spikes
+        else:
+            if type(arg1) == str:
+                arg1 = [arg1]
+            if legacy:
+                for i, f in enumerate(arg1):
+                    filetype = splitext(f)[-1]
+                    not_first_file = i > 0
+                    if filetype == ".hdf5":
+                        _f = h5py.File(f, "r")
+                        if "shapes" in list(_f.keys()):
+                            _f.close()
+                            self.LoadHDF5(f, append=not_first_file, **kwargs)
+                        elif "Shapes" in list(_f.keys()):
+                            _f.close()
+                            self.LoadHDF5_legacy_detected(
+                                f, append=not_first_file, **kwargs
+                            )
+                    elif filetype == ".bin":
+                        if cutout_length is None:
+                            raise ValueError(
+                                "You must pass cutout_length for .bin files."
+                            )
+                        self.LoadBin(f, cutout_length, append=not_first_file)
+                    else:
+                        raise IOError("File format unknown. Expected .hdf5 or .bin")
+            else:
+                for i, f in enumerate(arg1):
+                    shape_file = Path(f).with_suffix(".bin")
+                    shape_file = shape_file.with_stem(f"{shape_file.stem}-0")
+                    spikes_file = Path(f).with_suffix(".hdf5")
+                    print(
+                        f"loading spikes from {spikes_file}, shapes from {shape_file}"
+                    )
+                    spikes_data = h5py.File(spikes_file, "r")
+                    cutout_length = spikes_data["cutout_length"][()]
+                    shapes = np.memmap(
+                        str(shape_file), dtype=np.int16, mode="r"
+                    ).reshape(-1, cutout_length)
+                    self.shapecache.append(shapes)
+                    spikes = pd.DataFrame(
+                        {
+                            "Shape": list(-self.shapecache[-1]),
+                            "ch": spikes_data["ch"],
+                            "t": spikes_data["t"],
+                            "Amplitude": spikes_data["Amplitude"],
+                            "x": spikes_data["x"],
+                            "y": spikes_data["y"],
+                        },
+                        copy=False,
+                    )
+                    if i > 0:
+                        self.expinds.append(len(self.spikes))
+                        self.spikes = pd.concat(
+                            [self.spikes, spikes], ignore_index=True
                         )
-
-                elif filetype == ".bin":
-                    if cutout_length is None:
-                        raise ValueError("You must pass cutout_length for .bin files.")
-                    self.LoadBin(f, cutout_length, append=not_first_file)
-                else:
-                    raise IOError("File format unknown. Expected .hdf5 or .bin")
-        else:  # we suppose arg1 is an instance of Detection
-            try:  # see if LoadDetected was run
-                self.spikes = arg1.spikes
-            except NameError:
-                arg1.LoadDetected()
-                self.spikes = arg1.spikes
-            # this computes average amplitudes, disabled for now
-            # self.spikes['min_amp'] = self.spikes.Shape.apply(min_func)
-            self.filelist = [arg1.out_file_name]
-            self.expinds = [0]
-            self.IsClustered = False
+                        self.filelist.append(arg1)
+                    else:
+                        self.spikes = spikes
+                        self.expinds = [0]
+                        self.filelist = [arg1]
 
     def CombinedClustering(
         self, alpha, clustering_algorithm=None, cluster_subset=None, **kwargs
     ):
         """
-        Clusters spikes based on their (x, y) location and on the other features
-        in HSClustering.features. These are normally principal components of the
-        spike waveforms, computed by HSClustering.ShapePCA. Cluster memberships
-        are available as HSClustering.spikes.cl. Cluster information is
-        available in the HSClustering.clusters dataframe.
+        Clusters spikes based on their location and additional features (e.g.
+        PCA projections of the spike shapes at their peak channel).
+        Cluster memberships are available in the dataframe HSClustering.spikes (column
+        cl), and cluster information in HSClustering.clusters.
 
-        Arguments:
-        alpha -- the weight given to the other features, relative to spatial
-        components (which have weight 1.)
-        clustering_algorithm -- An instance of a scikit-learn clustering object.
-        If None, a sklearn.cluster.MeanShift object will be instantiated, and the
-        **kwargs will be passed to it. A possible alternative is DBSCAN:
-            dbscan = sklearn.cluster.DBSCAN(...options...)
-            HSClusterer.CombinedClustering(clustering_algorithm=dbscan)
-        cluster_subset -- Number of spikes used to build clusters, spikes are
-        then assigned to the nearest by Euclidean distance
-        **kwargs -- additional arguments are passed to the clustering class.
-        This may include n_jobs > 1 for parallelisation.
+        Parameters
+        ----------
+        alpha : float
+            The weight given to the other features, relative to spatial components
+            (which have weight 1.)
+        clustering_algorithm : sklearn.cluster object
+            The clustering algorithm to use. If None, a MeanShift object will be
+            instantiated.
+        cluster_subset : int
+            Number of spikes used to build clusters, spikes are then assigned to the
+            nearest by Euclidean distance
+        **kwargs : dict
+            Additional arguments are passed to the clustering class. This may include
+            n_jobs > 1 for parallelisation.
         """
         try:
             fourvec = np.vstack(
@@ -519,22 +797,41 @@ class HSClustering(object):
         self.IsClustered = True
 
     def ShapePCA(
-        self, pca_ncomponents=2, pca_whiten=True, chunk_size=1000000,
-        custom_decomposition=None
+        self,
+        pca_ncomponents=2,
+        pca_whiten=True,
+        chunk_size=1000000,
+        custom_decomposition=None,
     ):
         """
-        Finds the principal components (PCs) of spike shapes contained in the
-        class, and saves them to HSClustering.features, to be used for
-        clustering.
+        Computes the principal components of the spike shapes contained in the class,
+        and computes projections of the spikes on these components. The features are
+        saved to HSClustering.features, to be used for clustering.
 
-        Arguments -- pca_ncomponents: number of PCs to be used (default 2)
-        pca_whiten -- whiten data before PCA.
-        chunk_size -- maximum number of shapes to be used to find PCs,
-        default 1 million.
-        custom_decomposition -- a custom instance of a sklearn decomposition object
-        (such as instances PCA or FastICA), to be used for custom dimensionality
-        reduction. pca_ncomponents and pca_whiten are ignored if provided.
+        Parameters
+        ----------
+        pca_ncomponents : int
+            Number of principal components to be used
+        pca_whiten : bool
+            Whiten data before PCA
+        chunk_size : int
+            Maximum number of shapes to be used to find PCs
+        custom_decomposition : sklearn.decomposition object
+            A custom instance of a sklearn decomposition object (such as instances PCA
+            or FastICA), to be used for custom dimensionality reduction. pca_ncomponents
+            and pca_whiten are ignored if provided.
         """
+
+        def custom_roll(arr, r_tup):
+            m = np.asarray(r_tup)
+            arr_roll = arr[
+                :, [*range(arr.shape[1]), *range(arr.shape[1] - 1)]
+            ].copy()  # need `copy`
+            strd_0, strd_1 = arr_roll.strides
+            n = arr.shape[1]
+            result = as_strided(arr_roll, (*arr.shape, n), (strd_0, strd_1, strd_1))
+            return result[np.arange(arr.shape[0]), (n - m) % n]
+
         n_spikes = self.spikes.shape[0]
         if custom_decomposition is None:  # default is PCA
             _pca = PCA(n_components=pca_ncomponents, whiten=pca_whiten)
@@ -542,29 +839,47 @@ class HSClustering(object):
             _pca = custom_decomposition
 
         if n_spikes > chunk_size:
-            print("Fitting dimensionality reduction using", chunk_size, "out of",
-                  n_spikes, "spikes...")
+            print(
+                f"Fitting dimensionality reduction using {chunk_size} out of {n_spikes} spikes..."
+            )
             inds = np.sort(np.random.choice(n_spikes, chunk_size, replace=False))
             s = self.spikes.Shape.loc[inds].values.tolist()
         else:
             print("Fitting dimensionality reduction using all spikes...")
             s = self.spikes.Shape.values.tolist()
+        # align peaks
+        peak = np.argmin(np.diff(np.asarray(s).T, axis=0), axis=0)
+        shift = np.min(peak) - peak
+        s_roll = custom_roll(np.asarray(s), shift)
 
-        _pca.fit(np.asarray(s))
+        _pca.fit(np.asarray(s_roll))
 
         print("...projecting...")
         _pcs = np.empty((n_spikes, pca_ncomponents))
         for i in range(n_spikes // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
             s = self.spikes.Shape.loc[
-                i * chunk_size : (i + 1) * chunk_size - 1].values.tolist()
+                i * chunk_size : (i + 1) * chunk_size - 1
+            ].values.tolist()
+            # align peaks
+            peak = np.argmin(np.diff(np.asarray(s).T, axis=0), axis=0)
+            shift = np.min(peak) - peak
+            s_roll = custom_roll(np.asarray(s), shift)
             _pcs[i * chunk_size : (i + 1) * chunk_size, :] = _pca.transform(s)
 
         self.pca = _pca
         self.features = _pcs
         print("...done")
 
-    def _savesinglehdf5(self, filename, limits, compression, sampling, transpose=False):
+    def _savesinglehdf5(
+        self,
+        filename,
+        limits,
+        compression,
+        sampling,
+        transpose=False,
+        save_shapes=False,
+    ):
         if limits is not None:
             spikes = self.spikes[limits[0] : limits[1]]
         else:
@@ -593,18 +908,25 @@ class HSClustering(object):
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
-        if not spikes.empty:
+        # no longer save the spike shapes by default
+        if save_shapes and not spikes.empty:
             cutout_length = spikes.Shape.iloc[0].size
             sh_tmp = np.empty((cutout_length, spikes.Shape.size), dtype=int)
             for i, s in enumerate(spikes.Shape):
                 sh_tmp[:, i] = s
             g.create_dataset("shapes", data=sh_tmp, compression=compression)
-        else:
-            g.create_dataset("shapes", data=[], compression=compression)
-
+        # else:
+        # g.create_dataset("shapes", data=[], compression=compression)
         g.close()
 
-    def SaveHDF5(self, filename, compression=None, sampling=None, transpose=False):
+    def SaveHDF5(
+        self,
+        filename,
+        compression=None,
+        sampling=None,
+        transpose=False,
+        save_shapes=False,
+    ):
         """
         Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers
         compression of the shapes, 'lzf' appears a good trade-off between speed
@@ -614,13 +936,19 @@ class HSClustering(object):
         If filename is a list of names of the same length as the number of
         experiments, one file per experiment will be saved.
 
-        Arguments:
-        filename -- the names of the file or list of files to be saved.
-        compression -- passed to HDF5, for compression of shapes only.
-        sampling -- provide this information to include it in the file.
-        transpose -- whether to swap x and y.
+        Parameters
+        ----------
+        filename : str or list
+            The names of the file or list of files to be saved.
+        compression : str
+            Passed to HDF5, to save shapes compressed.
+        sampling : float
+            Provide sampling rate to include it in the file.
+        transpose : bool
+            Whether to swap x and y.  Default is False.
+        save_shapes : bool
+            Whether to save the spike shapes. Default is False.
         """
-
         if sampling is None:
             print(
                 "# Warning: no sampling rate given, will be set to 0 in the hdf5 file."
@@ -646,15 +974,19 @@ class HSClustering(object):
     def LoadHDF5(self, filename, append=False, chunk_size=1000000, scale=1.0):
         """
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
-        HS1 folowing clustering.
+        legacy HS1 code folowing clustering.
 
-        Arguments:
-        filename -- file to load from
-        append -- append to data already im memory
-        chunk_size -- read shapes in chunks of this size to avoid memory problems
-        scale -- re-scale shapes by this factor (may be required for HS1 data)
+        Parameters
+        ----------
+        filename : str
+            The name of the file to load from.
+        append : bool
+            Append to data already in memory.
+        chunk_size : int
+            Read shapes in chunks of this size to avoid memory problems.
+        scale : float
+            Re-scale shapes by this factor (may be required for HS1 data).
         """
-
         g = h5py.File(filename, "r")
         print("Reading from clustered (HS1 or HS2) file " + filename)
 
@@ -664,9 +996,14 @@ class HSClustering(object):
             "and converting to integer...",
         )
         i = len(self.shapecache)
-        self.shapecache.append(np.memmap("tmp"+str(i)+".bin",
-                               dtype=np.int32, mode="w+",
-                               shape=g['shapes'].shape[::-1]))
+        self.shapecache.append(
+            np.memmap(
+                "tmp" + str(i) + ".bin",
+                dtype=np.int32,
+                mode="w+",
+                shape=g["shapes"].shape[::-1],
+            )
+        )
         for i in range(g["shapes"].shape[1] // chunk_size + 1):
             tmp = (
                 scale
@@ -677,7 +1014,7 @@ class HSClustering(object):
             print("Read chunk " + str(i + 1))
             if len(inds) > 0:
                 print("Found", len(inds), "data points out of linear regime")
-            print(len(self.shapecache),tmp.shape, i * chunk_size , (i + 1) * chunk_size)
+            print(len(self.shapecache), tmp.shape, i * chunk_size, (i + 1) * chunk_size)
             self.shapecache[-1][i * chunk_size : (i + 1) * chunk_size] = tmp[:]
 
         self.cutout_length = self.shapecache[-1].shape[1]
@@ -726,8 +1063,6 @@ class HSClustering(object):
                 "Color": 1.0 * np.random.permutation(self.NClusters) / self.NClusters,
                 "Size": _cls,
             }
-            # 'AvgAmpl': _avgAmpl}
-
             self.clusters = pd.DataFrame(dic_cls)
             self.IsClustered = True
         else:
@@ -751,13 +1086,17 @@ class HSClustering(object):
         Load data, cluster centres and ClusterIDs from a hdf5 file created with
         the HS1 detector.
 
-        Arguments:
-        filename -- file to load from
-        append -- append to data already im memory
-        chunk_size -- read shapes in chunks of this size to avoid memory problems
-        scale -- re-scale shapes by this factor (may be required for HS1 data)
+        Parameters
+        ----------
+        filename : str
+            The name of the file to load from.
+        append : bool
+            Append to data already in memory.
+        chunk_size : int
+            Read shapes in chunks of this size to avoid memory problems.
+        scale : float
+            Re-scale shapes by this factor (may be required for HS1 data).
         """
-
         g = h5py.File(filename, "r")
         print("Reading from unclustered HS1 file " + filename)
         if scale == 1:
@@ -820,13 +1159,17 @@ class HSClustering(object):
 
     def LoadBin(self, filename, cutout_length, append=False):
         """
-        Reads a binary file with spikes detected with the DetectFromRaw() method
+        Reads a binary file with spikes detected with the legacy DetectFromRaw() method.
 
-        Arguments:
-        filename -- the name of the file
-        cutout_length -- the length of each spike shape, in frames (this is necessary
-        because the data is stored as a 1d array)
-        append -- append to data already im memory
+        Parameters
+        ----------
+        filename : str
+            The name of the file
+        cutout_length : int
+            The length of each spike shape, in frames (this is necessary
+            because the data is stored as a 1d array)
+        append : bool
+            Append to data already im memory
         """
         # 5 here are the non-shape data columns
         print("# loading", filename)
@@ -876,19 +1219,23 @@ class HSClustering(object):
         Plot a sample of the spike shapes contained in a given set of clusters
         and their average.
 
-        Arguments:
-        units -- a list of the cluster IDs to be considered.
-        ncols -- the number of columns under which to distribute the plots.
-        ylim -- limits of the vertical axis of the plots. If None, try to figure
-        them out.
+        Parameters
+        ----------
+        units : list
+            A list of the cluster IDs to be considered.
+        ncols : int
+            The number of columns under which to distribute the plots.
+        ylim : list
+            Limits of the vertical axis of the plots. If None, try to figure
+            them out.
         """
-        nrows = np.ceil(len(units) / ncols)
+        nrows = int(np.ceil(len(units) / ncols))
         cutouts = self.spikes.Shape
 
         # all this is to determine suitable ylims TODO probe should provide
         yoff = 0
         if ylim is None:
-            meanshape = np.mean(cutouts.loc[:2000], axis=0)
+            meanshape = np.mean(np.vstack(cutouts.loc[:1000].values), axis=0)
             yoff = -meanshape[0]
             maxy, miny = meanshape.max() + yoff, meanshape.min() + yoff
             varshape = np.var(cutouts.loc[:1000].values, axis=0)
@@ -901,14 +1248,20 @@ class HSClustering(object):
         plt.figure(figsize=(3 * ncols, 3 * nrows))
         for i, cl in enumerate(units):
             inds = np.where(self.spikes.cl == cl)[0][:max_shapes]
-            meanshape = np.mean(cutouts.loc[inds], axis=0)
+            meanshape = np.mean(np.vstack(cutouts.loc[inds].values), axis=0)
             yoff = -meanshape[0]
 
             plt.subplot(nrows, ncols, i + 1)
-            [plt.plot(v - v[0], "gray", alpha=0.3) for v in cutouts.loc[inds].values]
+            plt.plot(
+                np.vstack(cutouts.loc[inds[:50]].values).T,
+                color=(0.8, 0.8, 0.8),
+                lw=0.8,
+            )
+
             plt.plot(meanshape + yoff, c=plt.cm.hsv(self.clusters.Color[cl]), lw=4)
             plt.ylim(ylim)
             plt.title("Cluster " + str(cl))
+        plt.tight_layout()
 
     def PlotAll(
         self,
@@ -917,21 +1270,32 @@ class HSClustering(object):
         ax=None,
         max_show=200000,
         fontsize=16,
-        **kwargs
+        **kwargs,
     ):
         """
         Plots all the spikes currently stored in the class, in (x, y) space.
         If clustering has been performed, each spike is coloured according to
         the cluster it belongs to.
 
-        Arguments:
-        invert -- (boolean, optional) if True, flips x and y
-        show_labels -- (boolean, optional) if True, annotates each cluster
-        centre with its cluster ID.
-        ax -- a matplotlib axes object where to draw. Defaults to current axis.
-        max_show -- maximum number of spikes to show
-        fontsize -- font size for annotations
-        **kwargs -- additional arguments are passed to pyplot.scatter
+        Parameters
+        ----------
+        invert : bool
+            Invert the x and y axes
+        show_labels : bool
+            Annotate each cluster centre with its cluster ID
+        ax : matplotlib axis
+            The axis to plot the spikes
+        max_show : int
+            The maximum number of spikes to show
+        fontsize : int
+            The size of the font for the labels
+        **kwargs : dict
+            Additional arguments for the scatter plot
+
+        Returns
+        -------
+        ax : matplotlib axis
+            The axis with the plot
         """
         n_spikes = self.spikes.shape[0]
         if ax is None:
@@ -970,15 +1334,27 @@ class HSClustering(object):
         """
         Plot all units and spikes in the neighbourhood of cluster cl.
 
-        Arguments:
-        cl -- ID of the cluster to be shown
-        radius -- spikes are shown for units this far away from cluster centre
-        show_cluster_numbers -- whether to print cluster labels
-        alpha -- transparency of spike points
-        show_unclustered -- whether to show unclustered spikes (left by certain
-        clustering algorithms)
-        max_shapes -- maximum number of shapes to be plotted
-        figsize -- the size of the figure
+        Parameters
+        ----------
+        cl : int
+            The ID of the cluster to be shown
+        radius : float
+            Spikes are shown for units this far away from the cluster centre
+        show_cluster_numbers : bool
+            Whether to print cluster labels
+        alpha : float
+            Transparency of spike points
+        show_unclustered : bool
+            Whether to show unclustered spikes (left by certain clustering algorithms)
+        max_shapes : int
+            Maximum number of shapes to be plotted
+        figsize : tuple
+            The size of the figure
+
+        Returns
+        -------
+        ax : matplotlib axis
+            The axis with the plot.
         """
 
         plt.figure(figsize=figsize)
@@ -1014,11 +1390,14 @@ class HSClustering(object):
             )
             if show_cluster_numbers:
                 ax[0].text(cx - 0.1, cy, str(cl_t), fontsize=16, color="w")
-            for i in inds[:30]:
-                ax[i_cl + 2].plot(self.spikes.Shape[i], color=(0.8, 0.8, 0.8), lw=0.8)
+            ax[i_cl + 2].plot(
+                np.vstack(self.spikes.loc[inds[:50]].Shape.values).T,
+                color=(0.8, 0.8, 0.8),
+                lw=0.8,
+            )
             if len(inds) > 1:
                 ax[i_cl + 2].plot(
-                    np.mean(self.spikes.Shape[inds].values, axis=0),
+                    np.mean(np.vstack(self.spikes.loc[inds].Shape.values), axis=0),
                     color=plt.cm.hsv(self.clusters["Color"][cl_t]),
                     lw=2,
                 )
