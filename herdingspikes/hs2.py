@@ -652,9 +652,11 @@ class HSClustering(object):
         if type(arg1) == pd.core.frame.DataFrame:
             print("Reading spikes from Dataframe")
             self.spikes = arg1
+            self.expinds = [0]
         elif type(arg1) == HSDetectionLightning or type(arg1) == HSDetection:
             print("Reading spikes from detection")
             self.spikes = arg1.spikes
+            self.expinds = [0]
         else:
             if type(arg1) == str:
                 arg1 = [arg1]
@@ -909,12 +911,12 @@ class HSClustering(object):
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
         # no longer save the spike shapes by default
-        if save_shapes and not spikes.empty:
-            cutout_length = spikes.Shape.iloc[0].size
-            sh_tmp = np.empty((cutout_length, spikes.Shape.size), dtype=int)
-            for i, s in enumerate(spikes.Shape):
-                sh_tmp[:, i] = s
-            g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        # if save_shapes and not spikes.empty:
+        #     cutout_length = spikes.Shape.iloc[0].size
+        #     sh_tmp = np.empty((cutout_length, spikes.Shape.size), dtype=int)
+        #     for i, s in enumerate(spikes.Shape):
+        #         sh_tmp[:, i] = s
+        #     g.create_dataset("shapes", data=sh_tmp, compression=compression)
         # else:
         # g.create_dataset("shapes", data=[], compression=compression)
         g.close()
