@@ -68,30 +68,40 @@ with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 # Compile C++ code
-extra_compile_args = ["-std=c++17", "-O3"] + [
-    "-march=native",
-    "-mtune=native",
-] * NATIVE_OPTIM
+extra_compile_args = [] * NATIVE_OPTIM
 link_extra_args = []
 # OS X support
 if platform.system() == "Darwin":
     extra_compile_args += [
         "-mmacosx-version-min=10.14",
         "-F.",
-        # "-I/opt/homebrew/opt/libomp/include",
+        "-I/opt/homebrew/opt/libomp/include",
         "-Xclang",
         "-fopenmp",
+        "-std=c++17",
+        "-O3",
+        "-march=native",
+        "-mtune=native",
     ]
     link_extra_args += [
         "-stdlib=libc++",
         "-mmacosx-version-min=10.14",
-        # "-lomp",
-        # "-L/opt/homebrew/opt/libomp/lib",
+        "-lomp",
+        "-L/opt/homebrew/opt/libomp/lib",
         "-Xclang",
         "-fopenmp",
     ]
+elif platform.system() == "Windows":
+    extra_compile_args += ["/std:c++17"]
+    link_extra_args += ["/std:c++17"]
 else:
-    extra_compile_args += ["-fopenmp"]
+    extra_compile_args += [
+        "-fopenmp",
+        "-std=c++17",
+        "-O3",
+        "-march=native",
+        "-mtune=native",
+    ]
     link_extra_args += ["-fopenmp"]
 
 # lightning detection code

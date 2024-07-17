@@ -13,7 +13,7 @@ namespace HSDetection
 
     void SpikeFilterer::operator()(SpikeQueue *pQueue)
     {
-        Spike maxSpike = move(*pQueue->begin());
+        Spike maxSpike = std::move(*pQueue->begin());
         pQueue->erase(pQueue->begin());
 
         IntFrame frameBound = maxSpike.frame + temporalJitter;
@@ -24,7 +24,7 @@ namespace HSDetection
                           { return spike.frame <= frameBound &&
                                    pLayout->areNeighbors(spike.channel, maxChannel) &&
                                    spike.amplitude <= maxAmp; });
-        pQueue->push_front(move(maxSpike));
+        pQueue->push_front(std::move(maxSpike));
     }
 
 } // namespace HSDetection

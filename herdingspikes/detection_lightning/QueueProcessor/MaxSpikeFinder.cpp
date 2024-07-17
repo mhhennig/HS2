@@ -24,7 +24,7 @@ namespace HSDetection
                      lhs.amplitude <= rhs.amplitude; });
         // using amp <=, so it's the latest max spike in spatial-temporal neighborhood
 
-        pQueue->push_front(move(*itMax));
+        pQueue->push_front(std::move(*itMax));
         pQueue->erase(itMax);
     }
 
