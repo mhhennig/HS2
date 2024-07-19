@@ -32,18 +32,14 @@ namespace HSDetection
         // {
         //     arrayBuffer = new (memAlign) IntVolt[(IntCalc)(frameMask + 1) * numChannels];
         // }
-        // ~RollingArray() { operator delete[](arrayBuffer, memAlign); }
-        // RollingArray(IntFrame rollingLen, IntChannel numChannels)
-        //     : frameMask(getMask(rollingLen)), numChannels(numChannels)
-        // {
-        //     arrayBuffer = new IntVolt[(IntCalc)(frameMask + 1) * numChannels];
-        // }
         RollingArray(IntFrame rollingLen, IntChannel numChannels)
             : frameMask(getMask(rollingLen)), numChannels(numChannels)
         {
-            arrayBuffer = (IntVolt *)operator new[](sizeof(IntVolt) * (IntCalc)(frameMask + 1) * numChannels, memAlign);
+            // std::cout << "Rollingarray\n";
+            arrayBuffer = (IntVolt *) operator new[](sizeof(IntVolt) * (IntCalc)(frameMask + 1) * numChannels,memAlign);
         }
-        ~RollingArray() { delete[] arrayBuffer; }
+
+        ~RollingArray() { operator delete[](arrayBuffer, memAlign); }
 
         // copy constructor deleted to protect buffer
         RollingArray(const RollingArray &) = delete;
