@@ -27,12 +27,23 @@ namespace HSDetection
         }
 
     public:
+        // RollingArray(IntFrame rollingLen, IntChannel numChannels)
+        //     : frameMask(getMask(rollingLen)), numChannels(numChannels)
+        // {
+        //     arrayBuffer = new (memAlign) IntVolt[(IntCalc)(frameMask + 1) * numChannels];
+        // }
+        // ~RollingArray() { operator delete[](arrayBuffer, memAlign); }
+        // RollingArray(IntFrame rollingLen, IntChannel numChannels)
+        //     : frameMask(getMask(rollingLen)), numChannels(numChannels)
+        // {
+        //     arrayBuffer = new IntVolt[(IntCalc)(frameMask + 1) * numChannels];
+        // }
         RollingArray(IntFrame rollingLen, IntChannel numChannels)
             : frameMask(getMask(rollingLen)), numChannels(numChannels)
         {
-            arrayBuffer = new (memAlign) IntVolt[(IntCalc)(frameMask + 1) * numChannels];
+            arrayBuffer = (IntVolt *)operator new[](sizeof(IntVolt) * (IntCalc)(frameMask + 1) * numChannels, memAlign);
         }
-        ~RollingArray() { operator delete[](arrayBuffer, memAlign); }
+        ~RollingArray() { delete[] arrayBuffer; }
 
         // copy constructor deleted to protect buffer
         RollingArray(const RollingArray &) = delete;

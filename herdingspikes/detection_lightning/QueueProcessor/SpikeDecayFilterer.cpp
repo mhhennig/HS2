@@ -1,6 +1,7 @@
 #include <set>
 #include <algorithm>
 #include <utility>
+#include <iterator>
 
 #include "SpikeDecayFilterer.h"
 
@@ -15,7 +16,7 @@ namespace HSDetection
 
     void SpikeDecayFilterer::operator()(SpikeQueue *pQueue)
     {
-        Spike maxSpike = move(*pQueue->begin());
+        Spike maxSpike = std::move(*pQueue->begin());
         pQueue->erase(pQueue->begin());
 
         IntFrame frameBound = maxSpike.frame + temporalJitter;
@@ -41,7 +42,7 @@ namespace HSDetection
                           { return spike.frame <= frameBound &&
                                    pLayout->areInnerNeighbors(spike.channel, maxChannel) &&
                                    spike.amplitude <= maxAmp; });
-        pQueue->push_front(move(maxSpike));
+        pQueue->push_front(std::move(maxSpike));
     }
 
     bool SpikeDecayFilterer::shouldFilterOuter(SpikeQueue *pQueue, const Spike &outerSpike) const

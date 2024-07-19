@@ -119,3 +119,4 @@ pyproject.toml.save
 setup.py.save
 herdingspikes/detection_localisation/detect.cpp
 herdingspikes/detection_lightning/detect.cpp
+.vscode/settings.json

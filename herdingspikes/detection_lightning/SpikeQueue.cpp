@@ -75,7 +75,7 @@ namespace HSDetection
                  [this](QueueProcessor *pQueProc)
                  { (*pQueProc)(this); });
 
-        pRresult->push_back(move(*queue.begin()));
+        pRresult->push_back(std::move(*queue.begin()));
         queue.erase(queue.begin());
     }
 
@@ -92,7 +92,7 @@ namespace HSDetection
                 procFront();
             }
 
-            queue.push_back(move(spikes[i]));
+            queue.push_back(std::move(spikes[i]));
         }
 
         spikeCnt = 0; // reset for next chunk

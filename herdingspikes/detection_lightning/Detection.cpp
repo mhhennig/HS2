@@ -21,8 +21,10 @@ namespace HSDetection
         : traceRaw(chunkLeftMargin, numChannels, chunkSize),
           numChannels(numChannels), alignedChannels(alignChannel(numChannels)),
           chunkSize(chunkSize), chunkLeftMargin(chunkLeftMargin), rescale(rescale),
-          scale(new (align_val_t(channelAlign * sizeof(IntVolt))) FloatRaw[alignedChannels * channelAlign]),
-          offset(new (align_val_t(channelAlign * sizeof(IntVolt))) FloatRaw[alignedChannels * channelAlign]),
+        //   scale(new FloatRaw[alignedChannels * channelAlign]),
+        //   offset(new FloatRaw[alignedChannels * channelAlign]),
+          scale((FloatRaw *)operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
+          offset((FloatRaw *)operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
           trace(chunkSize + chunkLeftMargin, alignedChannels * channelAlign),
           medianReference(medianReference), averageReference(averageReference),
           commonRef(chunkSize + chunkLeftMargin, 1),
@@ -62,8 +64,8 @@ namespace HSDetection
         delete[] spikeArea;
         delete[] hasAHP;
 
-        operator delete[](scale, align_val_t(channelAlign * sizeof(IntVolt)));
-        operator delete[](offset, align_val_t(channelAlign * sizeof(IntVolt)));
+        operator delete[](scale, std::align_val_t(channelAlign * sizeof(IntVolt)));
+        operator delete[](offset, std::align_val_t(channelAlign * sizeof(IntVolt)));
     }
 
     void Detection::step(FloatRaw *traceBuffer, IntFrame chunkStart, IntFrame chunkLen)
