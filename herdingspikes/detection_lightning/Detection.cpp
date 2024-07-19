@@ -197,7 +197,7 @@ namespace HSDetection
         IntChannel thActualEnd = min(thAlignedEnd * channelAlign, numChannels);
 
         // perform averaging over two frames
-        for (IntChannel t = chunkStart + chunkLen; t > chunkStart; t--)
+        for (IntChannel t = chunkStart + chunkLen + 1; t > chunkStart; t--)
         {
             for (IntChannel i = thAlignedStart * channelAlign; i < thActualEnd; i++)
             {
