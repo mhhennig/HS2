@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <numeric>
-#include <iostream>
+
 #include <omp.h>
 
 #include "Detection.h"
@@ -21,10 +21,8 @@ namespace HSDetection
         : traceRaw(chunkLeftMargin, numChannels, chunkSize),
           numChannels(numChannels), alignedChannels(alignChannel(numChannels)),
           chunkSize(chunkSize), chunkLeftMargin(chunkLeftMargin), rescale(rescale),
-        //   scale(new FloatRaw[alignedChannels * channelAlign]),
-        //   offset(new FloatRaw[alignedChannels * channelAlign]),
-          scale((FloatRaw *)operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
-          offset((FloatRaw *)operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
+          scale((FloatRaw *) operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
+          offset((FloatRaw *) operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
           trace(chunkSize + chunkLeftMargin, alignedChannels * channelAlign),
           medianReference(medianReference), averageReference(averageReference),
           commonRef(chunkSize + chunkLeftMargin, 1),
@@ -64,8 +62,8 @@ namespace HSDetection
         delete[] spikeArea;
         delete[] hasAHP;
 
-        operator delete[](scale, std::align_val_t(channelAlign * sizeof(IntVolt)));
-        operator delete[](offset, std::align_val_t(channelAlign * sizeof(IntVolt)));
+        operator delete[](scale, align_val_t(channelAlign * sizeof(IntVolt)));
+        operator delete[](offset, align_val_t(channelAlign * sizeof(IntVolt)));
     }
 
     void Detection::step(FloatRaw *traceBuffer, IntFrame chunkStart, IntFrame chunkLen)
@@ -196,25 +194,16 @@ namespace HSDetection
         thAlignedEnd = min(thAlignedEnd, alignedChannels);
         IntChannel thActualEnd = min(thAlignedEnd * channelAlign, numChannels);
 
-        // perform averaging over two frames
-        for (IntChannel t = chunkStart + chunkLen; t > chunkStart; t--)
-        {
-            for (IntChannel i = thAlignedStart * channelAlign; i < thActualEnd; i++)
-            {
-                trace[t][i] = (trace[t][i] + trace[t - 1][i]) / 2;
-            }
-        }
-
         for (IntFrame t = chunkStart; t < chunkStart + chunkLen; t++)
         {
             estimation(runningBaseline[t], runningDeviation[t],
-                        trace[t], commonRef[t],
-                        runningBaseline[t - 1], runningDeviation[t - 1],
-                        thAlignedStart, thAlignedEnd);
+                       trace[t], commonRef[t],
+                       runningBaseline[t - 1], runningDeviation[t - 1],
+                       thAlignedStart, thAlignedEnd);
 
             detection(trace[t], commonRef[t],
-                        runningBaseline[t], runningDeviation[t],
-                        thAlignedStart * channelAlign, thActualEnd, t);
+                      runningBaseline[t], runningDeviation[t],
+                      thAlignedStart * channelAlign, thActualEnd, t);
         }
     }
 
