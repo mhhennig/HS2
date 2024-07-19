@@ -28,7 +28,6 @@ except ImportError:
 
     print("WARNING no Cython found, not for build")
 
-
 PROFILE = 0  # disabled in release, only use in dev
 NATIVE_OPTIM = True  # enabled for better speed
 FORCE_CYTHONIZE = True  # force rebuild in release, no need to in dev
@@ -70,8 +69,8 @@ with open("README.md", "r", encoding="utf-8") as f:
 # Compile C++ code
 extra_compile_args = [] * NATIVE_OPTIM
 link_extra_args = []
-# OS X support
-if platform.system() == "Darwin":
+
+if platform.system() == "Darwin":  # macOS
     extra_compile_args += [
         "-mmacosx-version-min=10.14",
         "-F.",
@@ -91,10 +90,10 @@ if platform.system() == "Darwin":
         "-Xclang",
         "-fopenmp",
     ]
-elif platform.system() == "Windows":
+elif platform.system() == "Windows":  # Windows
     extra_compile_args += ["/std:c++17"]
     link_extra_args += ["/std:c++17"]
-else:
+else:  # Linux
     extra_compile_args += [
         "-fopenmp",
         "-std=c++17",
@@ -118,7 +117,7 @@ detect_lightning = Extension(
     language="c++",
 )
 
-# original detection code
+# original detection code, ship for comatibility
 ext_src = ["detect.pyx"]
 sources = glob.glob(
     "herdingspikes/detection_localisation/**/[A-Z]*.cpp", recursive=True
@@ -150,8 +149,6 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Cython",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3 :: Only",
     ],
@@ -167,6 +164,7 @@ setup(
         "tqdm",
         "joblib",
         "spikeinterface[full]",
+        "h5py",
     ],
     # extras_require={
     #     'tests': [
@@ -195,16 +193,8 @@ setup(
             "**/__pycache__/*",
         ]
     },
-    # ext_modules=detect_ext,
     # zip_safe=False,
-    # project_urls={
-    #     'Source': 'https://github.com/mhhennig/HS2/'
-    # },
     ext_modules=[detect_ext, detect_lightning],
-    # zip_safe=False,
-    # project_urls={
-    #     'Source': 'https://github.com/mhhennig/HS2/'
-    # },
 )
 
 

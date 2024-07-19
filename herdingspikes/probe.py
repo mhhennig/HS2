@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
-import json
+
+# import json
 from matplotlib import pyplot as plt
 from .probe_functions.readUtils import read_flat
 from .probe_functions.readUtils import openHDF5file, getHDF5params, getHDF5params_brw4
@@ -8,16 +9,18 @@ from .probe_functions.readUtils import readHDF5t_100, readHDF5t_101
 from .probe_functions.readUtils import readHDF5t_100_i, readHDF5t_101_i
 from .probe_functions.readUtils import readHDF5_brw4
 from .probe_functions.neighborMatrixUtils import createNeighborMatrix
-import h5py
+
+# import h5py
 import ctypes
 import os.path
 from scipy.spatial.distance import cdist
 import warnings
 
-this_file_path = os.path.dirname(os.path.abspath(__file__))
+this_file_path = "."  # os.path.dirname(os.path.abspath(__file__))
 
 DEFAULT_EVENT_LENGTH = 0.5
 DEFAULT_PEAK_JITTER = 0.2
+
 
 def get_neighbors(radius, ch_positions):
     distances = cdist(ch_positions, ch_positions, metric="euclidean")
@@ -26,6 +29,7 @@ def get_neighbors(radius, ch_positions):
     for dist_from_ch in distances:
         neighbors.append(indices[dist_from_ch <= radius])
     return neighbors
+
 
 # def create_probe_files(pos_file, neighbor_file, radius, ch_positions):
 #     n_channels = ch_positions.shape[0]
@@ -43,19 +47,22 @@ def get_neighbors(radius, ch_positions):
 #             f.write("{},\n".format(str(list(neighbors))[1:-1]))
 #     f.close()
 
+
 def in_probes_dir(file):
-    probe_path1 = os.getenv('HS2_PROBE_PATH', this_file_path)    
+    probe_path1 = os.getenv("HS2_PROBE_PATH", this_file_path)
     probe_path = os.path.join(probe_path1, "probes")
     if not os.path.exists(probe_path):
         os.mkdir(probe_path)
     return os.path.join(probe_path, file)
 
+
 def in_probe_info_dir(file):
-    probe_path1 = os.getenv('HS2_PROBE_PATH', this_file_path)    
+    probe_path1 = os.getenv("HS2_PROBE_PATH", this_file_path)
     probe_path = os.path.join(probe_path1, "probe_info")
     if not os.path.exists(probe_path):
         os.mkdir(probe_path)
     return os.path.join(probe_path, file)
+
 
 class NeuralProbe(object):
     def __init__(
@@ -164,6 +171,7 @@ class NeuralProbe(object):
                 channel_positions.append(self.positions[channel])
         return channel_positions
 
+
 class BioCam(NeuralProbe):
     def __init__(
         self,
@@ -180,7 +188,7 @@ class BioCam(NeuralProbe):
         self.data_file = data_file_path
         if data_file_path is not None:
             self.d = openHDF5file(data_file_path)
-            if '3BData' in self.d:
+            if "3BData" in self.d:
                 params = getHDF5params(self.d)
             else:
                 params = getHDF5params_brw4(self.d)
@@ -204,7 +212,7 @@ class BioCam(NeuralProbe):
                     self.read_function = readHDF5t_101_i
                 else:
                     self.read_function = readHDF5t_101
-            elif file_format == 'brw4':
+            elif file_format == "brw4":
                 self.read_function = readHDF5_brw4
         else:
             print("# Note: data file not specified, setting some defaults")
@@ -270,6 +278,7 @@ class BioCam(NeuralProbe):
 
     def Read(self, t0, t1):
         return self.read_function(self.d, t0, t1, self.num_channels)
+
 
 class RecordingExtractor(NeuralProbe):
     def __init__(
