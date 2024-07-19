@@ -495,7 +495,7 @@ class HSDetectionLightning(object):
             self.params = detectDataLightning.DEFAULT_PARAMS
         self.out_file_name = self.params["out_file"]
         if self.params["chunk_size"] == None:
-            self.params["chunk_size"] = 1e9 / (rec.get_num_channels())
+            self.params["chunk_size"] = min((1e9 / rec.get_num_channels()), 1e6)
         if self.out_file_name is not None:
             out_dir = os.path.dirname(self.out_file_name)
             self.spikes_file = self.out_file_name + ".hdf5"
