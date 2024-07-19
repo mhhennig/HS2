@@ -92,7 +92,6 @@ if platform.system() == "Darwin":  # macOS
     ]
 elif platform.system() == "Windows":  # Windows
     extra_compile_args += ["/std:c++17"]
-    link_extra_args += ["/std:c++17"]
 else:  # Linux
     extra_compile_args += [
         "-fopenmp",
