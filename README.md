@@ -78,6 +78,7 @@ Example code is in the folder [notebooks](notebooks). These can be run without i
 
 ## Contributors, alphabetical <a name="people"></a>
 
+- [Mariyana Cholakova](https://www.linkedin.com/in/mariyana-cholakova-a17496136/): Parameter optimisation
 - [Matthias Hennig](http://homepages.inf.ed.ac.uk/mhennig/index.html): Spike sorting
 - [Jano Horvath](https://github.com/JanoHorvath): Parameter optimisation
 - [Cole Hurwitz](https://github.com/colehurwitz31): Spike detection, localisation and sorting, C++ code
