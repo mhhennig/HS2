@@ -74,6 +74,8 @@ Then run:
 
 A [quick start guide](documentation/quick_start.md) is available.
 
+[This document](documentation/spikeinterface.md) explains how to use Herdingspikes with SpikeInterface.
+
 Example code is in the folder [notebooks](notebooks). These can be run without installing HS2 system-wide and requires to run ``python setup.py build_ext --inplace`` in the ``HS2`` directory. Next, run ``jupyter notebook`` and navigate to the directory to try the code.
 
 ## Contributors, alphabetical <a name="people"></a>
