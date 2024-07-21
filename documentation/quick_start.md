@@ -77,7 +77,7 @@ sorting = si.NumpySorting.from_times_labels(spike_indexes, spike_labels, samplin
 sorting.save_to_folder('biocam_sorting', overwrite=True)
 ```
 
-# Parameters
+# Parameters <a name="parameters"></a>
 
 ## General parameters
 
