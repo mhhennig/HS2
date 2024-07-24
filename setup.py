@@ -162,7 +162,6 @@ setup(
         "pandas",
         "tqdm",
         "joblib",
-        "spikeinterface[full]",
         "h5py",
     ],
     # extras_require={
