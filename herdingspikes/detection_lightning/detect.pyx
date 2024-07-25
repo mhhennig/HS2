@@ -433,8 +433,8 @@ class HSDetectionLightning(object):
             )
 
         result: dict[str, RealArray] = {
-            "sample_ind": sample_ind,
-            "channel_ind": channel_ind,
+            "sample_index": sample_ind,
+            "channel_index": channel_ind,
             "amplitude": amplitude,
         }
         if self.localize:
