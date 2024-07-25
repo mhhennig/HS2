@@ -11,7 +11,7 @@ namespace HSDetection
 {
     Detection::Detection(IntChannel numChannels, IntFrame chunkSize, IntFrame chunkLeftMargin,
                          bool rescale, const FloatRaw *scale, const FloatRaw *offset,
-                         bool medianReference, bool averageReference,
+                         bool lowpass, bool medianReference, bool averageReference,
                          IntFrame spikeDur, IntFrame ampAvgDur,
                          FloatRatio threshold, FloatRatio minAvgAmp, FloatRatio maxAHPAmp,
                          const FloatGeom *channelPositions, FloatGeom neighborRadius, FloatGeom innerRadius,
@@ -24,6 +24,7 @@ namespace HSDetection
           scale((FloatRaw *) operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
           offset((FloatRaw *) operator new[](sizeof(FloatRaw) * alignedChannels * channelAlign, (std::align_val_t(channelAlign * sizeof(IntVolt))))),
           trace(chunkSize + chunkLeftMargin, alignedChannels * channelAlign),
+          lowpass(lowpass),
           medianReference(medianReference), averageReference(averageReference),
           commonRef(chunkSize + chunkLeftMargin, 1),
           runningBaseline(chunkSize + chunkLeftMargin, alignedChannels * channelAlign),
@@ -101,23 +102,50 @@ namespace HSDetection
         thChunkLen = min(thChunkLen, chunkStart + chunkLen - thChunkStart);
 
         if (rescale && !medianReference && averageReference)
-        {
-            scaleAndAverage(thChunkStart, thChunkLen);
+        {   
+            if (lowpass)
+            {
+                scaleAndAverageLowpass(thChunkStart, thChunkLen);
+            }
+            else
+            {
+                scaleAndAverage(thChunkStart, thChunkLen);
+            }
             return;
         }
 
         if (rescale)
         {
-            for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
+            if(lowpass) 
             {
-                scaleCast(trace[t], traceRaw[t]);
+                for (IntFrame t = thChunkStart + thChunkLen - 1; t > thChunkStart; t--)
+                {
+                    scaleCastLowpass(trace[t], traceRaw[t], traceRaw[t - 1]);
+                }
+            }
+            else
+            {
+                for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
+                {
+                    scaleCast(trace[t], traceRaw[t]);
+                }
             }
         }
         else
         {
-            for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
+            if (lowpass)
             {
-                noscaleCast(trace[t], traceRaw[t]);
+                for (IntFrame t = thChunkStart + thChunkLen - 1; t > thChunkStart; t--)
+                {
+                    noscaleCastLowpass(trace[t], traceRaw[t], traceRaw[t-1]);
+                }
+            }
+            else
+            {
+                for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
+                {
+                    noscaleCast(trace[t], traceRaw[t]);
+                }
             }
         }
 
@@ -152,6 +180,16 @@ namespace HSDetection
         }
     }
 
+    void Detection::scaleAndAverageLowpass(IntFrame chunkStart, IntFrame chunkLen)
+    {
+        for (IntFrame t = chunkStart + chunkLen - 1; t > chunkStart; t--)
+        {
+            scaleCastLowpass(trace[t], traceRaw[t], traceRaw[t - 1]);
+
+            commonAverage(commonRef[t], trace[t]);
+        }
+    }
+
     void Detection::scaleCast(IntVolt *trace, const FloatRaw *input)
     {
         for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
@@ -160,11 +198,27 @@ namespace HSDetection
         }
     }
 
+    void Detection::scaleCastLowpass(IntVolt *trace, const FloatRaw *input1, const FloatRaw *input2)
+    {
+        for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
+        {
+            trace[i] = (input1[i]+input2[i])/2 * scale[i] + offset[i];
+        }
+    }
+
     void Detection::noscaleCast(IntVolt *trace, const FloatRaw *input)
     {
         for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
         {
             trace[i] = input[i];
+        }
+    }
+
+    void Detection::noscaleCastLowpass(IntVolt * trace, const FloatRaw *input1, const FloatRaw *input2)
+    {
+        for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
+        {
+            trace[i] = (input1[i]+input2[i])/2;
         }
     }
 
@@ -193,15 +247,6 @@ namespace HSDetection
         IntChannel thAlignedEnd = (threadNum + 1) * thChannels;
         thAlignedEnd = min(thAlignedEnd, alignedChannels);
         IntChannel thActualEnd = min(thAlignedEnd * channelAlign, numChannels);
-
-        // perform averaging over two frames
-        for (IntChannel t = chunkStart + chunkLen; t > chunkStart; t--)
-        {
-            for (IntChannel i = thAlignedStart * channelAlign; i < thActualEnd; i++)
-            {
-                trace[t][i] = (trace[t][i] + trace[t - 1][i]) / 2;
-            }
-        }
 
         for (IntFrame t = chunkStart; t < chunkStart + chunkLen; t++)
         {

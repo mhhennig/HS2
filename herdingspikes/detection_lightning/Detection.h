@@ -41,6 +41,9 @@ namespace HSDetection
         FloatRaw *offset;   // offset for rescaling
         RollingArray trace; // rescaled and quantized trace to be used
 
+        // temporal lowpass
+        bool lowpass;          // whether to use temporal lowpass filter (2 frames)
+
         // common reference
         bool medianReference;   // whether to use CMR (overrides CAR)
         bool averageReference;  // whether to use CAR
@@ -87,16 +90,19 @@ namespace HSDetection
 
     private:
         inline void scaleCast(IntVolt *trace, const FloatRaw *input);
+        inline void scaleCastLowpass(IntVolt *trace, const FloatRaw *input1, const FloatRaw *input2);
         inline void noscaleCast(IntVolt *trace, const FloatRaw *input);
+        inline void noscaleCastLowpass(IntVolt *trace, const FloatRaw *input1, const FloatRaw *input2);
         inline void commonMedian(IntVolt *ref, const IntVolt *trace,
                                  IntVolt *buffer, IntChannel mid);
         inline void commonAverage(IntVolt *ref, const IntVolt *trace);
         void scaleAndAverage(IntFrame chunkStart, IntFrame chunkLen);
+        void scaleAndAverageLowpass(IntFrame chunkStart, IntFrame chunkLen);
         void castAndCommonref(IntFrame chunkStart, IntFrame chunkLen);
         inline void estimation(IntVolt *baselines, IntVolt *deviations,
-                               const IntVolt *trace, const IntVolt *ref,
-                               const IntVolt *basePrev, const IntVolt *devPrev,
-                               IntChannel alignedStart, IntChannel alignedEnd);
+                                   const IntVolt *trace, const IntVolt *ref,
+                                   const IntVolt *basePrev, const IntVolt *devPrev,
+                                   IntChannel alignedStart, IntChannel alignedEnd);
         inline void detection(const IntVolt *trace, const IntVolt *ref,
                               const IntVolt *baselines, const IntVolt *deviations,
                               IntChannel channelStart, IntChannel channelEnd, IntFrame t);
@@ -105,7 +111,7 @@ namespace HSDetection
     public:
         Detection(IntChannel numChannels, IntFrame chunkSize, IntFrame chunkLeftMargin,
                   bool rescale, const FloatRaw *scale, const FloatRaw *offset,
-                  bool medianReference, bool averageReference,
+                  bool lowpass, bool medianReference, bool averageReference,
                   IntFrame spikeDur, IntFrame ampAvgDur,
                   FloatRatio threshold, FloatRatio minAvgAmp, FloatRatio maxAHPAmp,
                   const FloatGeom *channelPositions, FloatGeom neighborRadius, FloatGeom innerRadius,

@@ -25,6 +25,7 @@ cdef extern from "Detection.h" namespace "HSDetection":
                   bool rescale,
                   const float *scale,
                   const float *offset,
+                  bool lowpass,
                   bool medianReference,
                   bool averageReference,
                   int32_t spikeDur,

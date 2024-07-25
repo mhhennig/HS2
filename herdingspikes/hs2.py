@@ -491,11 +491,18 @@ class HSDetectionLightning(object):
         self.recording = rec
         self.num_segments = rec.get_num_segments()
         self.params = params
-        if self.params == None:
-            self.params = detectDataLightning.DEFAULT_PARAMS
+        self.params = detectDataLightning.DEFAULT_PARAMS
+        if self.params is not None:
+            self.params.update(params)
         self.out_file_name = self.params["out_file"]
         if self.params["chunk_size"] == None:
-            self.params["chunk_size"] = min((1e9 / rec.get_num_channels()), 1e6)
+            self.params["chunk_size"] = int(min((2e7 / rec.get_num_channels()), 1e6))
+            if self.params["verbose"]:
+                print(
+                    "Chunk size not set, setting to",
+                    self.params["chunk_size"],
+                    "samples.",
+                )
         if self.out_file_name is not None:
             out_dir = os.path.dirname(self.out_file_name)
             self.spikes_file = self.out_file_name + ".hdf5"
@@ -506,6 +513,8 @@ class HSDetectionLightning(object):
         """
         det = detectDataLightning(self.recording, self.params)
         sp = det.detect()
+        if self.params["save_shape"] == False:  # create dummy if no shapes saved
+            sp[0]["spike_shape"] = np.zeros(len(sp[0]["sample_ind"]))
         self.spikes = pd.DataFrame(
             {
                 "ch": sp[0]["channel_ind"],
@@ -521,11 +530,15 @@ class HSDetectionLightning(object):
         assert self.spikes.shape[0] > 0, "No spikes detected"
         # write spikes dict to hdf5 (without shapes)
         if self.out_file_name is not None:
-            print(f"writing spikes to {self.spikes_file}")
+            if self.params["verbose"]:
+                print(f"writing spikes to {self.spikes_file}")
             h = h5py.File(self.spikes_file, "w")
             for key in ["ch", "t", "Amplitude", "x", "y"]:
                 h.create_dataset(key, data=self.spikes[key])
-            h["cutout_length"] = self.spikes["Shape"][0].shape[0]
+            if self.params["save_shape"]:
+                h["cutout_length"] = self.spikes["Shape"][0].shape[0]
+            else:
+                h["cutout_length"] = 0
             h.close()
 
     def PlotTracesChannels(

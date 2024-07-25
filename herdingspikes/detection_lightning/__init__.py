@@ -6,6 +6,7 @@ class Params(TypedDict):
     chunk_size: int
     rescale: bool
     rescale_value: float
+    lowpass: bool
     common_reference: str
     spike_duration: float
     amp_avg_duration: float
@@ -30,6 +31,7 @@ DEFAULT_PARAMS: Params = {
     "chunk_size": None,
     "rescale": True,
     "rescale_value": -1280.0,
+    "lowpass": True,
     "common_reference": "median",
     "spike_duration": 1.0,
     "amp_avg_duration": 0.4,

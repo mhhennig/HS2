@@ -62,6 +62,7 @@ class HSDetectionLightning(object):
     chunk_size: int = cython.declare(int32_t)  # type: ignore
     left_margin: int = cython.declare(int32_t)  # type: ignore
 
+    lowpass: bool = cython.declare(bool_t)  # type: ignore
     rescale: bool = cython.declare(bool_t)  # type: ignore
     scale: NDArray[np.single] = cython.declare(np.ndarray)  # type: ignore
     offset: NDArray[np.single] = cython.declare(np.ndarray)  # type: ignore
@@ -139,6 +140,8 @@ class HSDetectionLightning(object):
             self.offset: NDArray[np.single] = np.zeros(
                 self.num_channels, dtype=np.single
             )
+
+        self.lowpass = params["lowpass"]
 
         common_reference = params["common_reference"]
         self.median_reference = common_reference == "median"
@@ -360,6 +363,7 @@ class HSDetectionLightning(object):
             self.rescale,
             cython.cast(p_single, self.scale.data),
             cython.cast(p_single, self.offset.data),
+            self.lowpass,
             self.median_reference,
             self.average_reference,
             self.spike_duration,
