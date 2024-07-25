@@ -492,7 +492,7 @@ class HSDetectionLightning(object):
         self.num_segments = rec.get_num_segments()
         self.params = params
         self.params = detectDataLightning.DEFAULT_PARAMS
-        if self.params is not None:
+        if params is not None:
             self.params.update(params)
         self.out_file_name = self.params["out_file"]
         if self.params["chunk_size"] == None:
