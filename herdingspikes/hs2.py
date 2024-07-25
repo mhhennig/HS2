@@ -514,7 +514,9 @@ class HSDetectionLightning(object):
         det = detectDataLightning(self.recording, self.params)
         sp = det.detect()
         if self.params["save_shape"] == False:  # create dummy if no shapes saved
-            sp[0]["spike_shape"] = np.zeros(len(sp[0]["sample_ind"]))
+            sp[0]["spike_shape"] = np.zeros(len(sp[0]["sample_index"]))
+        if self.params["localize"] == False:  # create dummy if no shapes saved
+            sp[0]["location"] = np.zeros((len(sp[0]["sample_index"]), 2))
         self.spikes = pd.DataFrame(
             {
                 "ch": sp[0]["channel_index"],
@@ -1435,7 +1437,7 @@ class HSClustering(object):
         return ax
 
 
-def detect_peaks_lightning(recording, params=None):
+def detect_peaks_lightning(recording, **params):
     """
     Detect spikes in a recording using the lightning framework. This function is compatible
     with the SpikeInterface sorting components framework. Note it does not return spike locations.
@@ -1459,7 +1461,6 @@ def detect_peaks_lightning(recording, params=None):
             The amplitude of the peak
 
     """
-
     det = HSDetectionLightning(recording, params=params)
     peaks = det.DetectFromRaw()
     peaks_array = np.array(
