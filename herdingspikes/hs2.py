@@ -663,14 +663,17 @@ class HSClustering(object):
         Additional arguments to load the data.
     """
 
-    def __init__(self, arg1, legacy=False, cutout_length=None, **kwargs):
+    def __init__(self, arg1, legacy=False, cutout_length=None, verbose=True, **kwargs):
+        self.verbose = verbose
         self.shapecache = []
         if type(arg1) == pd.core.frame.DataFrame:
-            print("Reading spikes from Dataframe")
+            if self.verbose:
+                print("Reading spikes from Dataframe")
             self.spikes = arg1
             self.expinds = [0]
-        elif type(arg1) == HSDetectionLightning or type(arg1) == HSDetection:
-            print("Reading spikes from detection")
+        elif (type(arg1) == HSDetectionLightning) or (type(arg1) == HSDetection):
+            if self.verbose:
+                print("Reading spikes from detection")
             self.spikes = arg1.spikes
             self.expinds = [0]
         else:
@@ -781,24 +784,30 @@ class HSClustering(object):
             )
             clusterer.fit(fourvec[inds])
             self.NClusters = len(np.unique(clusterer.labels_))
-            print("Number of estimated units:", self.NClusters)
-            print("Predicting cluster labels for", self.spikes.shape[0], "spikes...")
+            if self.verbose:
+                print("Number of estimated units:", self.NClusters)
+                print(
+                    "Predicting cluster labels for", self.spikes.shape[0], "spikes..."
+                )
             self.spikes["cl"] = clusterer.predict(fourvec)
         else:
-            print("Clustering " + str(self.spikes.shape[0]) + " spikes...")
+            if self.verbose:
+                print("Clustering " + str(self.spikes.shape[0]) + " spikes...")
             self.spikes["cl"] = clusterer.fit_predict(fourvec)
             self.NClusters = len(np.unique(self.spikes["cl"]))
-            print("Number of estimated units:", self.NClusters)
+            if self.verbose:
+                print("Number of estimated units:", self.NClusters)
 
         # methods like DBSCAN assign '-1' to unclustered data
         # here we replace these by a new cluster at the end of the list
         if self.spikes.cl.min() == -1:
-            print(
-                "There are",
-                (self.spikes.cl == -1).sum(),
-                "unclustered events, these are now in cluster number ",
-                self.NClusters - 1,
-            )
+            if self.verbose:
+                print(
+                    "There are",
+                    (self.spikes.cl == -1).sum(),
+                    "unclustered events, these are now in cluster number ",
+                    self.NClusters - 1,
+                )
             self.spikes.loc[self.spikes.cl == -1, "cl"] = self.NClusters - 1
 
         _cl = self.spikes.groupby(["cl"])
@@ -857,13 +866,15 @@ class HSClustering(object):
             _pca = custom_decomposition
 
         if n_spikes > chunk_size:
-            print(
-                f"Fitting dimensionality reduction using {chunk_size} out of {n_spikes} spikes..."
-            )
+            if self.verbose:
+                print(
+                    f"Fitting dimensionality reduction using {chunk_size} out of {n_spikes} spikes..."
+                )
             inds = np.sort(np.random.choice(n_spikes, chunk_size, replace=False))
             s = self.spikes.Shape.loc[inds].values.tolist()
         else:
-            print("Fitting dimensionality reduction using all spikes...")
+            if self.verbose:
+                print("Fitting dimensionality reduction using all spikes...")
             s = self.spikes.Shape.values.tolist()
         # align peaks
         peak = np.argmin(np.diff(np.asarray(s).T, axis=0), axis=0)
@@ -872,7 +883,8 @@ class HSClustering(object):
 
         _pca.fit(np.asarray(s_roll))
 
-        print("...projecting...")
+        if self.verbose:
+            print("...projecting...")
         _pcs = np.empty((n_spikes, pca_ncomponents))
         for i in range(n_spikes // chunk_size + 1):
             # is this the best way? Warning: Pandas slicing with .loc is different!
