@@ -173,7 +173,7 @@ void Detection::Iterate(short *vm, long t0, int tInc, int tCut, int tCut2, int m
             SpkArea[i] += a;
           }
           // check whether it does repolarize
-          else if (a < (AHPthr * Qd[i])) {
+          else if (a > (AHPthr * Qd[i])) {
             AHP[i] = true;
           }
           // accept spikes after MaxSl frames if...

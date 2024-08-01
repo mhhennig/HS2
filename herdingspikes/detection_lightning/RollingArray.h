@@ -27,16 +27,15 @@ namespace HSDetection
         }
 
     public:
-        // RollingArray(IntFrame rollingLen, IntChannel numChannels)
-        //     : frameMask(getMask(rollingLen)), numChannels(numChannels)
-        // {
-        //     arrayBuffer = new (memAlign) IntVolt[(IntCalc)(frameMask + 1) * numChannels];
-        // }
         RollingArray(IntFrame rollingLen, IntChannel numChannels)
             : frameMask(getMask(rollingLen)), numChannels(numChannels)
         {
-            // std::cout << "Rollingarray\n";
-            arrayBuffer = (IntVolt *) operator new[](sizeof(IntVolt) * (IntCalc)(frameMask + 1) * numChannels,memAlign);
+            arrayBuffer = (IntVolt *) operator new[](sizeof(IntVolt) * (IntCalc)(frameMask + 1) * numChannels, memAlign);
+            // need to zero in case no common referencing
+            for (IntChannel i = 0; i < numChannels * (IntCalc)(frameMask + 1); i++)
+            {
+                arrayBuffer[i] = 0;
+            }
         }
 
         ~RollingArray() { operator delete[](arrayBuffer, memAlign); }
