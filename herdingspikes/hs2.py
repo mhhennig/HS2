@@ -2,6 +2,7 @@ from __future__ import division
 from __future__ import absolute_import
 import pandas as pd
 import numpy as np
+from sympy import N
 import h5py
 import os
 from pathlib import Path
@@ -130,6 +131,8 @@ class HSDetection(object):
         self.num_com_centers = num_com_centers
         self.sp_flat = None
         self.spikes = None
+
+        self.sampling = probe.fps
 
         # Make directory for results if it doesn't exist
         os.makedirs(file_directory_name, exist_ok=True)
@@ -490,6 +493,7 @@ class HSDetectionLightning(object):
         self.spikes = None
         self.recording = rec
         self.num_segments = rec.get_num_segments()
+        self.sampling = rec.get_sampling_frequency()
         self.params = params
         self.params = detectDataLightning.DEFAULT_PARAMS
         if params is not None:
@@ -659,13 +663,26 @@ class HSClustering(object):
         list of files is passed as first argument and legacy==True.
     legacy : bool
         Whether to load the spikes from the legacy format (True) or the new Lightning format.
+    verbose : bool
+        Print additional information.
+    chunk_size : int
+        The size of the chunks to load the spike shapes in (only when loading from a hdf5 file
     **kwargs : dict
         Additional arguments to load the data.
     """
 
-    def __init__(self, arg1, legacy=False, cutout_length=None, verbose=True, **kwargs):
+    def __init__(
+        self,
+        arg1,
+        legacy=False,
+        cutout_length=None,
+        verbose=True,
+        chunk_size=1000000,
+        **kwargs,
+    ):
         self.verbose = verbose
         self.shapecache = []
+        self.sampling = None
         if type(arg1) == pd.core.frame.DataFrame:
             if self.verbose:
                 print("Reading spikes from Dataframe")
@@ -676,6 +693,7 @@ class HSClustering(object):
                 print("Reading spikes from detection")
             self.spikes = arg1.spikes
             self.expinds = [0]
+            self.sampling = arg1.sampling
         else:
             if type(arg1) == str:
                 arg1 = [arg1]
@@ -703,23 +721,63 @@ class HSClustering(object):
                         raise IOError("File format unknown. Expected .hdf5 or .bin")
             else:
                 for i, f in enumerate(arg1):
-                    shape_file = Path(f).with_suffix(".bin")
-                    shape_file = shape_file.with_stem(f"{shape_file.stem}-0")
+                    # There's some legacy stuff to deal with here, trying to make it consistent for now.
+                    # If a .hdf5 file is provided, it'll look for shapes in theer first.
+                    # If shapes are not there, it'll look doe a .bin file with the same name and try to load that.
+                    # If this fails an error will be thrown.
                     spikes_file = Path(f).with_suffix(".hdf5")
-                    print(
-                        f"loading spikes from {spikes_file}, shapes from {shape_file}"
-                    )
                     spikes_data = h5py.File(spikes_file, "r")
                     cutout_length = spikes_data["cutout_length"][()]
-                    shapes = np.memmap(
-                        str(shape_file), dtype=np.int16, mode="r"
-                    ).reshape(-1, cutout_length)
-                    self.shapecache.append(shapes)
+                    if "shapes" in spikes_data.keys():
+                        print(f"loading spike shapes from {spikes_file}")
+                        i = len(self.shapecache)
+                        self.shapecache.append(
+                            np.memmap(
+                                "tmp" + str(i) + ".bin",
+                                dtype=np.int32,
+                                mode="w+",
+                                shape=spikes_data["shapes"].shape[::-1],
+                            )
+                        )
+                        for i in range(
+                            spikes_data["shapes"].shape[1] // chunk_size + 1
+                        ):
+                            tmp = (
+                                np.transpose(
+                                    spikes_data["shapes"][
+                                        :, i * chunk_size : (i + 1) * chunk_size
+                                    ]
+                                )
+                            ).astype(np.int32)
+                            print("Read chunk " + str(i + 1))
+                            self.shapecache[-1][
+                                i * chunk_size : (i + 1) * chunk_size
+                            ] = tmp[:]
+
+                        self.cutout_length = self.shapecache[-1].shape[1]
+                        print("Events: ", self.shapecache[-1].shape[0])
+                        print("Cut-out size: ", self.cutout_length)
+
+                    else:
+                        shape_file = Path(f).with_suffix(".bin")
+                        shape_file = shape_file.with_stem(f"{shape_file.stem}-0")
+                        # check if exists, if not throw error
+                        if not shape_file.exists():
+                            raise FileNotFoundError(
+                                f"Could not find {shape_file}, provide a .hdf5 file with shapes or a .bin file with shapes."
+                            )
+                        print(
+                            f"loading spikes from {spikes_file}, shapes from {shape_file}"
+                        )
+                        shapes = np.memmap(
+                            str(shape_file), dtype=np.int16, mode="r"
+                        ).reshape(-1, cutout_length)
+                        self.shapecache.append(shapes)
                     spikes = pd.DataFrame(
                         {
-                            "Shape": list(-self.shapecache[-1]),
+                            "Shape": list(self.shapecache[-1]),
                             "ch": spikes_data["ch"],
-                            "t": spikes_data["t"],
+                            "t": spikes_data["times"],
                             "Amplitude": spikes_data["Amplitude"],
                             "x": spikes_data["x"],
                             "y": spikes_data["y"],
@@ -813,13 +871,9 @@ class HSClustering(object):
         _cl = self.spikes.groupby(["cl"])
         _x_mean = _cl.x.mean()
         _y_mean = _cl.y.mean()
-        # this computes average amplitudes, disabled for now
-        # _avgAmpl = _cl.min_amp.mean()
         _cls = _cl.cl.count()
         _color = 1.0 * np.random.permutation(self.NClusters) / self.NClusters
         dic_cls = {"ctr_x": _x_mean, "ctr_y": _y_mean, "Color": _color, "Size": _cls}
-        #    'AvgAmpl': _avgAmpl
-        # }
         self.clusters = pd.DataFrame(dic_cls)
         self.IsClustered = True
 
@@ -917,19 +971,23 @@ class HSClustering(object):
 
         g = h5py.File(filename, "w")
         if transpose:
-            g.create_dataset("data", data=np.vstack((spikes.y, spikes.x)))
+            # g.create_dataset("data", data=np.vstack((spikes.y, spikes.x)))
+            g.create_dataset("x", data=spikes.y)
+            g.create_dataset("y", data=spikes.x)
         else:
-            g.create_dataset("data", data=np.vstack((spikes.x, spikes.y)))
+            # g.create_dataset("data", data=np.vstack((spikes.x, spikes.y)))
+            g.create_dataset("x", data=spikes.x)
+            g.create_dataset("y", data=spikes.y)
         if sampling is not None:
             g.create_dataset("Sampling", data=sampling)
         g.create_dataset("times", data=spikes.t)
         g.create_dataset("ch", data=spikes.ch)
+        g.create_dataset("Amplitude", data=spikes.Amplitude)
         if self.IsClustered:
             if transpose:
                 g.create_dataset("centres", data=self.clusters[["ctr_y", "ctr_x"]])
             else:
                 g.create_dataset("centres", data=self.clusters[["ctr_x", "ctr_y"]])
-            # g.create_dataset("centres", data=self.centers.T)
             g.create_dataset("cluster_id", data=spikes.cl)
         else:
             g.create_dataset("centres", data=[])
@@ -938,15 +996,15 @@ class HSClustering(object):
         g.create_dataset("exp_inds", data=self.expinds)
         # this is still a little slow (and perhaps memory intensive)
         # but I have not yet found a better way:
-        # no longer save the spike shapes by default
-        # if save_shapes and not spikes.empty:
-        #     cutout_length = spikes.Shape.iloc[0].size
-        #     sh_tmp = np.empty((cutout_length, spikes.Shape.size), dtype=int)
-        #     for i, s in enumerate(spikes.Shape):
-        #         sh_tmp[:, i] = s
-        #     g.create_dataset("shapes", data=sh_tmp, compression=compression)
-        # else:
-        # g.create_dataset("shapes", data=[], compression=compression)
+        if save_shapes and not spikes.empty:
+            cutout_length = spikes.Shape.iloc[0].size
+            g.create_dataset("cutout_length", data=cutout_length)
+            sh_tmp = np.empty((cutout_length, spikes.Shape.size))
+            for i, s in enumerate(spikes.Shape):
+                sh_tmp[:, i] = s
+            g.create_dataset("shapes", data=sh_tmp, compression=compression)
+        else:
+            g.create_dataset("shapes", data=[], compression=compression)
         g.close()
 
     def SaveHDF5(
@@ -955,7 +1013,7 @@ class HSClustering(object):
         compression=None,
         sampling=None,
         transpose=False,
-        save_shapes=False,
+        save_shapes=True,
     ):
         """
         Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers
@@ -979,14 +1037,31 @@ class HSClustering(object):
         save_shapes : bool
             Whether to save the spike shapes. Default is False.
         """
-        if sampling is None:
+        if (sampling is None) and (self.sampling is None):
             print(
                 "# Warning: no sampling rate given, will be set to 0 in the hdf5 file."
             )
             sampling = 0
+        elif sampling is not None:
+            if self.sampling is None:
+                print(
+                    f"# Sampling rate provided as {sampling}, will be saved in the hdf5 file."
+                )
+            elif sampling != self.sampling:
+                print(
+                    f"# Warning: sampling rate provided as {sampling}, "
+                    f"but {self.sampling} was previously set. Using {sampling}."
+                )
+            else:
+                print(f"# Sampling rate: {sampling}.")
+        else:
+            sampling = self.sampling
+            print(f"# Sampling rate: {sampling}.")
 
         if type(filename) == str:
-            self._savesinglehdf5(filename, None, compression, sampling, transpose)
+            self._savesinglehdf5(
+                filename, None, compression, sampling, transpose, save_shapes
+            )
         elif type(filename) == list:
             if len(filename) != len(self.expinds):
                 raise ValueError(
@@ -996,10 +1071,15 @@ class HSClustering(object):
             expinds = self.expinds + [len(self.spikes)]
             for i, f in enumerate(filename):
                 self._savesinglehdf5(
-                    f, [expinds[i], expinds[i + 1]], compression, sampling, transpose
+                    f,
+                    [expinds[i], expinds[i + 1]],
+                    compression,
+                    sampling,
+                    transpose,
+                    save_shapes,
                 )
         else:
-            raise ValueError("filename not understood")
+            raise ValueError(f"filename {filename} not understood")
 
     def LoadHDF5(self, filename, append=False, chunk_size=1000000, scale=1.0):
         """
@@ -1021,9 +1101,7 @@ class HSClustering(object):
         print("Reading from clustered (HS1 or HS2) file " + filename)
 
         print(
-            "Creating memmapped cache for shapes, reading in chunks of size",
-            chunk_size,
-            "and converting to integer...",
+            f"Creating memmapped cache for shapes, reading in chunks of size {chunk_size} and converting to integer..."
         )
         i = len(self.shapecache)
         self.shapecache.append(
@@ -1039,12 +1117,7 @@ class HSClustering(object):
                 scale
                 * np.transpose(g["shapes"][:, i * chunk_size : (i + 1) * chunk_size])
             ).astype(np.int32)
-            inds = np.where(tmp > 20000)[0]
-            tmp[inds] = 0
             print("Read chunk " + str(i + 1))
-            if len(inds) > 0:
-                print("Found", len(inds), "data points out of linear regime")
-            print(len(self.shapecache), tmp.shape, i * chunk_size, (i + 1) * chunk_size)
             self.shapecache[-1][i * chunk_size : (i + 1) * chunk_size] = tmp[:]
 
         self.cutout_length = self.shapecache[-1].shape[1]
@@ -1081,9 +1154,6 @@ class HSClustering(object):
 
             inds = spikes.groupby(["cl"]).cl.count().index
             _cl = spikes.groupby(["cl"])
-            # this computes average amplitudes, disabled for now
-            # _avgAmpl = np.zeros(self.NClusters)
-            # _avgAmpl[inds] = _cl.min_amp.mean()
             _cls = np.zeros(self.NClusters)
             _cls[inds] = _cl.cl.count()
 
