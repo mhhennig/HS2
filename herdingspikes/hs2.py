@@ -739,24 +739,25 @@ class HSClustering(object):
                                 shape=spikes_data["shapes"].shape[::-1],
                             )
                         )
-                        for i in range(
+                        for ii in range(
                             spikes_data["shapes"].shape[1] // chunk_size + 1
                         ):
                             tmp = (
                                 np.transpose(
                                     spikes_data["shapes"][
-                                        :, i * chunk_size : (i + 1) * chunk_size
+                                        :, ii * chunk_size : (ii + 1) * chunk_size
                                     ]
                                 )
                             ).astype(np.int32)
-                            print("Read chunk " + str(i + 1))
+                            print("Read chunk " + str(ii + 1))
                             self.shapecache[-1][
-                                i * chunk_size : (i + 1) * chunk_size
+                                ii * chunk_size : (ii + 1) * chunk_size
                             ] = tmp[:]
 
                         self.cutout_length = self.shapecache[-1].shape[1]
-                        print("Events: ", self.shapecache[-1].shape[0])
-                        print("Cut-out size: ", self.cutout_length)
+                        if self.verbose:
+                            print(f'Spikes loaded: {self.shapecache[-1].shape[0]}')
+                            print(f'Cut-out size: {self.cutout_length} frames')
 
                     else:
                         shape_file = Path(f).with_suffix(".bin")
