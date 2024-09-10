@@ -154,7 +154,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     keywords="spikes sorting electrophysiology detection",
-    python_requires=">=3.12",
+    python_requires=">=3.10",
     install_requires=[
         "cython",
         "numpy",
