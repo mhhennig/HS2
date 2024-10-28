@@ -508,8 +508,7 @@ class HSDetectionLightning(object):
                     "samples.",
                 )
         if self.out_file_name is not None:
-            out_dir = os.path.dirname(self.out_file_name)
-            self.spikes_file = Path(out_dir).joinpath(str(self.out_file_name) + ".hdf5")
+            self.spikes_file = Path(str(self.out_file_name) + ".hdf5")
 
     def DetectFromRaw(self):
         """
