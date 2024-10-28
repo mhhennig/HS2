@@ -2,7 +2,7 @@ from __future__ import division
 from __future__ import absolute_import
 import pandas as pd
 import numpy as np
-from sympy import N
+# from sympy import N
 import h5py
 import os
 from pathlib import Path
@@ -509,7 +509,7 @@ class HSDetectionLightning(object):
                 )
         if self.out_file_name is not None:
             out_dir = os.path.dirname(self.out_file_name)
-            self.spikes_file = self.out_file_name + ".hdf5"
+            self.spikes_file = Path(out_dir).joinpath(str(self.out_file_name) + ".hdf5")
 
     def DetectFromRaw(self):
         """
@@ -543,10 +543,61 @@ class HSDetectionLightning(object):
                 h.create_dataset(key, data=self.spikes[key])
             if self.params["save_shape"]:
                 h["cutout_length"] = self.spikes["Shape"][0].shape[0]
+                sh_tmp = np.empty((h["cutout_length"][()], self.spikes.Shape.size))
+                for i, s in enumerate(self.spikes.Shape):
+                    sh_tmp[:, i] = s
+                h.create_dataset("Shape", data=sh_tmp)#, compression=compression)
             else:
                 h["cutout_length"] = 0
             h.close()
         return sp
+
+    def LoadDetected(self, file_name=None):
+        """
+        Reads a binary file with spikes detected with the DetectFromRaw()
+        method.
+
+        Parameters
+        ----------
+        file_name : str
+            The name of the .bin file. Defaults to self.out_file_name.
+        """
+
+        if file_name is None:
+            file_name = self.out_file_name
+
+        if os.stat(file_name).st_size == 0:
+            self.spikes = pd.DataFrame(
+            {
+                "ch": [],
+                "t": [],
+                "Amplitude": [],
+                "x": [],
+                "y": [],
+                "Shape": [],
+            },
+        )
+            warnings.warn(
+                "Loading an empty file {} . This usually happens when no spikes were"
+                "detected due to the detection parameters being set too "
+                "strictly".format(file_name)
+            )
+
+        h = h5py.File(file_name, "r")
+        
+        self.spikes = pd.DataFrame(
+            {
+                "ch": h['ch'],
+                "t": h['t'],
+                "Amplitude": h['Amplitude'],
+                "x": h['x'],
+                "y": h['y'],
+                "Shape": list(np.transpose(h['Shape'])),
+            },
+            copy=False,
+        )
+        self.IsClustered = False
+        print("Loaded " + str(self.spikes.shape[0]) + " spikes.")
 
     def PlotTracesChannels(
         self,
