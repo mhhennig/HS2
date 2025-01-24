@@ -608,7 +608,103 @@ class HSDetectionLightning(object):
         show_channel_numbers=True,
         show_loc=True,
     ):
-        print("not implemented")
+        if ax is None:
+            ax = plt.gca()
+
+        inner_radius = self.params["inner_radius"]
+        cutout_start = int(self.params["left_cutout_time"] * self.sampling / 1000 + 0.5)
+        cutout_end = int(self.params["right_cutout_time"] * self.sampling / 1000 + 0.5)
+
+        pos = np.array([
+            self.recording.get_channel_property(ch, "location")
+            for ch in self.recording.get_channel_ids()],
+            dtype=np.single,
+            )
+        
+        neighs = []
+        for channel in range(len(pos)):
+            # Calculate distance from current channel to all other channels
+            curr_channel_distances = np.sqrt(
+                np.sum((pos - pos[channel]) ** 2, axis=1)
+            )
+            # Find all neighbors in given radius and add them to neighbors
+            neighbors = np.where(curr_channel_distances < inner_radius)[0]
+            neighs.append(neighbors)
+
+        event = self.spikes.loc[eventid]
+        if self.params["verbose"]:
+            print("Spike detected at channel: ", event.ch)
+            print("Spike detected at frame: ", event.t)
+            print("Spike localised in position", event.x, event.y)
+        cutlen = len(event.Shape)
+
+        # compute distance between electrodes, for scaling
+        distances = np.abs(pos[event.ch][0] - pos[neighs[event.ch]][:, 0])
+        interdistance = np.min(distances[distances > 0])
+        scale = interdistance / 110.0 * ascale
+
+        # scatter of the large grey balls for electrode location
+        x = pos[(neighs[event.ch], 0)]
+        y = pos[(neighs[event.ch], 1)]
+        if show_channels:
+            plt.scatter(x, y, s=1600, alpha=0.2)
+
+        ws = window_size // 2
+        ws = max(ws, 1 + cutout_start, 1 + cutout_end)
+        t1 = np.max((0, event.t - ws))
+        t2 = event.t + ws
+
+        trange = (np.arange(t1, t2) - event.t) * scale
+        start_bluered = event.t - t1 - cutout_start
+        trange_bluered = trange[start_bluered : start_bluered + cutlen]
+
+        data = self.recording.get_traces(start_frame=1088, end_frame=1188)
+        # remove offsets
+        data = data - data[0]
+
+        # grey and blue traces
+        for i, n in enumerate(neighs[event.ch]):
+            dist_from_max = np.sqrt(
+                (pos[n][0] - pos[event.ch][0]) ** 2
+                + (pos[n][1] - pos[event.ch][1]) ** 2
+            )
+            # if n in self.probe.masked_channels:
+            #     col = "g"
+            if dist_from_max <= inner_radius:
+                col = "orange"
+            else:
+                col = "b"
+            plt.plot(pos[n][0] + trange, pos[n][1] + data[:, n] * scale, "gray")
+            plt.plot(
+                pos[n][0] + trange_bluered,
+                pos[n][1] + data[start_bluered : start_bluered + cutlen, n] * scale,
+                col,
+            )
+
+        # red overlay for central channel
+        plt.plot(
+            pos[event.ch][0] + trange_bluered,
+            pos[event.ch][1] + event.Shape * scale * 0.01,
+            "r",
+        )
+        inner_radius_circle = plt.Circle(
+            (pos[event.ch][0], pos[event.ch][1]),
+            inner_radius,
+            color="red",
+            fill=False,
+        )
+        ax.add_artist(inner_radius_circle)
+
+        # red dot of event location
+        if show_loc:
+            plt.scatter(event.x, event.y, s=80, c="r")
+
+        # electrode numbers
+        if show_channel_numbers:
+            for i, txt in enumerate(neighs[event.ch]):
+                ax.annotate(txt, (x[i], y[i]))
+        ax.set_aspect("equal")
+        return ax
 
     def PlotDensity(self, binsize=1.0, invert=False, ax=None):
         """
