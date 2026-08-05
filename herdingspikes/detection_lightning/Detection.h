@@ -89,15 +89,9 @@ namespace HSDetection
         IntFrame cutoutEnd;   // the end of cutout
 
     private:
-        inline void scaleCast(IntVolt *trace, const FloatRaw *input);
-        inline void scaleCastLowpass(IntVolt *trace, const FloatRaw *input1, const FloatRaw *input2);
-        inline void noscaleCast(IntVolt *trace, const FloatRaw *input);
-        inline void noscaleCastLowpass(IntVolt *trace, const FloatRaw *input1, const FloatRaw *input2);
-        inline void commonMedian(IntVolt *ref, const IntVolt *trace,
-                                 IntVolt *buffer, IntChannel mid);
-        inline void commonAverage(IntVolt *ref, const IntVolt *trace);
-        void scaleAndAverage(IntFrame chunkStart, IntFrame chunkLen);
-        void scaleAndAverageLowpass(IntFrame chunkStart, IntFrame chunkLen);
+        // quantize the raw chunk into `trace`, removing the spatial DC (median
+        // or mean across channels) in the RAW domain, before per-channel
+        // scaling, so it is still spatially uniform when subtracted
         void castAndCommonref(IntFrame chunkStart, IntFrame chunkLen);
         inline void estimation(IntVolt *baselines, IntVolt *deviations,
                                    const IntVolt *trace, const IntVolt *ref,

@@ -513,23 +513,45 @@ class HSDetectionLightning(object):
     def DetectFromRaw(self):
         """
         Detect spikes from the raw data.
+
+        Every recording segment is detected (each gets its own Detection pass
+        and its own shape file), and their spikes are concatenated into
+        `self.spikes`. `self.segment_start_rows` holds the row at which each
+        segment begins, which HSClustering picks up as `expinds`.
+
+        Note `t` stays segment-local: each segment's frame indices start at 0,
+        so use the segment boundaries to disambiguate.
         """
         det = detectDataLightning(self.recording, self.params)
         sp = det.detect()
-        if self.params["save_shape"] == False:  # create dummy if no shapes saved
-            sp[0]["spike_shape"] = np.zeros(len(sp[0]["sample_index"]))
-        if self.params["localize"] == False:  # create dummy if no shapes saved
-            sp[0]["location"] = np.zeros((len(sp[0]["sample_index"]), 2))
-        self.spikes = pd.DataFrame(
-            {
-                "ch": sp[0]["channel_index"],
-                "t": sp[0]["sample_index"],
-                "Amplitude": sp[0]["amplitude"],
-                "x": sp[0]["location"][:, 0],
-                "y": sp[0]["location"][:, 1],
-                "Shape": list(-sp[0]["spike_shape"]),
-            },
-            copy=False,
+
+        frames = []
+        self.segment_start_rows = []
+        n_rows = 0
+        for seg in sp:
+            n_seg = len(seg["sample_index"])
+            if self.params["save_shape"] == False:  # create dummy if no shapes saved
+                seg["spike_shape"] = np.zeros(n_seg)
+            if self.params["localize"] == False:  # create dummy if not localized
+                seg["location"] = np.zeros((n_seg, 2))
+            self.segment_start_rows.append(n_rows)
+            n_rows += n_seg
+            frames.append(
+                pd.DataFrame(
+                    {
+                        "ch": seg["channel_index"],
+                        "t": seg["sample_index"],
+                        "Amplitude": seg["amplitude"],
+                        "x": seg["location"][:, 0],
+                        "y": seg["location"][:, 1],
+                        "Shape": list(-seg["spike_shape"]),
+                    },
+                    copy=False,
+                )
+            )
+        # avoid a needless copy of the whole frame in the common 1-segment case
+        self.spikes = (
+            frames[0] if len(frames) == 1 else pd.concat(frames, ignore_index=True)
         )
         # check if any spikes
         assert self.spikes.shape[0] > 0, "No spikes detected"
@@ -540,6 +562,8 @@ class HSDetectionLightning(object):
             h = h5py.File(self.spikes_file, "w")
             for key in ["ch", "t", "Amplitude", "x", "y"]:
                 h.create_dataset(key, data=self.spikes[key])
+            # so the intermediate stays self-describing for multi-segment runs
+            h.create_dataset("segment_start_rows", data=self.segment_start_rows)
             if self.params["save_shape"]:
                 h["cutout_length"] = self.spikes["Shape"][0].shape[0]
                 sh_tmp = np.empty((h["cutout_length"][()], self.spikes.Shape.size))
@@ -838,7 +862,9 @@ class HSClustering(object):
             if self.verbose:
                 print("Reading spikes from detection")
             self.spikes = arg1.spikes
-            self.expinds = [0]
+            # a multi-segment detection reports where each segment starts;
+            # treat those as experiments so they reach exp_inds on save
+            self.expinds = list(getattr(arg1, "segment_start_rows", None) or [0])
             self.sampling = arg1.sampling
         else:
             if type(arg1) == str:
