@@ -92,6 +92,27 @@ namespace HSDetection
         return result.data();
     }
 
+    // Turn the raw float chunk into the quantized `trace`, in one pass:
+    //
+    //     src   = lowpass ? (raw[t] + raw[t-1]) / 2 : raw[t]
+    //     trace = (src - spatialDC(src)) * scale + offset
+    //
+    // Three notes on why this is a single expression rather than a matrix of
+    // special cases:
+    //
+    //  - `rescale` needs no branch. When it is off the constructor leaves
+    //    scale=1, offset=0, so the affine form is already the identity.
+    //  - `offset` is -temporalDC * scale, i.e. the cast is really
+    //    (src - temporalDC - spatialDC) * scale. The two DC removals are the
+    //    same operation on the two axes; only the spatial one varies per frame.
+    //  - the spatial DC must come off BEFORE scaling. It is uniform across
+    //    channels only in the raw domain; after per-channel scaling it is
+    //    s_c*dc, and median{s*x} != s_c*median{x} unless all s_c are equal.
+    //    That is also why it cannot live in `commonRef`: the correction is
+    //    per-channel, `commonRef` holds one value per frame.
+    //
+    // `commonRef` is therefore never written and keeps its zero-fill, so the
+    // "- *ref" terms in estimation(), detection() and SpikeLocalizer are "- 0".
     void Detection::castAndCommonref(IntFrame chunkStart, IntFrame chunkLen)
     {
         int numThreads = omp_get_num_threads();
@@ -101,140 +122,61 @@ namespace HSDetection
         IntFrame thChunkStart = chunkStart + threadNum * thChunkLen;
         thChunkLen = min(thChunkLen, chunkStart + chunkLen - thChunkStart);
 
-        if (rescale && !medianReference && averageReference)
-        {   
+        const IntChannel nAligned = alignedChannels * channelAlign;
+        const bool needSpatialDC = medianReference || averageReference;
+        const IntChannel mid = numChannels / 2;
+        // nth_element reorders its input, so the source values get their own buffer
+        FloatRaw *buffer = needSpatialDC ? new FloatRaw[numChannels] : nullptr;
+
+        for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
+        {
+            const FloatRaw *input = traceRaw[t];
+            const FloatRaw *inputPrev = lowpass ? traceRaw[t - 1] : nullptr;
+            IntVolt *out = trace[t];
+
+            FloatRaw spatialDC = 0;
+            if (needSpatialDC)
+            {
+                if (lowpass)
+                {
+                    for (IntChannel i = 0; i < numChannels; i++)
+                    {
+                        buffer[i] = (input[i] + inputPrev[i]) / 2;
+                    }
+                }
+                else
+                {
+                    copy_n(input, numChannels, buffer);
+                }
+
+                if (medianReference)
+                {
+                    nth_element(buffer, buffer + mid, buffer + numChannels);
+                    spatialDC = buffer[mid];
+                }
+                else
+                {
+                    spatialDC = accumulate(buffer, buffer + numChannels, (double)0) / numChannels;
+                }
+            }
+
             if (lowpass)
             {
-                scaleAndAverageLowpass(thChunkStart, thChunkLen);
-            }
-            else
-            {
-                scaleAndAverage(thChunkStart, thChunkLen);
-            }
-            return;
-        }
-
-        if (rescale)
-        {
-            if(lowpass) 
-            {
-                for (IntFrame t = thChunkStart + thChunkLen - 1; t > thChunkStart; t--)
+                for (IntChannel i = 0; i < nAligned; i++)
                 {
-                    scaleCastLowpass(trace[t], traceRaw[t], traceRaw[t - 1]);
+                    out[i] = ((input[i] + inputPrev[i]) / 2 - spatialDC) * scale[i] + offset[i];
                 }
             }
             else
             {
-                for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
+                for (IntChannel i = 0; i < nAligned; i++)
                 {
-                    scaleCast(trace[t], traceRaw[t]);
-                }
-            }
-        }
-        else
-        {
-            if (lowpass)
-            {
-                for (IntFrame t = thChunkStart + thChunkLen - 1; t > thChunkStart; t--)
-                {
-                    noscaleCastLowpass(trace[t], traceRaw[t], traceRaw[t-1]);
-                }
-            }
-            else
-            {
-                for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
-                {
-                    noscaleCast(trace[t], traceRaw[t]);
+                    out[i] = (input[i] - spatialDC) * scale[i] + offset[i];
                 }
             }
         }
 
-        if (medianReference)
-        {
-            IntVolt *buffer = new IntVolt[numChannels]; // nth_element modifies container
-            IntChannel mid = numChannels / 2;
-
-            for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
-            {
-                commonMedian(commonRef[t], trace[t], buffer, mid);
-            }
-
-            delete[] buffer;
-        }
-        else if (averageReference)
-        {
-            for (IntFrame t = thChunkStart; t < thChunkStart + thChunkLen; t++)
-            {
-                commonAverage(commonRef[t], trace[t]);
-            }
-        }
-    }
-
-    void Detection::scaleAndAverage(IntFrame chunkStart, IntFrame chunkLen)
-    {
-        for (IntFrame t = chunkStart; t < chunkStart + chunkLen; t++)
-        {
-            scaleCast(trace[t], traceRaw[t]);
-
-            commonAverage(commonRef[t], trace[t]);
-        }
-    }
-
-    void Detection::scaleAndAverageLowpass(IntFrame chunkStart, IntFrame chunkLen)
-    {
-        for (IntFrame t = chunkStart + chunkLen - 1; t > chunkStart; t--)
-        {
-            scaleCastLowpass(trace[t], traceRaw[t], traceRaw[t - 1]);
-
-            commonAverage(commonRef[t], trace[t]);
-        }
-    }
-
-    void Detection::scaleCast(IntVolt *trace, const FloatRaw *input)
-    {
-        for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
-        {
-            trace[i] = input[i] * scale[i] + offset[i];
-        }
-    }
-
-    void Detection::scaleCastLowpass(IntVolt *trace, const FloatRaw *input1, const FloatRaw *input2)
-    {
-        for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
-        {
-            trace[i] = (input1[i]+input2[i])/2 * scale[i] + offset[i];
-        }
-    }
-
-    void Detection::noscaleCast(IntVolt *trace, const FloatRaw *input)
-    {
-        for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
-        {
-            trace[i] = input[i];
-        }
-    }
-
-    void Detection::noscaleCastLowpass(IntVolt * trace, const FloatRaw *input1, const FloatRaw *input2)
-    {
-        for (IntChannel i = 0; i < alignedChannels * channelAlign; i++)
-        {
-            trace[i] = (input1[i]+input2[i])/2;
-        }
-    }
-
-    void Detection::commonMedian(IntVolt *ref, const IntVolt *trace, IntVolt *buffer, IntChannel mid)
-    {
-        copy_n(trace, numChannels, buffer);
-        nth_element(buffer, buffer + mid, buffer + numChannels);
-        *ref = buffer[mid];
-    }
-
-    void Detection::commonAverage(IntVolt *ref, const IntVolt *trace)
-    {
-        IntCalc sum = accumulate(trace, trace + numChannels, (IntCalc)0,
-                                 [](IntCalc sum, IntVolt data)
-                                 { return sum + data; });
-        *ref = sum / numChannels;
+        delete[] buffer;
     }
 
     void Detection::estimateAndDetect(IntFrame chunkStart, IntFrame chunkLen)
