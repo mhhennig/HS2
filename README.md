@@ -9,7 +9,7 @@ This function has unnecessarily complicated if-else blocks. Simplifing them with
 There was also a bug whereby the lowpass loop skips each thread's first frame.
 
 ## Fix dtype issue in SpikeQueue 
-Previously, chuckSize can't be over 2^19 without overflowing chuckSize*numChannels.
+Previously, chunkSize couldn't be over 2^19 without overflowing chunkSize*numChannels.
 
 ## Get multi-segments working 
 Previously, only the first segment of a multi-segment recording would be processed and the others silently ignored.
