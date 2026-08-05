@@ -22,7 +22,10 @@ using namespace std;
 namespace HSDetection
 {
     SpikeQueue::SpikeQueue(Detection *pDet)
-        : spikes((Spike *)new char[pDet->chunkSize * pDet->numChannels * sizeof(Spike)]), spikeCnt(0),
+        // (IntCalc) so the product is computed in 64 bit: chunkSize*numChannels
+        // overflows int32 for a large chunk on a dense probe (e.g. 2^20 frames
+        // x 4094 channels), wrapping negative and blowing up the allocation.
+        : spikes((Spike *)new char[(IntCalc)pDet->chunkSize * pDet->numChannels * sizeof(Spike)]), spikeCnt(0),
           queue(), queProcs(), spkProcs(), pRresult(&pDet->result),
           procDelay(max(pDet->cutoutEnd - pDet->spikeDur, pDet->riseDur) + pDet->temporalJitter + 1)
     {
