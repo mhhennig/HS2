@@ -1,7 +1,7 @@
 # Changes in this fork
 
 ## Remove DC signal before scaling
-The original HS2's preprocessing does `remove_dc(cast_to_float16(per_channel_scale(traces)))`. The issue here is that by scaling first, we are nolonger removing the DC signal. I've seen some scripts where people avoid this issue by subtracting the median before calling HS2's preprocessing; doing this should not be needed anymore.
+The original HS2's preprocessing does `remove_dc(cast_to_float16(per_channel_scale(traces)))`. The issue here is that by scaling first, we are no longer removing the DC signal. I've seen some scripts where people avoid this issue by subtracting the median before calling HS2's preprocessing; doing this should not be needed anymore.
 
 ## Tidy up Detection.cpp::castAndCommonref
 This function has unnecessarily complicated if-else blocks. Simplifying them without changing functionality removes ~60 lines of code.
